@@ -1,0 +1,21 @@
+{
+  "name": "vibeproteins",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel run dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:api": "pnpm --filter api dev",
+    "build": "pnpm --parallel run build",
+    "lint": "pnpm --parallel run lint",
+    "db:generate": "pnpm --filter api db:generate",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:studio": "pnpm --filter api db:studio",
+    "db:shell": "sqlite3 api/vibeproteins.db"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}

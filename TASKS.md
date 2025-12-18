@@ -2,33 +2,33 @@
 
 ## Phase 1: Project Setup
 
-- [ ] Initialize monorepo structure
-  - [ ] `/frontend` - Vite + React + TypeScript
-  - [ ] `/api` - Node.js + TypeScript API server
-  - [ ] `/modal` - Python Modal functions
-- [ ] Set up frontend (Vite + React)
-  - [ ] Initialize Vite project
-  - [ ] Configure TypeScript
-  - [ ] Set up routing (React Router)
-  - [ ] Add Tailwind or styling solution
-- [ ] Set up API server
-  - [ ] Initialize Node.js + TypeScript project
-  - [ ] Set up Express or Hono
-  - [ ] Configure SQLite + Drizzle/Kysely (or other ORM)
-  - [ ] Set up BetterAuth
-- [ ] Set up Modal
-  - [ ] Create Modal account/project
-  - [ ] Set up basic Modal function (hello world)
-  - [ ] Configure S3/R2 for file storage
+- [x] Initialize monorepo structure
+  - [x] `/frontend` - Vite + React + TypeScript
+  - [x] `/api` - Node.js + TypeScript API server
+  - [x] `/modal` - Python Modal functions
+- [x] Set up frontend (Vite + React)
+  - [x] Initialize Vite project
+  - [x] Configure TypeScript
+  - [x] Set up routing (React Router)
+  - [x] Add Tailwind CSS
+- [x] Set up API server
+  - [x] Initialize Node.js + TypeScript project
+  - [x] Set up Hono
+  - [x] Configure SQLite + Drizzle
+  - [x] Set up BetterAuth
+- [x] Set up Modal
+  - [ ] Create Modal account/project (requires user signup)
+  - [x] Set up basic Modal function structure (placeholder)
+  - [ ] Configure S3/R2 for file storage (requires user credentials)
 
 ## Phase 2: Core Infrastructure
 
-- [ ] Database schema
-  - [ ] Users table
-  - [ ] Challenges table
-  - [ ] Submissions table
-  - [ ] Jobs table (for tracking inference jobs)
-  - [ ] Credits/transactions table
+- [x] Database schema
+  - [x] Users table
+  - [x] Challenges table
+  - [x] Submissions table
+  - [x] Jobs table (for tracking inference jobs)
+  - [x] Credits/transactions table
 - [ ] API endpoints
   - [ ] Auth routes (handled by BetterAuth)
   - [ ] `GET /challenges` - list challenges
@@ -118,7 +118,13 @@
 
 > Update this section with what we're actively working on
 
-_Not started yet_
+**Phase 1 nearly complete!** Remaining:
+- Create Modal account and authenticate (`modal token new`)
+- Configure S3/R2 for file storage
+
+**Next up (Phase 2):**
+- API endpoints for challenges, jobs, submissions
+- Inference provider abstraction
 
 ---
 
