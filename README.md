@@ -84,10 +84,10 @@ Use the bundled sample structures under `sample_data/` plus the helper script to
 
 ```bash
 # Runs RFdiffusion, ProteinMPNN, Boltz-2, and scoring against the sample PDBs
-python modal/scripts/run_modal_smoketest.py
+UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py
 
-# Target a subset or a specific Modal app
-python modal/scripts/run_modal_smoketest.py --jobs rfdiffusion boltz2 --app vibeproteins
+# Target only a subset of the pipeline
+UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py --jobs rfdiffusion boltz2
 ```
 
 Make sure you have already authenticated with Modal (`modal token new`) and deployed `app.py` before running the smoke test.

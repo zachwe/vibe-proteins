@@ -10,11 +10,12 @@ const DATABASE_PATH = process.env.DATABASE_URL || "vibeproteins.db";
 const sqlite = new Database(DATABASE_PATH);
 const db = drizzle(sqlite, { schema: authSchema });
 
+const isProduction = process.env.NODE_ENV === "production";
+
 // Trusted origins based on environment
-const trustedOrigins =
-  process.env.NODE_ENV === "production"
-    ? ["https://vibe-proteins.zachocean.com"]
-    : ["http://localhost:5173"];
+const trustedOrigins = isProduction
+  ? ["https://vibe-proteins.zachocean.com"]
+  : ["http://localhost:5173"];
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -29,6 +30,22 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5, // 5 minutes
+    },
+  },
+  // Cookie settings for cross-domain auth
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: false, // Different domains, not subdomains
+    },
+    defaultCookieAttributes: {
+      secure: isProduction,
+      httpOnly: true,
+      sameSite: isProduction ? "none" : "lax", // "none" required for cross-site cookies
+      partitioned: isProduction, // CHIPS for cross-site cookies
+    },
   },
   trustedOrigins,
   // Secret is read from BETTER_AUTH_SECRET env var automatically
