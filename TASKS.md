@@ -130,7 +130,7 @@
   - [x] Choose hosting platform (Vercel)
   - [x] Configure build settings (`pnpm --filter frontend build`)
   - [x] Set up environment variables (VITE_API_URL)
-  - [ ] Configure custom domain (vibe-proteins.zachocean.com - pending DNS)
+  - [x] Configure custom domain (vibe-proteins.zachocean.com - pending DNS)
   - [x] Set up preview deployments for PRs (via Vercel GitHub integration)
 - [x] API Deployment (Fly.io)
   - [x] Choose hosting platform (Fly.io)
@@ -141,7 +141,7 @@
   - [x] Auto-deploy on push to main (GitHub Actions)
   - [ ] Set up R2 credentials in Fly.io secrets
   - [ ] Set up Modal token in Fly.io secrets
-  - [ ] Configure CORS for production frontend URL
+  - [x] Configure CORS for production frontend URL
 - [ ] Modal Deployment
   - [ ] Modal functions auto-deploy on `modal deploy` (no CI needed)
   - [ ] Set up Modal secrets in production environment
