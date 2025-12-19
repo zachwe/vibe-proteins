@@ -115,14 +115,13 @@ SQLite database stored at `api/vibeproteins.db`.
 ### Schema
 
 **App tables:**
-- `users` - User accounts and credits
 - `challenges` - Protein design challenges
 - `jobs` - GPU inference job tracking
 - `submissions` - User design submissions
 - `credit_transactions` - Credit usage history
 
 **Auth tables (BetterAuth):**
-- `user` - User accounts
+- `user` - User accounts (includes `credits` field)
 - `session` - Active sessions
 - `account` - OAuth/credential accounts
 - `verification` - Email verification tokens
