@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db, jobs, user } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
+import { getInferenceProvider, type JobType } from "../inference";
 
 const app = new Hono();
 
@@ -10,7 +11,7 @@ const app = new Hono();
 const JOB_COSTS: Record<string, number> = {
   bindcraft: 10,
   boltzgen: 20,
-  alphafold: 5,
+  predict: 5,
   score: 1,
 };
 
@@ -69,6 +70,27 @@ app.post("/", async (c) => {
     .set({ credits: currentUser.credits - cost })
     .where(eq(user.id, session.user.id));
 
+  // Submit to inference provider (async, don't await for long-running jobs)
+  const provider = getInferenceProvider();
+
+  // Fire off the job - for now we do this synchronously since placeholders are fast
+  // TODO: For real inference, use background processing
+  try {
+    const result = await provider.submitJob(type as JobType, input ?? {});
+
+    // Update job status
+    await db
+      .update(jobs)
+      .set({
+        status: result.status,
+        output: JSON.stringify({ callId: result.callId }),
+      })
+      .where(eq(jobs.id, jobId));
+  } catch (error) {
+    console.error("Failed to submit job to inference provider:", error);
+    // Job stays in pending state, can be retried
+  }
+
   return c.json({
     job: {
       id: jobId,
@@ -77,6 +99,13 @@ app.post("/", async (c) => {
       creditsUsed: cost,
     },
   }, 201);
+});
+
+// GET /api/jobs/health - Check inference provider health (must be before /:id)
+app.get("/health", async (c) => {
+  const provider = getInferenceProvider();
+  const health = await provider.healthCheck();
+  return c.json(health, health.status === "ok" ? 200 : 503);
 });
 
 // GET /api/jobs/:id - Get job status and result

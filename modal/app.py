@@ -128,12 +128,15 @@ def compute_scores(
 # Web endpoint for triggering jobs (alternative to calling functions directly)
 @app.function(image=base_image)
 @modal.fastapi_endpoint(method="POST")
-def submit_job(job_type: str, params: dict) -> dict:
+def submit_job(request: dict) -> dict:
     """
     Web endpoint to submit inference jobs.
 
     This can be called from the Node.js API server.
     """
+    job_type = request.get("job_type", "")
+    params = request.get("params", {})
+
     if job_type == "health":
         return health_check.remote()
     elif job_type == "bindcraft":

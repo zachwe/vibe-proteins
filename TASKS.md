@@ -41,10 +41,10 @@
   - [x] `GET /submissions/:id` - single submission
   - [x] `GET /users/me` - current user + credits
   - [x] API tests (vitest)
-- [ ] Inference provider abstraction
-  - [ ] Define `InferenceProvider` interface
-  - [ ] Implement `ModalProvider`
-  - [ ] Job status polling mechanism
+- [x] Inference provider abstraction
+  - [x] Define `InferenceProvider` interface
+  - [x] Implement `ModalProvider`
+  - [x] Job status polling mechanism
 
 ## Phase 3: Modal Inference Functions
 
@@ -121,16 +121,18 @@
 
 > Update this section with what we're actively working on
 
-**Phase 1 complete! Phase 2 in progress.**
+**Phase 1 & 2 complete!**
 
 Completed:
-- All API endpoints implemented and tested (10 tests passing)
+- All API endpoints implemented and tested (20 tests passing)
 - Modal authenticated and health check working
-- R2 bucket created (`vibeproteins`)
+- R2 bucket created (`vibeproteins`) with credentials configured
+- Inference provider abstraction (`ModalProvider`)
+- Jobs route integrated with Modal via `/api/jobs/health`
 
-Next up:
-- Inference provider abstraction
+Next up (Phase 3):
 - Wire up frontend to call API endpoints
+- Implement real Modal functions (BindCraft, BoltzGen, etc.)
 
 ---
 
