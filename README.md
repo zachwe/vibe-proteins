@@ -88,9 +88,13 @@ UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py
 
 # Target only a subset of the pipeline
 UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py --jobs rfdiffusion boltz2
+
+# Hit an already deployed Modal app instead of a local ephemeral run
+UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py --mode deployed --app-name vibeproteins
 ```
 
 Make sure you have already authenticated with Modal (`modal token new`) and deployed `app.py` before running the smoke test.
+Use `--environment <name>` if you need to look up functions from a specific Modal environment.
 
 ### Cloudflare R2 (File Storage)
 
