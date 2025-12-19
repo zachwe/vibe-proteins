@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import Markdown from "react-markdown";
 import { useChallenge } from "../lib/hooks";
 import MolstarViewer from "../components/MolstarViewer";
+import DesignPanel from "../components/DesignPanel";
 
 const levelColors: Record<number, string> = {
   1: "bg-green-600",
@@ -12,6 +15,7 @@ const levelColors: Record<number, string> = {
 export default function ChallengeDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: challenge, isLoading, error } = useChallenge(id || "");
+  const [showDesignPanel, setShowDesignPanel] = useState(false);
 
   if (isLoading) {
     return (
@@ -79,7 +83,7 @@ export default function ChallengeDetail() {
 
               {challenge.educationalContent && (
                 <div className="text-slate-300 mb-4 prose prose-invert prose-sm max-w-none">
-                  {challenge.educationalContent}
+                  <Markdown>{challenge.educationalContent}</Markdown>
                 </div>
               )}
 
@@ -153,9 +157,20 @@ export default function ChallengeDetail() {
               </div>
             </div>
 
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-              Start Designing
-            </button>
+            {showDesignPanel ? (
+              <DesignPanel
+                challengeId={challenge.id}
+                targetSequence={challenge.targetSequence}
+                onClose={() => setShowDesignPanel(false)}
+              />
+            ) : (
+              <button
+                onClick={() => setShowDesignPanel(true)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Start Designing
+              </button>
+            )}
           </div>
         </div>
       </div>

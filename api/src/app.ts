@@ -26,8 +26,8 @@ export function createApp() {
     return c.json({ status: "ok", message: "VibeProteins API" });
   });
 
-  // BetterAuth routes
-  app.on(["POST", "GET"], "/api/auth/**", (c) => {
+  // BetterAuth routes - note: single asterisk for wildcard
+  app.on(["POST", "GET"], "/api/auth/*", (c) => {
     return auth.handler(c.req.raw);
   });
 

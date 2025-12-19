@@ -62,29 +62,33 @@
 
 ## Phase 4: Frontend - Browse & Explore
 
-- [ ] Landing page (static, SEO-friendly)
-- [ ] Auth pages (login, signup)
-- [ ] Challenge browser
-  - [ ] Challenge list with difficulty levels
-  - [ ] Challenge detail page with educational content
-- [ ] Mol* integration
-  - [ ] Basic viewer component
-  - [ ] Load PDB/mmCIF structures
+- [x] Landing page (Home component with hero and feature cards)
+- [x] Auth pages (login, signup)
+- [x] Challenge browser
+  - [x] Challenge list with difficulty levels
+  - [x] Challenge detail page with educational content
+- [x] Mol* integration
+  - [x] Basic viewer component
+  - [x] Load PDB/mmCIF structures
   - [ ] Highlight binding sites / hotspots
+- [x] API integration
+  - [x] React Query setup
+  - [x] API client with typed endpoints
+  - [x] Hooks for challenges, jobs, submissions
 
 ## Phase 5: Frontend - Design Workflow
 
-- [ ] Challenge workspace page
-  - [ ] Step 1: Explore (target viewer, info panel)
-  - [ ] Step 2: Design (tool selection, parameters, run job)
+- [x] Challenge workspace page
+  - [x] Step 1: Explore (target viewer, info panel)
+  - [x] Step 2: Design (tool selection, parameters, run job)
   - [ ] Step 3: Evaluate (view results, compare candidates)
   - [ ] Step 4: Submit
-- [ ] Job status UI
-  - [ ] Pending/running/completed states
-  - [ ] Progress indication for long jobs
-- [ ] Results visualization
-  - [ ] View predicted complex in Mol*
-  - [ ] Score breakdown display
+- [x] Job status UI
+  - [x] Pending/running/completed states
+  - [x] Progress indication for long jobs
+- [x] Results visualization
+  - [x] View predicted complex in Mol*
+  - [x] Score breakdown display
 
 ## Phase 6: Scoring & Feedback
 
@@ -121,18 +125,29 @@
 
 > Update this section with what we're actively working on
 
-**Phase 1 & 2 complete!**
+**Phase 5 in progress - Design Workflow UI**
 
 Completed:
-- All API endpoints implemented and tested (20 tests passing)
+- All API endpoints implemented and tested (31 tests passing)
 - Modal authenticated and health check working
 - R2 bucket created (`vibeproteins`) with credentials configured
 - Inference provider abstraction (`ModalProvider`)
-- Jobs route integrated with Modal via `/api/jobs/health`
+- React Query integration with typed API client
+- Challenge list and detail pages
+- Mol* 3D protein viewer component
+- Seed data with 3 real protein targets (Spike RBD, IL-6, VEGF-A)
+- Landing page with hero and feature cards
+- Auth pages (login, signup)
+- DesignPanel component with tool selection, job submission, and status tracking
+- Job status UI with pending/running/completed/failed states
+- ResultsPanel component with Mol* viewer and score breakdown display
 
-Next up (Phase 3):
-- Wire up frontend to call API endpoints
-- Implement real Modal functions (BindCraft, BoltzGen, etc.)
+Currently working on:
+- Step 3: Evaluate (compare candidates)
+- Step 4: Submit workflow
+
+Next up:
+- Phase 3: Modal Inference Functions (actual AI design implementation)
 
 ---
 

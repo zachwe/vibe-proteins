@@ -15,6 +15,7 @@ export const auth = betterAuth({
     provider: "sqlite",
     schema: authSchema,
   }),
+  basePath: "/api/auth",
   emailAndPassword: {
     enabled: true,
   },
@@ -23,5 +24,6 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
   },
+  trustedOrigins: ["http://localhost:5173"],
   // You can add more providers here later (Google, GitHub, etc.)
 });
