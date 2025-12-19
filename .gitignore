@@ -50,5 +50,6 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
-# Drizzle
-drizzle/
+# Drizzle (keep api/drizzle/ for migrations)
+/drizzle/
+!/api/drizzle/

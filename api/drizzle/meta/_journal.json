@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1766101367156,
+      "tag": "0000_married_apocalypse",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1766101484867,
+      "tag": "0001_overconfident_fabian_cortez",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1766102711451,
+      "tag": "0002_strong_red_skull",
+      "breakpoints": true
+    }
+  ]
+}
