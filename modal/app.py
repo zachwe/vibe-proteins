@@ -54,9 +54,10 @@ gpu_image = (
     "torchaudio==2.1.2",
     extra_index_url=TORCH_INDEX,
   )
+  .add_local_python_source("utils")
 )
 
-cpu_image = modal.Image.debian_slim(python_version="3.11").pip_install(*COMMON_PY_PKGS)
+cpu_image = modal.Image.debian_slim(python_version="3.11").pip_install(*COMMON_PY_PKGS) .add_local_python_source("utils")
 
 r2_secret = modal.Secret.from_name("r2-credentials")
 
