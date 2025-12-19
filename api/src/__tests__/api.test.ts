@@ -106,6 +106,24 @@ describe("API Endpoints", () => {
     });
   });
 
+  describe("GET /api/jobs/health", () => {
+    // This test makes a real HTTP call to Modal - skip in CI, run manually for integration testing
+    it.skipIf(process.env.CI === "true")(
+      "should return inference provider health status (no auth required)",
+      { timeout: 15000 },
+      async () => {
+        const res = await app.request("/api/jobs/health");
+        // May return 200 (ok) or 503 (error) depending on Modal availability
+        expect([200, 503]).toContain(res.status);
+
+        const data = await res.json();
+        expect(data).toHaveProperty("status");
+        expect(["ok", "error"]).toContain(data.status);
+        expect(data).toHaveProperty("message");
+      }
+    );
+  });
+
   describe("POST /api/submissions", () => {
     it("should return 401 when not authenticated", async () => {
       const res = await app.request("/api/submissions", {
