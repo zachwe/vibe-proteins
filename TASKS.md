@@ -17,9 +17,9 @@
   - [x] Configure SQLite + Drizzle
   - [x] Set up BetterAuth
 - [x] Set up Modal
-  - [ ] Create Modal account/project (requires user signup)
+  - [x] Create Modal account/project
   - [x] Set up basic Modal function structure (placeholder)
-  - [ ] Configure S3/R2 for file storage (requires user credentials)
+  - [x] Configure S3/R2 for file storage (vibeproteins bucket created)
 
 ## Phase 2: Core Infrastructure
 
@@ -121,18 +121,16 @@
 
 > Update this section with what we're actively working on
 
-**Phase 2 in progress!**
+**Phase 1 complete! Phase 2 in progress.**
 
 Completed:
-- All API endpoints implemented and tested
-- vitest test suite passing (10 tests)
+- All API endpoints implemented and tested (10 tests passing)
+- Modal authenticated and health check working
+- R2 bucket created (`vibeproteins`)
 
-Remaining for Phase 2:
-- Inference provider abstraction (when Modal is set up)
-
-Blocked (waiting on user):
-- Create Modal account and authenticate (`modal token new`)
-- Configure S3/R2 for file storage
+Next up:
+- Inference provider abstraction
+- Wire up frontend to call API endpoints
 
 ---
 

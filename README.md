@@ -54,6 +54,76 @@ pnpm dev:frontend  # http://localhost:5173
 pnpm dev:api       # http://localhost:3000
 ```
 
+## External Services Setup
+
+### Modal (GPU Inference)
+
+Modal runs the GPU inference functions (BindCraft, BoltzGen, structure prediction).
+
+```bash
+cd modal
+
+# Create venv and install dependencies (requires uv)
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -r requirements.txt
+
+# Authenticate with Modal (opens browser)
+modal token new
+
+# Verify setup
+modal run app.py::health_check
+
+# Deploy functions (for production)
+modal deploy app.py
+```
+
+### Cloudflare R2 (File Storage)
+
+R2 stores PDB files, inference results, and other assets.
+
+**1. Create R2 Bucket**
+
+Via CLI (requires wrangler):
+```bash
+# Create API token at: https://dash.cloudflare.com/profile/api-tokens
+# Use "Edit Cloudflare Workers" template (includes R2 permissions)
+
+CLOUDFLARE_API_TOKEN=your_token wrangler r2 bucket create vibeproteins
+```
+
+Or via dashboard:
+1. Go to https://dash.cloudflare.com → R2 Object Storage
+2. Click "Create bucket"
+3. Name: `vibeproteins`
+
+**2. Create S3-Compatible API Credentials**
+
+1. Go to https://dash.cloudflare.com → R2 Object Storage → Manage R2 API Tokens
+2. Click "Create API token"
+3. Permissions: Object Read & Write
+4. Specify bucket: `vibeproteins`
+5. Save the Access Key ID and Secret Access Key
+
+**3. Configure Environment**
+
+Add to `api/.env`:
+```
+R2_ACCOUNT_ID=<your cloudflare account id>
+R2_ACCESS_KEY_ID=<from step 2>
+R2_SECRET_ACCESS_KEY=<from step 2>
+R2_BUCKET_NAME=vibeproteins
+```
+
+Add to Modal secrets (for inference functions):
+```bash
+modal secret create r2-credentials \
+  R2_ACCOUNT_ID=<your account id> \
+  R2_ACCESS_KEY_ID=<key id> \
+  R2_SECRET_ACCESS_KEY=<secret key> \
+  R2_BUCKET_NAME=vibeproteins
+```
+
 ## Development Commands
 
 ### Root (monorepo)
@@ -93,24 +163,6 @@ pnpm dev:api       # http://localhost:3000
 | `build` | Build for production |
 | `preview` | Preview production build |
 | `lint` | Run ESLint |
-
-### Modal (Python)
-
-```bash
-cd modal
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Authenticate with Modal (first time)
-modal token new
-
-# Deploy functions
-modal deploy app.py
-
-# Run locally for testing
-modal run app.py::health_check
-```
 
 ## Database
 
@@ -181,18 +233,29 @@ SELECT * FROM user;  -- Query data
 
 ### API (`api/.env`)
 
-```
+```bash
+# Auth (required)
 BETTER_AUTH_SECRET=<generate with: openssl rand -base64 32>
 BETTER_AUTH_URL=http://localhost:3000
+
+# R2 Storage (optional for dev, required for inference)
+R2_ACCOUNT_ID=<your cloudflare account id>
+R2_ACCESS_KEY_ID=<from R2 API token>
+R2_SECRET_ACCESS_KEY=<from R2 API token>
+R2_BUCKET_NAME=vibeproteins
 ```
 
-### Modal (future)
+### Modal
 
-```
-MODAL_TOKEN_ID=<from modal.com>
-MODAL_TOKEN_SECRET=<from modal.com>
-AWS_ACCESS_KEY_ID=<for S3/R2>
-AWS_SECRET_ACCESS_KEY=<for S3/R2>
+Modal credentials are stored in `~/.modal.toml` after running `modal token new`.
+
+For R2 access from Modal functions, create a secret:
+```bash
+modal secret create r2-credentials \
+  R2_ACCOUNT_ID=<account id> \
+  R2_ACCESS_KEY_ID=<key id> \
+  R2_SECRET_ACCESS_KEY=<secret key> \
+  R2_BUCKET_NAME=vibeproteins
 ```
 
 ## Contributing
