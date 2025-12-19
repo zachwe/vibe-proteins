@@ -213,7 +213,7 @@ Users submit:
 
 ### GPU Inference (Modal)
 - **Python** functions running on Modal's infrastructure
-- Models: BindCraft, BoltzGen, RFdiffusion, ProteinMPNN, AlphaFold2
+- Models: RFdiffusion, BoltzGen, ProteinMPNN, AlphaFold2
 - Abstraction layer for swapping inference providers
 
 ### Inference Provider Abstraction
@@ -279,7 +279,7 @@ class LocalGPUProvider implements InferenceProvider { ... }   // Future
 
    **Step 2: Design**
    - Select binding site (click residues or use suggested hotspot)
-   - Choose design tool (BindCraft, BoltzGen, etc.)
+   - Choose design tool (RFdiffusion, BoltzGen, etc.)
    - Set parameters (binder length, number of designs)
    - Run generation (costs credits)
    - View generated candidates
@@ -317,7 +317,7 @@ class LocalGPUProvider implements InferenceProvider { ... }   // Future
    | Browse / explore target | Free |
    | Run scoring metrics | Free or minimal |
    | Run AlphaFold prediction | Low-Medium |
-   | Run BindCraft | Medium |
+   | Run RFdiffusion pipeline | Medium |
    | Run BoltzGen | High |
 
 ### Design Decisions
@@ -367,7 +367,7 @@ class LocalGPUProvider implements InferenceProvider { ... }   // Future
 ## Tools & Dependencies to Investigate
 
 ### Protein Design
-- **BindCraft** - End-to-end binder design
+- **RFdiffusion Binder** - End-to-end binder design
 - **BoltzGen** - Generative model for protein structures
 - **RFdiffusion** - Diffusion-based binder design
 - **ProteinMPNN** - Sequence design from structure

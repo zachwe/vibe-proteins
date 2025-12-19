@@ -58,7 +58,7 @@ pnpm dev:api       # http://localhost:3000
 
 ### Modal (GPU Inference)
 
-Modal runs the GPU inference functions (BindCraft, BoltzGen, structure prediction).
+Modal runs the GPU inference functions (RFdiffusion + ProteinMPNN pipeline, Boltz-2 sanity checks, scoring utilities).
 
 ```bash
 cd modal
@@ -226,7 +226,7 @@ SELECT * FROM user;  -- Query data
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, React Router
 - **API**: Hono, TypeScript, Drizzle ORM, BetterAuth
 - **Database**: SQLite (dev), S3/R2 (file storage)
-- **Inference**: Modal (Python), BindCraft, BoltzGen, AlphaFold
+- **Inference**: Modal (Python), RFdiffusion + ProteinMPNN, Boltz-2, AlphaFold
 - **Visualization**: Mol* (molecular viewer)
 
 ## Environment Variables
@@ -243,6 +243,8 @@ R2_ACCOUNT_ID=<your cloudflare account id>
 R2_ACCESS_KEY_ID=<from R2 API token>
 R2_SECRET_ACCESS_KEY=<from R2 API token>
 R2_BUCKET_NAME=vibeproteins
+R2_PUBLIC_BASE_URL=<optional CDN base for serving artifacts>
+DESIGN_RESULTS_PREFIX=designs
 ```
 
 ### Modal
@@ -256,6 +258,11 @@ modal secret create r2-credentials \
   R2_ACCESS_KEY_ID=<key id> \
   R2_SECRET_ACCESS_KEY=<secret key> \
   R2_BUCKET_NAME=vibeproteins
+
+# Optional runtime tuning (set in your Modal environment or `.env`)
+# - DUMMY_INFERENCE=0           # flip to real model hooks (default is fast stub mode)
+# - DESIGN_RESULTS_PREFIX=designs
+# - R2_PUBLIC_BASE_URL=https://cdn.example.com
 ```
 
 ## Contributing
