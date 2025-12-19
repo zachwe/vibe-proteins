@@ -48,17 +48,17 @@
 
 ## Phase 3: Modal Inference Functions
 
-- [ ] Set up base infrastructure
-  - [ ] Shared utilities (S3 upload/download, etc.)
-  - [ ] Base image with common dependencies
-- [ ] Implement design tools
-  - [ ] BindCraft function
-  - [ ] BoltzGen function
-  - [ ] ProteinMPNN function (if needed separately)
+- [x] Set up base infrastructure
+  - [x] Shared utilities (S3 upload/download, etc.)
+  - [x] Base image with common dependencies
+- [x] Implement design tools
+  - [x] RFdiffusion + ProteinMPNN pipeline function
+  - [x] Boltz-2 sanity check pipeline
+  - [x] ProteinMPNN function (standalone)
 - [ ] Implement scoring/prediction
   - [ ] AlphaFold/Boltz structure prediction
-  - [ ] ipSAE scoring
-  - [ ] Interface metrics (shape complementarity, BSA, etc.)
+  - [x] ipSAE scoring
+  - [x] Interface metrics (shape complementarity, BSA, etc.)
 
 ## Phase 4: Frontend - Browse & Explore
 
@@ -119,6 +119,36 @@
 - [ ] Educational content for each target
 - [ ] Hints system
 
+## Phase 9: CI/CD & Deployment
+
+- [ ] CI Pipeline (GitHub Actions)
+  - [ ] Run API tests on push/PR
+  - [ ] Run TypeScript type checking
+  - [ ] Run frontend build check
+  - [ ] Lint checks (if configured)
+- [ ] Frontend Deployment
+  - [ ] Choose hosting platform (Vercel, Cloudflare Pages, Netlify)
+  - [ ] Configure build settings (`pnpm --filter frontend build`)
+  - [ ] Set up environment variables (API URL)
+  - [ ] Configure custom domain (optional)
+  - [ ] Set up preview deployments for PRs
+- [ ] API Deployment
+  - [ ] Choose hosting platform (Railway, Fly.io, Render)
+  - [ ] Configure persistent volume for SQLite database
+  - [ ] Set up environment variables (secrets, R2 credentials, Modal token)
+  - [ ] Configure health check endpoint
+  - [ ] Set up database migrations on deploy
+  - [ ] Configure CORS for production frontend URL
+- [ ] Modal Deployment
+  - [ ] Modal functions auto-deploy on `modal deploy` (no CI needed)
+  - [ ] Set up Modal secrets in production environment
+  - [ ] Verify R2 bucket access from Modal
+- [ ] Production Configuration
+  - [ ] Update BetterAuth `trustedOrigins` for production domain
+  - [ ] Configure production API URL in frontend
+  - [ ] Set up monitoring/logging (optional)
+  - [ ] Configure rate limiting (optional)
+
 ---
 
 ## Current Focus
@@ -143,8 +173,8 @@ Completed:
 - ResultsPanel component with Mol* viewer and score breakdown display
 
 Currently working on:
-- Step 3: Evaluate (compare candidates)
-- Step 4: Submit workflow
+- Phase 3: Modal inference + scoring (stabilizing pipelines)
+- Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
 
 Next up:
 - Phase 3: Modal Inference Functions (actual AI design implementation)

@@ -13,39 +13,41 @@ import ResultsPanel from "./ResultsPanel";
 interface DesignPanelProps {
   challengeId: string;
   targetSequence: string | null;
+  targetStructureUrl: string | null;
   onClose: () => void;
 }
 
-type DesignTool = "bindcraft" | "boltzgen" | "proteinmpnn";
+type DesignTool = "rfdiffusion" | "boltz2" | "proteinmpnn";
 
 const toolInfo: Record<DesignTool, { name: string; description: string; credits: number }> = {
-  bindcraft: {
-    name: "BindCraft",
-    description: "AI-driven binder design using RFdiffusion + ProteinMPNN + AlphaFold2",
-    credits: 10,
+  rfdiffusion: {
+    name: "RFdiffusion",
+    description: "Generative backbone design + ProteinMPNN sequences + Boltz-2 sanity check",
+    credits: 12,
   },
-  boltzgen: {
-    name: "BoltzGen",
-    description: "Generate protein binders using Boltz-1 flow matching model",
-    credits: 5,
+  boltz2: {
+    name: "Boltz-2",
+    description: "Fast co-fold sanity check for binder + target complexes",
+    credits: 6,
   },
   proteinmpnn: {
     name: "ProteinMPNN",
     description: "Sequence design for a given backbone structure",
-    credits: 2,
+    credits: 4,
   },
 };
 
 export default function DesignPanel({
   challengeId,
   targetSequence,
+  targetStructureUrl,
   onClose,
 }: DesignPanelProps) {
   const navigate = useNavigate();
   const { data: session } = useSession();
   const createJob = useCreateJob();
 
-  const [selectedTool, setSelectedTool] = useState<DesignTool>("bindcraft");
+  const [selectedTool, setSelectedTool] = useState<DesignTool>("rfdiffusion");
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
 
@@ -64,6 +66,7 @@ export default function DesignPanel({
         type: selectedTool,
         input: {
           targetSequence,
+          targetStructureUrl,
         },
       });
 

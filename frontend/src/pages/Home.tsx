@@ -42,7 +42,7 @@ export default function Home() {
               AI-Powered Design
             </h3>
             <p className="text-slate-400">
-              Use BindCraft, BoltzGen, and other state-of-the-art protein design tools.
+              Use RFdiffusion, Boltz-2, and other state-of-the-art protein design tools.
             </p>
           </div>
           <div className="bg-slate-800 rounded-xl p-6">

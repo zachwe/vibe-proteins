@@ -161,6 +161,7 @@ export default function ChallengeDetail() {
             <DesignPanel
               challengeId={challenge.id}
               targetSequence={challenge.targetSequence}
+              targetStructureUrl={challenge.targetStructureUrl}
               onClose={() => setShowDesignPanel(false)}
             />
           ) : (
