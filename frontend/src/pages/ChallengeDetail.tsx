@@ -1,7 +1,49 @@
 import { useParams, Link } from "react-router-dom";
+import { useChallenge } from "../lib/hooks";
+import MolstarViewer from "../components/MolstarViewer";
+
+const levelColors: Record<number, string> = {
+  1: "bg-green-600",
+  2: "bg-yellow-600",
+  3: "bg-orange-600",
+  4: "bg-red-600",
+};
 
 export default function ChallengeDetail() {
   const { id } = useParams<{ id: string }>();
+  const { data: challenge, isLoading, error } = useChallenge(id || "");
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span className="ml-3 text-slate-400">Loading challenge...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <Link to="/challenges" className="text-blue-400 hover:text-blue-300">
+              &larr; Back to Challenges
+            </Link>
+          </div>
+          <div className="bg-red-500/10 border border-red-500 text-red-400 rounded-lg p-4">
+            {error.message === "HTTP 404"
+              ? "Challenge not found"
+              : `Failed to load challenge: ${error.message}`}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!challenge) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -13,14 +55,14 @@ export default function ChallengeDetail() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left side - Target viewer placeholder */}
+          {/* Left side - Target viewer */}
           <div className="bg-slate-800 rounded-xl p-4">
-            <div className="aspect-square bg-slate-700 rounded-lg flex items-center justify-center">
-              <p className="text-slate-400">
-                Mol* Viewer will render here
-                <br />
-                <span className="text-sm">Target: {id}</span>
-              </p>
+            <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">
+              <MolstarViewer
+                pdbUrl={challenge.targetStructureUrl || undefined}
+                pdbId={challenge.targetPdbId || undefined}
+                className="w-full h-full"
+              />
             </div>
           </div>
 
@@ -28,21 +70,34 @@ export default function ChallengeDetail() {
           <div className="space-y-6">
             <div className="bg-slate-800 rounded-xl p-6">
               <h1 className="text-2xl font-bold text-white mb-4">
-                Challenge: {id}
+                {challenge.name}
               </h1>
-              <p className="text-slate-400 mb-4">
-                Educational content about this target will appear here.
-                Learn about the biology, disease relevance, and why this
-                target matters.
-              </p>
-              <div className="flex gap-2">
-                <span className="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded">
-                  Level 1
+
+              {challenge.description && (
+                <p className="text-slate-400 mb-4">{challenge.description}</p>
+              )}
+
+              {challenge.educationalContent && (
+                <div className="text-slate-300 mb-4 prose prose-invert prose-sm max-w-none">
+                  {challenge.educationalContent}
+                </div>
+              )}
+
+              <div className="flex gap-2 mb-4">
+                <span
+                  className={`${levelColors[challenge.level] || "bg-slate-600"} text-white text-xs font-semibold px-2 py-1 rounded`}
+                >
+                  Level {challenge.level}
                 </span>
                 <span className="bg-slate-600 text-white text-xs font-semibold px-2 py-1 rounded">
-                  Binder
+                  {challenge.taskType}
+                </span>
+                <span className="text-slate-500 text-sm ml-2">
+                  {"★".repeat(challenge.difficulty)}
+                  {"☆".repeat(Math.max(0, 5 - challenge.difficulty))}
                 </span>
               </div>
+
             </div>
 
             {/* Workflow steps */}
