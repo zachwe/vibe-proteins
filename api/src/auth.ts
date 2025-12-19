@@ -4,8 +4,10 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as authSchema from "./db/auth-schema";
 
+const DATABASE_PATH = process.env.DATABASE_URL || "vibeproteins.db";
+
 // Create a separate connection for BetterAuth
-const sqlite = new Database("vibeproteins.db");
+const sqlite = new Database(DATABASE_PATH);
 const db = drizzle(sqlite, { schema: authSchema });
 
 export const auth = betterAuth({

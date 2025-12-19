@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: "./vibeproteins.db",
+    url: process.env.DATABASE_URL || "./vibeproteins.db",
   },
 });

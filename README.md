@@ -69,6 +69,8 @@ pnpm dev:api       # http://localhost:3000
 | `pnpm db:migrate` | Apply pending migrations |
 | `pnpm db:studio` | Open Drizzle Studio (browser DB UI) |
 | `pnpm db:shell` | Open SQLite shell |
+| `pnpm test` | Run API tests |
+| `pnpm test:watch` | Run tests in watch mode |
 
 ### API (`pnpm --filter api <command>`)
 
@@ -77,6 +79,8 @@ pnpm dev:api       # http://localhost:3000
 | `dev` | Start dev server with hot reload |
 | `build` | Compile TypeScript |
 | `start` | Run compiled output |
+| `test` | Run tests once |
+| `test:watch` | Run tests in watch mode |
 | `db:generate` | Generate Drizzle migrations |
 | `db:migrate` | Apply pending migrations |
 | `db:studio` | Open Drizzle Studio (DB browser) |

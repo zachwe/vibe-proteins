@@ -29,15 +29,18 @@
   - [x] Submissions table
   - [x] Jobs table (for tracking inference jobs)
   - [x] Credits/transactions table
-- [ ] API endpoints
-  - [ ] Auth routes (handled by BetterAuth)
-  - [ ] `GET /challenges` - list challenges
-  - [ ] `GET /challenges/:id` - challenge details
-  - [ ] `POST /jobs` - submit inference job
-  - [ ] `GET /jobs/:id` - job status/result
-  - [ ] `POST /submissions` - submit design for scoring
-  - [ ] `GET /submissions` - user's submission history
-  - [ ] `GET /users/me` - current user + credits
+- [x] API endpoints
+  - [x] Auth routes (handled by BetterAuth)
+  - [x] `GET /challenges` - list challenges
+  - [x] `GET /challenges/:id` - challenge details
+  - [x] `POST /jobs` - submit inference job
+  - [x] `GET /jobs/:id` - job status/result
+  - [x] `GET /jobs` - list user's jobs
+  - [x] `POST /submissions` - submit design for scoring
+  - [x] `GET /submissions` - user's submission history
+  - [x] `GET /submissions/:id` - single submission
+  - [x] `GET /users/me` - current user + credits
+  - [x] API tests (vitest)
 - [ ] Inference provider abstraction
   - [ ] Define `InferenceProvider` interface
   - [ ] Implement `ModalProvider`
@@ -118,13 +121,18 @@
 
 > Update this section with what we're actively working on
 
-**Phase 1 nearly complete!** Remaining:
+**Phase 2 in progress!**
+
+Completed:
+- All API endpoints implemented and tested
+- vitest test suite passing (10 tests)
+
+Remaining for Phase 2:
+- Inference provider abstraction (when Modal is set up)
+
+Blocked (waiting on user):
 - Create Modal account and authenticate (`modal token new`)
 - Configure S3/R2 for file storage
-
-**Next up (Phase 2):**
-- API endpoints for challenges, jobs, submissions
-- Inference provider abstraction
 
 ---
 
