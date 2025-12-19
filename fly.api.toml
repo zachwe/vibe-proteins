@@ -3,7 +3,7 @@ app = "vibe-proteins-api"
 primary_region = "sjc"
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "api/Dockerfile"
 
 [env]
   NODE_ENV = "production"

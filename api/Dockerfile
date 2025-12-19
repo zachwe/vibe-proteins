@@ -6,38 +6,33 @@ RUN corepack enable && corepack prepare pnpm@9 --activate
 
 WORKDIR /app
 
-# Copy package files from root (monorepo)
+# Copy entire monorepo structure for proper workspace resolution
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY api/package.json ./api/
+COPY api/ ./api/
+COPY frontend/package.json ./frontend/
 
-# Install dependencies
+# Install all dependencies (needed for workspace resolution)
 RUN pnpm install --frozen-lockfile
 
-# Copy API source code
-COPY api/ ./api/
-
 # Build the API
-RUN pnpm --filter api build
+WORKDIR /app/api
+RUN pnpm build
+
+# Use pnpm deploy to create a standalone production bundle
+WORKDIR /app
+RUN pnpm --filter api deploy --prod /prod/api
 
 # Production stage
 FROM node:20-slim AS runner
 
-# Install pnpm for running
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY api/package.json ./api/
-
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# Copy the deployed production bundle
+COPY --from=builder /prod/api ./
 
 # Copy built files and migrations
-COPY --from=builder /app/api/dist ./api/dist
-COPY api/drizzle ./api/drizzle
-COPY api/drizzle.config.ts ./api/
+COPY --from=builder /app/api/dist ./dist
+COPY --from=builder /app/api/drizzle ./drizzle
 
 # Create data directory for SQLite
 RUN mkdir -p /data
@@ -47,7 +42,5 @@ ENV DATABASE_URL=/data/vibeproteins.db
 
 EXPOSE 3000
 
-WORKDIR /app/api
-
 # Run migrations and start server
-CMD ["sh", "-c", "pnpm db:migrate && node dist/index.js"]
+CMD ["sh", "-c", "node dist/db/migrate.js && node dist/index.js"]

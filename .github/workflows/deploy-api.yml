@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "api/**"
+      - "fly.api.toml"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/deploy-api.yml"
@@ -24,7 +25,6 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only --config api/fly.toml
-        working-directory: .
+        run: flyctl deploy --remote-only --config fly.api.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
