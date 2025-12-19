@@ -53,3 +53,4 @@ coverage/
 # Drizzle (keep api/drizzle/ for migrations)
 /drizzle/
 !/api/drizzle/
+.vercel

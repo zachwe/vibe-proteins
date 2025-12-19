@@ -121,23 +121,26 @@
 
 ## Phase 9: CI/CD & Deployment
 
-- [ ] CI Pipeline (GitHub Actions)
-  - [ ] Run API tests on push/PR
-  - [ ] Run TypeScript type checking
-  - [ ] Run frontend build check
+- [x] CI Pipeline (GitHub Actions)
+  - [x] Run API tests on push/PR
+  - [x] Run TypeScript type checking
+  - [x] Run frontend build check
   - [ ] Lint checks (if configured)
-- [ ] Frontend Deployment
-  - [ ] Choose hosting platform (Vercel, Cloudflare Pages, Netlify)
-  - [ ] Configure build settings (`pnpm --filter frontend build`)
-  - [ ] Set up environment variables (API URL)
-  - [ ] Configure custom domain (optional)
-  - [ ] Set up preview deployments for PRs
-- [ ] API Deployment
-  - [ ] Choose hosting platform (Railway, Fly.io, Render)
-  - [ ] Configure persistent volume for SQLite database
-  - [ ] Set up environment variables (secrets, R2 credentials, Modal token)
-  - [ ] Configure health check endpoint
-  - [ ] Set up database migrations on deploy
+- [x] Frontend Deployment (Vercel)
+  - [x] Choose hosting platform (Vercel)
+  - [x] Configure build settings (`pnpm --filter frontend build`)
+  - [x] Set up environment variables (VITE_API_URL)
+  - [ ] Configure custom domain (vibe-proteins.zachocean.com - pending DNS)
+  - [x] Set up preview deployments for PRs (via Vercel GitHub integration)
+- [x] API Deployment (Fly.io)
+  - [x] Choose hosting platform (Fly.io)
+  - [x] Configure persistent volume for SQLite database
+  - [x] Set up environment variables (secrets)
+  - [x] Configure health check endpoint
+  - [x] Set up database migrations on deploy
+  - [x] Auto-deploy on push to main (GitHub Actions)
+  - [ ] Set up R2 credentials in Fly.io secrets
+  - [ ] Set up Modal token in Fly.io secrets
   - [ ] Configure CORS for production frontend URL
 - [ ] Modal Deployment
   - [ ] Modal functions auto-deploy on `modal deploy` (no CI needed)

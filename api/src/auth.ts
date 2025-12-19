@@ -10,6 +10,12 @@ const DATABASE_PATH = process.env.DATABASE_URL || "vibeproteins.db";
 const sqlite = new Database(DATABASE_PATH);
 const db = drizzle(sqlite, { schema: authSchema });
 
+// Trusted origins based on environment
+const trustedOrigins =
+  process.env.NODE_ENV === "production"
+    ? ["https://vibe-proteins.zachocean.com"]
+    : ["http://localhost:5173"];
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "sqlite",
@@ -24,6 +30,7 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
   },
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins,
+  // Secret is read from BETTER_AUTH_SECRET env var automatically
   // You can add more providers here later (Google, GitHub, etc.)
 });

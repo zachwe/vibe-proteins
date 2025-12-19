@@ -8,6 +8,12 @@ import usersRoutes from "./routes/users";
 import jobsRoutes from "./routes/jobs";
 import submissionsRoutes from "./routes/submissions";
 
+// CORS origins based on environment
+const corsOrigins =
+  process.env.NODE_ENV === "production"
+    ? ["https://vibe-proteins.zachocean.com"]
+    : ["http://localhost:5173"];
+
 export function createApp() {
   const app = new Hono();
 
@@ -16,7 +22,7 @@ export function createApp() {
   app.use(
     "*",
     cors({
-      origin: "http://localhost:5173",
+      origin: corsOrigins,
       credentials: true,
     })
   );
