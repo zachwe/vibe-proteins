@@ -2,26 +2,44 @@
  * Inference job types and interfaces
  */
 
-export type JobType = "bindcraft" | "boltzgen" | "predict" | "score";
+export type JobType = "rfdiffusion" | "boltz2" | "proteinmpnn" | "predict" | "score";
 
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 
 export interface JobInput {
-  // BindCraft
+  // RFdiffusion binder pipeline
   targetPdb?: string;
+  targetStructureUrl?: string | null;
+  targetSequence?: string | null;
   hotspotResidues?: string[];
   numDesigns?: number;
+  binderLength?: number;
+  diffusionSteps?: number;
+  sequencesPerBackbone?: number;
+  boltzSamples?: number;
+  binderSeeds?: number;
 
-  // BoltzGen
+  // Boltz-2 sanity check
   prompt?: string;
   numSamples?: number;
+  binderSequence?: string;
+  binderPdb?: string;
+  boltzMode?: "complex" | "binder";
+
+  // ProteinMPNN direct design
+  backbonePdb?: string;
+  sequencesPerDesign?: number;
 
   // Structure prediction
   sequence?: string;
-  targetSequence?: string;
 
   // Scoring
   designPdb?: string;
+  targetStructureKey?: string;
+
+  // Meta
+  jobId?: string;
+  challengeId?: string;
 }
 
 export interface JobResult {
@@ -42,6 +60,7 @@ export interface SubmitJobResponse {
   jobId: string;
   status: JobStatus;
   callId?: string; // Modal function call ID for polling
+  result?: JobResult; // For synchronous jobs that complete immediately
 }
 
 export interface JobStatusResponse {

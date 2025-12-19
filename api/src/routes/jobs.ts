@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
-import { db, jobs, user } from "../db";
+import { db, jobs, user, challenges } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider, type JobType } from "../inference";
@@ -9,8 +9,9 @@ const app = new Hono();
 
 // Credit costs for different job types
 const JOB_COSTS: Record<string, number> = {
-  bindcraft: 10,
-  boltzgen: 20,
+  rfdiffusion: 12,
+  boltz2: 6,
+  proteinmpnn: 4,
   predict: 5,
   score: 1,
 };
@@ -32,6 +33,19 @@ app.post("/", async (c) => {
     return c.json({ error: "Missing required fields: challengeId, type" }, 400);
   }
 
+  const challenge = await db
+    .select({
+      targetStructureUrl: challenges.targetStructureUrl,
+      targetSequence: challenges.targetSequence,
+    })
+    .from(challenges)
+    .where(eq(challenges.id, challengeId))
+    .get();
+
+  if (!challenge) {
+    return c.json({ error: "Challenge not found" }, 404);
+  }
+
   // Check credit cost
   const cost = JOB_COSTS[type] ?? 5;
 
@@ -49,9 +63,16 @@ app.post("/", async (c) => {
     );
   }
 
-  // Create the job
   const jobId = randomUUID();
   const now = new Date();
+
+  const normalizedInput = {
+    challengeId,
+    targetStructureUrl: challenge.targetStructureUrl,
+    targetSequence: challenge.targetSequence,
+    targetPdb: challenge.targetStructureUrl,
+    ...(input ?? {}),
+  };
 
   await db.insert(jobs).values({
     id: jobId,
@@ -59,7 +80,7 @@ app.post("/", async (c) => {
     challengeId,
     type,
     status: "pending",
-    input: JSON.stringify(input ?? {}),
+    input: JSON.stringify(normalizedInput ?? {}),
     creditsUsed: cost,
     createdAt: now,
   });
@@ -76,16 +97,27 @@ app.post("/", async (c) => {
   // Fire off the job - for now we do this synchronously since placeholders are fast
   // TODO: For real inference, use background processing
   try {
-    const result = await provider.submitJob(type as JobType, input ?? {});
+    const result = await provider.submitJob(type as JobType, {
+      ...normalizedInput,
+      jobId,
+      challengeId,
+    });
 
-    // Update job status
-    await db
-      .update(jobs)
-      .set({
-        status: result.status,
-        output: JSON.stringify({ callId: result.callId }),
-      })
-      .where(eq(jobs.id, jobId));
+    const updatePayload: Record<string, unknown> = {
+      status: result.status,
+      output: JSON.stringify(result.result?.output ?? { callId: result.callId }),
+    };
+
+    if (result.status === "completed") {
+      updatePayload.completedAt = new Date();
+    } else if (result.status === "failed") {
+      updatePayload.error =
+        result.result?.error ||
+        (result.result?.output?.message as string | undefined) ||
+        "Modal job failed";
+    }
+
+    await db.update(jobs).set(updatePayload).where(eq(jobs.id, jobId));
   } catch (error) {
     console.error("Failed to submit job to inference provider:", error);
     // Job stays in pending state, can be retried

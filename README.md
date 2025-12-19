@@ -78,6 +78,20 @@ modal run app.py::health_check
 modal deploy app.py
 ```
 
+### Manual Modal Smoke Test (GPU-backed, optional)
+
+Use the bundled sample structures under `sample_data/` plus the helper script to exercise each Modal function. This is intentionally **not** run in CI – GPU calls can incur cost.
+
+```bash
+# Runs RFdiffusion, ProteinMPNN, Boltz-2, and scoring against the sample PDBs
+python modal/scripts/run_modal_smoketest.py
+
+# Target a subset or a specific Modal app
+python modal/scripts/run_modal_smoketest.py --jobs rfdiffusion boltz2 --app vibeproteins
+```
+
+Make sure you have already authenticated with Modal (`modal token new`) and deployed `app.py` before running the smoke test.
+
 ### Cloudflare R2 (File Storage)
 
 R2 stores PDB files, inference results, and other assets.
@@ -264,6 +278,118 @@ modal secret create r2-credentials \
 # - DESIGN_RESULTS_PREFIX=designs
 # - R2_PUBLIC_BASE_URL=https://cdn.example.com
 ```
+
+## Deployment
+
+### Frontend (Vercel)
+
+The frontend is deployed to Vercel with automatic deploys on push to `main`.
+
+**Live URLs:**
+- Production: https://vibeproteins.vercel.app
+- Custom domain: https://vibe-proteins.zachocean.com (requires DNS setup)
+
+**Setup (already configured):**
+
+1. **Link project to Vercel** (from repo root):
+   ```bash
+   vercel link --yes
+   ```
+
+2. **Set environment variables:**
+   ```bash
+   vercel env add VITE_API_URL production
+   # Enter: https://vibe-proteins-api.fly.dev
+   ```
+
+3. **Connect GitHub for auto-deploy:**
+   ```bash
+   vercel git connect
+   ```
+
+4. **Deploy:**
+   ```bash
+   vercel --prod
+   ```
+
+**Custom Domain Setup:**
+
+To use a custom domain like `vibe-proteins.zachocean.com`:
+
+1. Add domain to Vercel:
+   ```bash
+   vercel domains add vibe-proteins.zachocean.com
+   ```
+
+2. Add DNS record at your DNS provider:
+   ```
+   Type: CNAME
+   Name: vibe-proteins
+   Value: cname.vercel-dns.com
+   ```
+
+3. Vercel will automatically provision SSL once DNS propagates.
+
+**Configuration Files:**
+- `vercel.json` - Build settings for monorepo (root directory)
+- `frontend/src/lib/api.ts` - Uses `VITE_API_URL` env var
+- `frontend/src/lib/auth.ts` - Uses `VITE_API_URL` env var
+
+### API (Fly.io)
+
+The API is deployed to Fly.io with automatic deploys via GitHub Actions.
+
+**Live URL:** https://vibe-proteins-api.fly.dev
+
+**Setup:**
+
+1. **Install Fly CLI:**
+   ```bash
+   curl -L https://fly.io/install.sh | sh
+   ```
+
+2. **Login:**
+   ```bash
+   fly auth login
+   ```
+
+3. **Create app** (already done):
+   ```bash
+   fly apps create vibe-proteins-api
+   ```
+
+4. **Create persistent volume for SQLite:**
+   ```bash
+   fly volumes create vibeproteins_data --size 1 --region iad
+   ```
+
+5. **Set secrets:**
+   ```bash
+   fly secrets set BETTER_AUTH_SECRET="<your-secret>"
+   fly secrets set BETTER_AUTH_URL="https://vibe-proteins-api.fly.dev"
+   # Add R2 credentials when ready:
+   # fly secrets set R2_ACCOUNT_ID="..." R2_ACCESS_KEY_ID="..." R2_SECRET_ACCESS_KEY="..." R2_BUCKET_NAME="vibeproteins"
+   ```
+
+6. **Deploy:**
+   ```bash
+   fly deploy
+   ```
+
+**Auto-Deploy:**
+
+GitHub Actions automatically deploys to Fly.io on push to `main`. The workflow is in `.github/workflows/deploy-api.yml`.
+
+To set up auto-deploy, add `FLY_API_TOKEN` to GitHub secrets:
+```bash
+fly tokens create deploy --app vibe-proteins-api
+gh secret set FLY_API_TOKEN --body "<token>"
+```
+
+**Configuration Files:**
+- `api/fly.toml` - Fly.io app configuration
+- `api/Dockerfile` - Production Docker image
+- `.github/workflows/deploy-api.yml` - CI/CD pipeline
 
 ## Contributing
 

@@ -10,6 +10,7 @@ import type {
   JobInput,
   SubmitJobResponse,
   JobStatusResponse,
+  JobStatus,
 } from "./types";
 import { randomUUID } from "crypto";
 
@@ -46,13 +47,22 @@ export class ModalProvider implements InferenceProvider {
       }
 
       const result = await response.json();
+      const status: JobStatus =
+        result.status && ["pending", "running", "failed", "completed"].includes(result.status)
+          ? result.status
+          : "completed";
+      const completedAt = new Date();
 
-      // For now, jobs complete synchronously (placeholder functions are fast)
-      // TODO: Implement async job handling with Modal's spawn() API
       return {
         jobId,
-        status: result.status === "not_implemented" ? "completed" : "completed",
+        status,
         callId: jobId, // In async mode, this would be the Modal call ID
+        result: {
+          status,
+          output: result,
+          startedAt: completedAt,
+          completedAt: status === "completed" ? completedAt : undefined,
+        },
       };
     } catch (error) {
       console.error("Modal job submission failed:", error);
@@ -117,17 +127,39 @@ export class ModalProvider implements InferenceProvider {
     input: JobInput
   ): Record<string, unknown> {
     switch (type) {
-      case "bindcraft":
+      case "rfdiffusion":
         return {
-          target_pdb: input.targetPdb,
+          target_pdb: input.targetPdb || input.targetStructureUrl,
+          target_structure_url: input.targetStructureUrl,
+          target_sequence: input.targetSequence,
           hotspot_residues: input.hotspotResidues || [],
-          num_designs: input.numDesigns || 10,
+          num_designs: input.numDesigns ?? 2,
+          binder_length: input.binderLength ?? 85,
+          diffusion_steps: input.diffusionSteps ?? 30,
+          sequences_per_backbone: input.sequencesPerBackbone ?? 4,
+          boltz_samples: input.boltzSamples ?? 1,
+          binder_seeds: input.binderSeeds ?? input.numDesigns ?? 2,
+          job_id: input.jobId,
+          challenge_id: input.challengeId,
         };
 
-      case "boltzgen":
+      case "boltz2":
         return {
+          target_pdb: input.targetPdb || input.targetStructureUrl,
+          binder_sequence: input.binderSequence || input.sequence,
+          binder_pdb: input.binderPdb || input.designPdb,
           prompt: input.prompt || "",
-          num_samples: input.numSamples || 5,
+          num_samples: input.numSamples ?? 1,
+          boltz_mode: input.boltzMode || "complex",
+          job_id: input.jobId,
+        };
+
+      case "proteinmpnn":
+        return {
+          backbone_pdb: input.backbonePdb || input.targetPdb,
+          num_sequences: input.sequencesPerDesign ?? input.numSamples ?? 4,
+          binder_sequence: input.binderSequence,
+          job_id: input.jobId,
         };
 
       case "predict":
@@ -139,7 +171,8 @@ export class ModalProvider implements InferenceProvider {
       case "score":
         return {
           design_pdb: input.designPdb || "",
-          target_pdb: input.targetPdb || "",
+          target_pdb: input.targetPdb || input.targetStructureUrl || "",
+          job_id: input.jobId,
         };
 
       default:

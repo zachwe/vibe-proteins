@@ -57,6 +57,9 @@ pnpm --filter api test
 
 # TypeScript check
 pnpm exec tsc --noEmit
+
+# Python scripts (Modal helpers, etc.)
+uv run python <script>
 ```
 
 ## API Routes
