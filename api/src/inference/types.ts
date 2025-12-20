@@ -2,12 +2,12 @@
  * Inference job types and interfaces
  */
 
-export type JobType = "rfdiffusion" | "boltz2" | "proteinmpnn" | "predict" | "score";
+export type JobType = "rfdiffusion3" | "boltz2" | "proteinmpnn" | "predict" | "score";
 
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 
 export interface JobInput {
-  // RFdiffusion binder pipeline
+  // RFDiffusion3 binder pipeline
   targetPdb?: string;
   targetStructureUrl?: string | null;
   targetSequence?: string | null;

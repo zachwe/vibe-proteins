@@ -64,7 +64,7 @@ describe("ModalProvider", () => {
   });
 
   describe("submitJob", () => {
-    it("should submit RFdiffusion job with transformed params", async () => {
+    it("should submit RFDiffusion3 job with transformed params", async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -74,7 +74,7 @@ describe("ModalProvider", () => {
           }),
       });
 
-      const result = await provider.submitJob("rfdiffusion", {
+      const result = await provider.submitJob("rfdiffusion3", {
         targetPdb: "some-pdb-data",
         hotspotResidues: ["A:123", "A:124"],
         numDesigns: 5,
@@ -88,7 +88,7 @@ describe("ModalProvider", () => {
 
       // Verify the params were transformed correctly
       const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
-      expect(callBody.job_type).toBe("rfdiffusion");
+      expect(callBody.job_type).toBe("rfdiffusion3");
       expect(callBody.params).toMatchObject({
         target_pdb: "some-pdb-data",
         hotspot_residues: ["A:123", "A:124"],
@@ -183,7 +183,7 @@ describe("ModalProvider", () => {
         text: () => Promise.resolve("Internal server error"),
       });
 
-      const result = await provider.submitJob("rfdiffusion", {
+      const result = await provider.submitJob("rfdiffusion3", {
         targetPdb: "test",
       });
 
@@ -193,7 +193,7 @@ describe("ModalProvider", () => {
     it("should return failed status when fetch throws", async () => {
       fetchMock.mockRejectedValueOnce(new Error("Network error"));
 
-      const result = await provider.submitJob("rfdiffusion", {
+      const result = await provider.submitJob("rfdiffusion3", {
         targetPdb: "test",
       });
 

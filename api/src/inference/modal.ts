@@ -127,7 +127,7 @@ export class ModalProvider implements InferenceProvider {
     input: JobInput
   ): Record<string, unknown> {
     switch (type) {
-      case "rfdiffusion":
+      case "rfdiffusion3":
         return {
           target_pdb: input.targetPdb || input.targetStructureUrl,
           target_structure_url: input.targetStructureUrl,

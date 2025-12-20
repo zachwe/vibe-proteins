@@ -92,7 +92,7 @@ describe("API Endpoints", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           challengeId: testChallenge.id,
-          type: "rfdiffusion",
+          type: "rfdiffusion3",
         }),
       });
       expect(res.status).toBe(401);

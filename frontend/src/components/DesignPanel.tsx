@@ -17,12 +17,12 @@ interface DesignPanelProps {
   onClose: () => void;
 }
 
-type DesignTool = "rfdiffusion" | "boltz2" | "proteinmpnn";
+type DesignTool = "rfdiffusion3" | "boltz2" | "proteinmpnn";
 
 const toolInfo: Record<DesignTool, { name: string; description: string; credits: number }> = {
-  rfdiffusion: {
-    name: "RFdiffusion",
-    description: "Generative backbone design + ProteinMPNN sequences + Boltz-2 sanity check",
+  rfdiffusion3: {
+    name: "RFDiffusion3",
+    description: "RFDiffusion3 backbone design + ProteinMPNN sequences + Boltz-2 sanity check",
     credits: 12,
   },
   boltz2: {
@@ -47,7 +47,7 @@ export default function DesignPanel({
   const { data: session } = useSession();
   const createJob = useCreateJob();
 
-  const [selectedTool, setSelectedTool] = useState<DesignTool>("rfdiffusion");
+  const [selectedTool, setSelectedTool] = useState<DesignTool>("rfdiffusion3");
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
 

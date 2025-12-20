@@ -35,7 +35,7 @@ export const jobs = sqliteTable("jobs", {
   challengeId: text("challenge_id")
     .notNull()
     .references(() => challenges.id),
-  type: text("type").notNull(), // 'rfdiffusion', 'boltz2', 'alphafold', etc.
+  type: text("type").notNull(), // 'rfdiffusion3', 'boltz2', 'alphafold', etc.
   status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
   input: text("input"), // JSON input parameters
   output: text("output"), // JSON output or S3 URL

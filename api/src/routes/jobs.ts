@@ -9,7 +9,7 @@ const app = new Hono();
 
 // Credit costs for different job types
 const JOB_COSTS: Record<string, number> = {
-  rfdiffusion: 12,
+  rfdiffusion3: 12,
   boltz2: 6,
   proteinmpnn: 4,
   predict: 5,

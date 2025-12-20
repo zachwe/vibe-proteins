@@ -23,7 +23,7 @@ if str(MODAL_DIR) not in sys.path:
 
 import modal  # noqa: E402
 
-from app import app, run_boltz2, run_proteinmpnn, run_rfdiffusion, compute_scores  # noqa: E402
+from app import app, run_boltz2, run_proteinmpnn, run_rfdiffusion3, compute_scores  # noqa: E402
 
 SAMPLE_DIR = REPO_ROOT / "sample_data"
 SAMPLE_DIR = REPO_ROOT / "sample_data"
@@ -37,11 +37,13 @@ BINDER_SEQ_PATH = SEQ_DIR / "mini_binder.fasta"
 
 TARGET_SEQUENCE = "GSA"  # Derived from mini_target.pdb
 
-GPU_JOBS = {"rfdiffusion", "proteinmpnn", "boltz2"}
-JOB_ORDER = ["rfdiffusion", "proteinmpnn", "boltz2", "score"]
+GPU_JOBS = {"rfdiffusion3", "proteinmpnn", "boltz2"}
+JOB_ORDER = ["rfdiffusion3", "proteinmpnn", "boltz2", "score"]
+EXTRA_JOBS: List[str] = []
+JOB_CHOICES = JOB_ORDER + EXTRA_JOBS + ["all"]
 
 FUNCTION_NAMES = {
-    "rfdiffusion": "run_rfdiffusion",
+    "rfdiffusion3": "run_rfdiffusion3",
     "proteinmpnn": "run_proteinmpnn",
     "boltz2": "run_boltz2",
     "score": "compute_scores",
@@ -58,7 +60,7 @@ def read_sequence(path: Path) -> str:
 
 
 LOCAL_FUNCTIONS = {
-    "rfdiffusion": run_rfdiffusion,
+    "rfdiffusion3": run_rfdiffusion3,
     "proteinmpnn": run_proteinmpnn,
     "boltz2": run_boltz2,
     "score": compute_scores,
@@ -70,7 +72,7 @@ def build_payload(job: str, args: argparse.Namespace) -> Dict[str, object]:
     binder_pdb = read_text(BINDER_PDB_PATH)
     binder_seq = read_sequence(BINDER_SEQ_PATH)
 
-    if job == "rfdiffusion":
+    if job == "rfdiffusion3":
         return (
             {
                 "target_pdb": target_pdb,
@@ -131,18 +133,18 @@ def main() -> None:
     parser.add_argument(
         "--jobs",
         nargs="+",
-        choices=JOB_ORDER + ["all"],
+        choices=JOB_CHOICES,
         default=["all"],
         help="Which jobs to run (default: all)",
     )
-    parser.add_argument("--designs", type=int, default=1, help="RFdiffusion designs to request")
+    parser.add_argument("--designs", type=int, default=1, help="RFDiffusion3 designs to request")
     parser.add_argument(
         "--sequences-per-backbone",
         type=int,
         default=2,
-        help="ProteinMPNN sequences per RFdiffusion backbone",
+        help="ProteinMPNN sequences per RFDiffusion3 backbone",
     )
-    parser.add_argument("--diffusion-steps", type=int, default=20, help="RFdiffusion steps")
+    parser.add_argument("--diffusion-steps", type=int, default=20, help="RFDiffusion3 steps")
     parser.add_argument("--boltz-samples", type=int, default=1, help="Boltz-2 samples")
     parser.add_argument("--mpnn-sequences", type=int, default=4, help="ProteinMPNN sequences")
     parser.add_argument(

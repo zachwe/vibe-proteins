@@ -52,10 +52,12 @@
   - [x] Shared utilities (S3 upload/download, etc.)
   - [x] Base image with common dependencies
 - [x] Implement design tools
-  - [x] RFdiffusion + ProteinMPNN pipeline function
+  - [x] RFDiffusion3 + ProteinMPNN pipeline function
   - [x] Boltz-2 sanity check pipeline
   - [x] ProteinMPNN function (standalone)
 - [x] Replace mocked Boltz-2 with real inference (Boltz CLI + cached weights)
+- [x] Replace mocked RFDiffusion3 with real inference (RFD3 repo + checkpoints)
+- [x] Replace mocked ProteinMPNN with real inference (ProteinMPNN repo)
 - [ ] Implement scoring/prediction
   - [ ] AlphaFold/Boltz structure prediction
   - [x] ipSAE scoring
@@ -160,11 +162,11 @@
   - [ ] Define named regions in challenge data (e.g., "ACE2 binding face")
   - [ ] Custom markdown syntax for interactive elements `[[region:id|display text]]`
   - [ ] MolstarViewer ref/context API for `highlightResidues(chainId, residues[])`
-- [ ] Hotspot selection for RFdiffusion
+- [ ] Hotspot selection for RFDiffusion3
   - [ ] Add `suggestedHotspots` field to challenge schema
   - [ ] "Advanced options" accordion in DesignPanel
   - [ ] Click-to-select residues in Mol* viewer
-  - [ ] Pass hotspots to RFdiffusion inference
+  - [ ] Pass hotspots to RFDiffusion3 inference
 - [ ] Mol* viewer enhancements
   - [ ] Color chains by role (target vs context) matching legend colors
   - [ ] Sync legend hover with viewer highlighting
@@ -186,6 +188,7 @@ Completed:
 - All API endpoints implemented and tested (31 tests passing)
 - Modal authenticated and health check working
 - R2 bucket created (`vibeproteins`) with credentials configured
+- RFDiffusion3 Modal pipeline added (binder design)
 - Inference provider abstraction (`ModalProvider`)
 - React Query integration with typed API client
 - Challenge list and detail pages
@@ -198,7 +201,7 @@ Completed:
 - ResultsPanel component with Mol* viewer and score breakdown display
 
 Currently working on:
-- Phase 3: Modal inference + scoring (Boltz-2 real inference integration + validation)
+- Phase 3: Modal inference + scoring (RFDiffusion3 + ProteinMPNN real inference integration + validation)
 - Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
 
 Next up:

@@ -58,7 +58,7 @@ pnpm dev:api       # http://localhost:3000
 
 ### Modal (GPU Inference)
 
-Modal runs the GPU inference functions (RFdiffusion + ProteinMPNN pipeline, Boltz-2 sanity checks, scoring utilities).
+Modal runs the GPU inference functions (RFDiffusion3 + ProteinMPNN pipeline, Boltz-2 sanity checks, scoring utilities).
 
 ```bash
 cd modal
@@ -83,11 +83,11 @@ modal deploy app.py
 Use the bundled sample structures under `sample_data/` plus the helper script to exercise each Modal function. This is intentionally **not** run in CI – GPU calls can incur cost.
 
 ```bash
-# Runs RFdiffusion, ProteinMPNN, Boltz-2, and scoring against the sample PDBs
+# Runs RFDiffusion3, ProteinMPNN, Boltz-2, and scoring against the sample PDBs
 UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py
 
 # Target only a subset of the pipeline
-UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py --jobs rfdiffusion boltz2
+UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py --jobs rfdiffusion3 boltz2
 
 # Hit an already deployed Modal app instead of a local ephemeral run
 UV_CACHE_DIR=.uv-cache uv run python modal/scripts/run_modal_smoketest.py --mode deployed --app-name vibeproteins
@@ -244,7 +244,7 @@ SELECT * FROM user;  -- Query data
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, React Router
 - **API**: Hono, TypeScript, Drizzle ORM, BetterAuth
 - **Database**: SQLite (dev), S3/R2 (file storage)
-- **Inference**: Modal (Python), RFdiffusion + ProteinMPNN, Boltz-2, AlphaFold
+- **Inference**: Modal (Python), RFDiffusion3 + ProteinMPNN, Boltz-2, AlphaFold
 - **Visualization**: Mol* (molecular viewer)
 
 ## Environment Variables
