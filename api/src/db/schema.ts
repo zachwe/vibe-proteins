@@ -9,11 +9,15 @@ export const challenges = sqliteTable("challenges", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
+  mission: text("mission"), // Simple, inspiring mission statement for non-experts
   difficulty: integer("difficulty").notNull(), // 1-5
   level: integer("level").notNull(), // 1-4 (curriculum level)
   targetPdbId: text("target_pdb_id"), // PDB ID if available
   targetStructureUrl: text("target_structure_url"), // S3 URL to structure file
   targetSequence: text("target_sequence"),
+  targetChainId: text("target_chain_id"), // Which chain in the PDB is the actual target
+  pdbDescription: text("pdb_description"), // What this PDB structure shows
+  chainAnnotations: text("chain_annotations"), // JSON: { "E": { "name": "Spike RBD", "role": "target" }, ... }
   taskType: text("task_type").notNull(), // 'binder', 'blocker', 'decoy', 'stabilizer'
   educationalContent: text("educational_content"), // Markdown content
   hints: text("hints"), // JSON array of hints

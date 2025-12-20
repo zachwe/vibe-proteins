@@ -55,6 +55,7 @@
   - [x] RFdiffusion + ProteinMPNN pipeline function
   - [x] Boltz-2 sanity check pipeline
   - [x] ProteinMPNN function (standalone)
+- [x] Replace mocked Boltz-2 with real inference (Boltz CLI + cached weights)
 - [ ] Implement scoring/prediction
   - [ ] AlphaFold/Boltz structure prediction
   - [x] ipSAE scoring
@@ -152,6 +153,27 @@
   - [ ] Set up monitoring/logging (optional)
   - [ ] Configure rate limiting (optional)
 
+## Phase 10: Product Improvements
+
+- [ ] Interactive educational content
+  - [ ] Hover over residue mentions (e.g., "K417, Y453") to highlight in Mol* viewer
+  - [ ] Define named regions in challenge data (e.g., "ACE2 binding face")
+  - [ ] Custom markdown syntax for interactive elements `[[region:id|display text]]`
+  - [ ] MolstarViewer ref/context API for `highlightResidues(chainId, residues[])`
+- [ ] Hotspot selection for RFdiffusion
+  - [ ] Add `suggestedHotspots` field to challenge schema
+  - [ ] "Advanced options" accordion in DesignPanel
+  - [ ] Click-to-select residues in Mol* viewer
+  - [ ] Pass hotspots to RFdiffusion inference
+- [ ] Mol* viewer enhancements
+  - [ ] Color chains by role (target vs context) matching legend colors
+  - [ ] Sync legend hover with viewer highlighting
+  - [ ] Show/hide individual chains toggle
+- [ ] Challenge content improvements
+  - [ ] Add more detailed chain annotations for all targets
+  - [ ] Expand educational content with more terminology links
+  - [ ] Add hints that unlock progressively
+
 ---
 
 ## Current Focus
@@ -176,7 +198,7 @@ Completed:
 - ResultsPanel component with Mol* viewer and score breakdown display
 
 Currently working on:
-- Phase 3: Modal inference + scoring (stabilizing pipelines)
+- Phase 3: Modal inference + scoring (Boltz-2 real inference integration + validation)
 - Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
 
 Next up:

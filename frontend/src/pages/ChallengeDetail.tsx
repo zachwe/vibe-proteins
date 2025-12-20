@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import Markdown from "react-markdown";
+import type { Components } from "react-markdown";
 import { useChallenge } from "../lib/hooks";
 import MolstarViewer from "../components/MolstarViewer";
 import DesignPanel from "../components/DesignPanel";
+import type { ChainAnnotation } from "../lib/api";
 
 const workflowSteps = [
   { id: 1, name: "Explore", description: "View target structure" },
@@ -19,11 +21,166 @@ const levelColors: Record<number, string> = {
   4: "bg-red-600",
 };
 
+// URL transform to allow gpt: scheme (react-markdown sanitizes by default)
+function urlTransform(url: string): string {
+  // Allow gpt: URLs to pass through unchanged
+  if (url.startsWith("gpt:")) {
+    return url;
+  }
+  // For other URLs, use default behavior (allows http, https, mailto, tel)
+  const allowedProtocols = ["http:", "https:", "mailto:", "tel:"];
+  try {
+    const parsed = new URL(url);
+    if (allowedProtocols.includes(parsed.protocol)) {
+      return url;
+    }
+  } catch {
+    // Relative URLs are fine
+    return url;
+  }
+  return url;
+}
+
+// Custom markdown link renderer that handles gpt: links
+function createMarkdownComponents(): Components {
+  return {
+    a: ({ href, children }) => {
+      // Check if this is a gpt: link for terminology explanation
+      if (href?.startsWith("gpt:")) {
+        const encodedQuery = href.slice(4); // Remove "gpt:" prefix
+        const query = decodeURIComponent(encodedQuery); // Decode %20 back to spaces
+        const chatGptUrl = `https://chatgpt.com/?q=${encodeURIComponent(`Explain what "${query}" means in the context of protein biology and drug design. Keep it simple and accessible.`)}`;
+        return (
+          <a
+            href={chatGptUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline decoration-dotted underline-offset-2 cursor-help"
+            title={`Learn about: ${query}`}
+          >
+            {children}
+          </a>
+        );
+      }
+      // Regular link
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline"
+        >
+          {children}
+        </a>
+      );
+    },
+  };
+}
+
+// Sequence display component with copy functionality
+function SequenceDisplay({ sequence }: { sequence: string }) {
+  const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(sequence);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-slate-700/50 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-300">Target Sequence</span>
+          <span className="text-xs text-slate-500">({sequence.length} residues)</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={copyToClipboard}
+            className="text-xs bg-slate-600 hover:bg-slate-500 text-slate-300 px-2 py-1 rounded transition-colors"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs bg-slate-600 hover:bg-slate-500 text-slate-300 px-2 py-1 rounded transition-colors"
+          >
+            {expanded ? "Collapse" : "Expand"}
+          </button>
+        </div>
+      </div>
+      <div
+        className={`font-mono text-xs text-slate-400 break-all ${
+          expanded ? "" : "line-clamp-2"
+        }`}
+      >
+        {sequence}
+      </div>
+    </div>
+  );
+}
+
+// Chain legend component
+function ChainLegend({
+  chainAnnotations,
+  pdbDescription,
+}: {
+  chainAnnotations: Record<string, ChainAnnotation>;
+  pdbDescription: string | null;
+}) {
+  const chains = Object.entries(chainAnnotations);
+
+  return (
+    <div className="bg-slate-700/50 rounded-lg p-3 mb-2">
+      {pdbDescription && (
+        <p className="text-xs text-slate-400 mb-2 italic">{pdbDescription}</p>
+      )}
+      <div className="space-y-1">
+        {chains.map(([chainId, annotation]) => (
+          <div key={chainId} className="flex items-start gap-2 text-xs">
+            <span
+              className={`inline-flex items-center justify-center w-5 h-5 rounded text-white font-bold text-xs ${
+                annotation.role === "target" ? "bg-blue-600" : "bg-slate-500"
+              }`}
+            >
+              {chainId}
+            </span>
+            <div className="flex-1">
+              <span className="font-medium text-slate-300">{annotation.name}</span>
+              {annotation.role === "target" && (
+                <span className="ml-1 text-xs text-blue-400">(target)</span>
+              )}
+              <p className="text-slate-500 mt-0.5">{annotation.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type InfoTab = "overview" | "learn" | "sequence";
+
 export default function ChallengeDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: challenge, isLoading, error } = useChallenge(id || "");
   const [showDesignPanel, setShowDesignPanel] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [activeTab, setActiveTab] = useState<InfoTab>("overview");
+
+  // Parse chain annotations from JSON string
+  const chainAnnotations = useMemo(() => {
+    if (!challenge?.chainAnnotations) return null;
+    try {
+      return JSON.parse(challenge.chainAnnotations) as Record<string, ChainAnnotation>;
+    } catch {
+      return null;
+    }
+  }, [challenge?.chainAnnotations]);
+
+  // Memoize markdown components
+  const markdownComponents = useMemo(() => createMarkdownComponents(), []);
 
   if (isLoading) {
     return (
@@ -115,6 +272,13 @@ export default function ChallengeDetail() {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Left side - Target viewer */}
         <div className="bg-slate-800 rounded-xl p-4">
+          {/* Chain legend above viewer */}
+          {chainAnnotations && (
+            <ChainLegend
+              chainAnnotations={chainAnnotations}
+              pdbDescription={challenge.pdbDescription}
+            />
+          )}
           <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">
             <MolstarViewer
               pdbUrl={challenge.targetStructureUrl || undefined}
@@ -124,36 +288,122 @@ export default function ChallengeDetail() {
           </div>
         </div>
 
-        {/* Right side - Challenge info */}
+        {/* Right side - Challenge info with tabs */}
         <div className="space-y-6">
-          <div className="bg-slate-800 rounded-xl p-6">
-            <h1 className="text-2xl font-bold text-white mb-4">
-              {challenge.name}
-            </h1>
-
-            {challenge.description && (
-              <p className="text-slate-400 mb-4">{challenge.description}</p>
-            )}
-
-            {challenge.educationalContent && (
-              <div className="text-slate-300 mb-4 prose prose-invert prose-sm max-w-none">
-                <Markdown>{challenge.educationalContent}</Markdown>
-              </div>
-            )}
-
-            <div className="flex gap-2 mb-4">
-              <span
-                className={`${levelColors[challenge.level] || "bg-slate-600"} text-white text-xs font-semibold px-2 py-1 rounded`}
+          <div className="bg-slate-800 rounded-xl overflow-hidden">
+            {/* Tab headers */}
+            <div className="flex border-b border-slate-700">
+              <button
+                onClick={() => setActiveTab("overview")}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === "overview"
+                    ? "text-blue-400 border-b-2 border-blue-400 bg-slate-700/50"
+                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700/30"
+                }`}
               >
-                Level {challenge.level}
-              </span>
-              <span className="bg-slate-600 text-white text-xs font-semibold px-2 py-1 rounded">
-                {challenge.taskType}
-              </span>
-              <span className="text-slate-500 text-sm ml-2">
-                {"★".repeat(challenge.difficulty)}
-                {"☆".repeat(Math.max(0, 5 - challenge.difficulty))}
-              </span>
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab("learn")}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === "learn"
+                    ? "text-blue-400 border-b-2 border-blue-400 bg-slate-700/50"
+                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700/30"
+                }`}
+              >
+                Learn More
+              </button>
+              <button
+                onClick={() => setActiveTab("sequence")}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === "sequence"
+                    ? "text-blue-400 border-b-2 border-blue-400 bg-slate-700/50"
+                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700/30"
+                }`}
+              >
+                Sequence
+              </button>
+            </div>
+
+            {/* Tab content */}
+            <div className="p-6">
+              {/* Overview Tab */}
+              {activeTab === "overview" && (
+                <div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span
+                      className={`${levelColors[challenge.level] || "bg-slate-600"} text-white text-xs font-semibold px-2 py-1 rounded`}
+                    >
+                      Level {challenge.level}
+                    </span>
+                    <span className="bg-slate-600 text-white text-xs font-semibold px-2 py-1 rounded">
+                      {challenge.taskType}
+                    </span>
+                    <span className="text-yellow-400 text-sm">
+                      {"★".repeat(challenge.difficulty)}
+                      {"☆".repeat(Math.max(0, 5 - challenge.difficulty))}
+                    </span>
+                  </div>
+
+                  <h1 className="text-2xl font-bold text-white mb-4">
+                    {challenge.name}
+                  </h1>
+
+                  {/* Mission statement */}
+                  {challenge.mission && (
+                    <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl">🎯</span>
+                        <div>
+                          <h2 className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-1">
+                            Your Mission
+                          </h2>
+                          <p className="text-base text-white font-medium">
+                            {challenge.mission}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {challenge.description && (
+                    <p className="text-slate-400">{challenge.description}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Learn More Tab */}
+              {activeTab === "learn" && (
+                <div>
+                  {challenge.educationalContent ? (
+                    <div className="text-slate-300 prose prose-invert prose-sm max-w-none">
+                      <Markdown
+                        components={markdownComponents}
+                        urlTransform={urlTransform}
+                      >
+                        {challenge.educationalContent}
+                      </Markdown>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 italic">
+                      No additional educational content available for this challenge.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Sequence Tab */}
+              {activeTab === "sequence" && (
+                <div>
+                  {challenge.targetSequence ? (
+                    <SequenceDisplay sequence={challenge.targetSequence} />
+                  ) : (
+                    <p className="text-slate-500 italic">
+                      No target sequence available for this challenge.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

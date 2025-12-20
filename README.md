@@ -278,7 +278,6 @@ modal secret create r2-credentials \
   R2_BUCKET_NAME=vibeproteins
 
 # Optional runtime tuning (set in your Modal environment or `.env`)
-# - DUMMY_INFERENCE=0           # flip to real model hooks (default is fast stub mode)
 # - DESIGN_RESULTS_PREFIX=designs
 # - R2_PUBLIC_BASE_URL=https://cdn.example.com
 ```

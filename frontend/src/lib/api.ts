@@ -5,16 +5,26 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 // Types matching the API responses
+export interface ChainAnnotation {
+  name: string;
+  role: "target" | "context";
+  description: string;
+}
+
 export interface Challenge {
   id: string;
   name: string;
   description: string | null;
+  mission: string | null;
   difficulty: number;
   level: number;
   taskType: string;
   targetPdbId: string | null;
   targetStructureUrl: string | null;
   targetSequence: string | null;
+  targetChainId: string | null;
+  pdbDescription: string | null;
+  chainAnnotations: string | null; // JSON string of Record<string, ChainAnnotation>
   educationalContent: string | null;
   hints: string | null;
   createdAt: string;
