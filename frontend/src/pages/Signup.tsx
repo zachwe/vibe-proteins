@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { signUp } from "../lib/auth";
 
 export default function Signup() {
@@ -36,6 +37,11 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <Helmet>
+        <title>Sign Up | VibeProteins</title>
+        <meta name="description" content="Create a free VibeProteins account to start designing proteins." />
+        <meta name="robots" content="noindex" />
+      </Helmet>
       <div className="bg-slate-800 rounded-xl p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold text-white mb-6 text-center">
           Create Your Account

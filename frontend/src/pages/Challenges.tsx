@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useChallenges } from "../lib/hooks";
 
 const levelColors: Record<number, string> = {
@@ -13,6 +14,19 @@ export default function Challenges() {
 
   return (
     <div className="min-h-screen bg-slate-900">
+      <Helmet>
+        <title>Protein Design Challenges | VibeProteins</title>
+        <meta
+          name="description"
+          content="Browse protein design challenges. Design binders for real therapeutic targets including COVID-19 spike protein, cancer targets, and inflammatory disease targets."
+        />
+        <meta property="og:title" content="Protein Design Challenges | VibeProteins" />
+        <meta
+          property="og:description"
+          content="Browse protein design challenges. Design binders for real therapeutic targets including COVID-19 spike protein, cancer targets, and inflammatory disease targets."
+        />
+        <link rel="canonical" href="https://vibeproteins.com/challenges" />
+      </Helmet>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <Link to="/" className="text-blue-400 hover:text-blue-300">

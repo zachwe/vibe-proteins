@@ -7,6 +7,12 @@
 import { db, challenges } from "./index";
 import challengesData from "./challenges.json";
 
+interface ChainAnnotation {
+  name: string;
+  role: string;
+  description: string;
+}
+
 interface ChallengeInput {
   id: string;
   name: string;
@@ -21,7 +27,7 @@ interface ChallengeInput {
   targetSequence: string;
   targetChainId: string;
   pdbDescription: string;
-  chainAnnotations: Record<string, { name: string; role: string; description: string }>;
+  chainAnnotations: { [key: string]: ChainAnnotation };
   educationalContent: string;
 }
 
@@ -30,7 +36,7 @@ async function seed() {
 
   // Use upsert to update existing challenges or insert new ones
   // This avoids foreign key issues with jobs/submissions
-  for (const challenge of challengesData as ChallengeInput[]) {
+  for (const challenge of challengesData as unknown as ChallengeInput[]) {
     await db
       .insert(challenges)
       .values({

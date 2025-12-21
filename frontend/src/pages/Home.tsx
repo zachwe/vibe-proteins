@@ -1,8 +1,22 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800">
+      <Helmet>
+        <title>VibeProteins - Learn Protein Design</title>
+        <meta
+          name="description"
+          content="Learn to design proteins using AI. Practice on real druggable targets like Spike RBD, IL-6, and PD-L1 using cutting-edge tools like RFdiffusion."
+        />
+        <meta property="og:title" content="VibeProteins - Learn Protein Design" />
+        <meta
+          property="og:description"
+          content="Learn to design proteins. Practice on real druggable targets like Spike RBD, IL-6, and PD-L1 using cutting-edge tools like RFdiffusion."
+        />
+        <link rel="canonical" href="https://vibeproteins.com" />
+      </Helmet>
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
           <h1 className="text-5xl font-bold text-white mb-6">
