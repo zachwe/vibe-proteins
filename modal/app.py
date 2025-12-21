@@ -17,7 +17,6 @@ import os
 import random
 import re
 import shlex
-import string
 import subprocess
 import sys
 import tempfile
@@ -31,7 +30,16 @@ CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
   sys.path.append(str(CURRENT_DIR))
 
+from utils.boltz_helpers import (
+  _clean_sequence,
+  _extract_chain_sequences,
+  _read_boltz_confidence,
+  _select_boltz_prediction,
+  _select_chain_id,
+  _write_boltz_yaml,
+)
 from utils.metrics import chain_ids_from_structure, compute_interface_metrics
+from utils.rfd3_shim import RMSNORM_SHIM, ensure_rmsnorm
 from utils.storage import download_to_path, object_url, upload_bytes, upload_file
 
 app = modal.App("vibeproteins")
@@ -49,6 +57,7 @@ COMMON_PY_PKGS = [
   "packaging",
   "scipy",
   "requests",
+  "pyyaml",
   "wheel",
   "fastapi[standard]",
 ]
@@ -343,46 +352,6 @@ def _extract_rfd3_error(log_path: Path) -> str:
   return _tail_file(log_path)
 
 
-RMSNORM_SHIM = """\
-import torch
-
-if not hasattr(torch.nn, "RMSNorm"):
-  class RMSNorm(torch.nn.Module):
-    def __init__(
-      self,
-      normalized_shape,
-      eps: float = 1e-5,
-      elementwise_affine: bool = True,
-      device=None,
-      dtype=None,
-    ) -> None:
-      super().__init__()
-      if isinstance(normalized_shape, int):
-        normalized_shape = (normalized_shape,)
-      self.normalized_shape = tuple(normalized_shape)
-      self.eps = eps
-      self.elementwise_affine = elementwise_affine
-      if elementwise_affine:
-        self.weight = torch.nn.Parameter(
-          torch.ones(self.normalized_shape, device=device, dtype=dtype)
-        )
-      else:
-        self.register_parameter("weight", None)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-      dims = tuple(range(-len(self.normalized_shape), 0))
-      scale = torch.rsqrt(x.pow(2).mean(dim=dims, keepdim=True) + self.eps)
-      x = x * scale
-      if self.weight is None:
-        return x
-      return x * self.weight
-
-  torch.nn.RMSNorm = RMSNorm  # type: ignore[attr-defined]
-"""
-
-
-def _ensure_rmsnorm() -> None:
-  exec(RMSNORM_SHIM, {})
 
 
 def _run_proteinmpnn_local(
@@ -428,124 +397,12 @@ def _run_proteinmpnn_local(
   return sequences[:num_sequences]
 
 
-def _clean_sequence(sequence: str) -> str:
-  lines = [line.strip() for line in sequence.splitlines() if line.strip()]
-  return "".join(line for line in lines if not line.startswith(">"))
-
-
-def _extract_chain_sequences(path: Path) -> List[tuple[str, str]]:
-  from Bio.PDB import PDBParser
-  from Bio.PDB.Polypeptide import PPBuilder
-
-  parser = PDBParser(QUIET=True)
-  structure = parser.get_structure("structure", str(path))
-  builder = PPBuilder()
-  sequences: List[tuple[str, str]] = []
-  for chain in structure.get_chains():
-    fragments = [str(pp.get_sequence()) for pp in builder.build_peptides(chain)]
-    if fragments:
-      sequences.append((chain.id, "".join(fragments)))
-  return sequences
-
-
-def _select_chain_id(used: set[str]) -> str:
-  for letter in string.ascii_uppercase + string.ascii_lowercase:
-    if letter not in used:
-      return letter
-  raise ValueError("Unable to select an unused chain id for the binder.")
-
-
-def _write_boltz_yaml(
-  target_sequences: List[tuple[str, str]],
-  binder_sequence: str,
-  binder_chain_id: str,
-  output_path: Path,
-  use_msa_server: bool,
-) -> Path:
-  import yaml
-
-  sequences_payload: List[dict] = []
-  for chain_id, sequence in target_sequences:
-    entry = {"protein": {"id": chain_id, "sequence": sequence}}
-    if not use_msa_server:
-      entry["protein"]["msa"] = "empty"
-    sequences_payload.append(entry)
-
-  binder_entry = {"protein": {"id": binder_chain_id, "sequence": binder_sequence}}
-  if not use_msa_server:
-    binder_entry["protein"]["msa"] = "empty"
-  sequences_payload.append(binder_entry)
-
-  payload = {"version": 1, "sequences": sequences_payload}
-  output_path.write_text(yaml.safe_dump(payload, sort_keys=False))
-  return output_path
-
-
 def _ensure_boltz2_cache(cache_dir: Path) -> None:
   from boltz.main import download_boltz2
 
   cache_dir.mkdir(parents=True, exist_ok=True)
   if not (cache_dir / "boltz2_conf.ckpt").exists():
     download_boltz2(cache_dir)
-
-
-def _boltz_prediction_dirs(out_dir: Path, input_name: str) -> list[Path]:
-  predictions_dir = out_dir / "predictions"
-  if not predictions_dir.exists():
-    return []
-
-  manifest_path = out_dir / "processed" / "manifest.json"
-  record_ids: list[str] = []
-  if manifest_path.exists():
-    try:
-      manifest = json.loads(manifest_path.read_text())
-      record_ids = [
-        record["id"]
-        for record in manifest.get("records", [])
-        if isinstance(record, dict) and record.get("id")
-      ]
-    except json.JSONDecodeError:
-      record_ids = []
-
-  candidate_dirs: list[Path] = []
-  for record_id in record_ids or [input_name]:
-    candidate_dir = predictions_dir / record_id
-    if candidate_dir.exists():
-      candidate_dirs.append(candidate_dir)
-
-  if not candidate_dirs:
-    candidate_dirs = [path for path in predictions_dir.iterdir() if path.is_dir()]
-
-  return candidate_dirs
-
-
-def _select_boltz_prediction(out_dir: Path, input_name: str) -> Path:
-  pred_dirs = _boltz_prediction_dirs(out_dir, input_name)
-  candidates: list[Path] = []
-  for pred_dir in pred_dirs:
-    record_id = pred_dir.name
-    candidates.extend(sorted(pred_dir.glob(f"{record_id}_model_*.pdb")))
-    candidates.extend(sorted(pred_dir.glob(f"{record_id}_model_*.cif")))
-    candidates.extend(sorted(pred_dir.glob("*.pdb")))
-    candidates.extend(sorted(pred_dir.glob("*.cif")))
-
-  if not candidates:
-    raise FileNotFoundError(f"No Boltz predictions found under {out_dir / 'predictions'}")
-  return candidates[0]
-
-
-def _read_boltz_confidence(out_dir: Path, input_name: str) -> dict:
-  pred_dirs = _boltz_prediction_dirs(out_dir, input_name)
-  candidates: list[Path] = []
-  for pred_dir in pred_dirs:
-    record_id = pred_dir.name
-    candidates.extend(sorted(pred_dir.glob(f"confidence_{record_id}_model_*.json")))
-    candidates.extend(sorted(pred_dir.glob("confidence_*_model_*.json")))
-
-  if not candidates:
-    return {}
-  preferred = next((path for path in candidates if "_model_0" in path.name), candidates[0])
-  return json.loads(preferred.read_text())
 
 
 @app.function(image=cpu_image)
@@ -616,7 +473,7 @@ def run_rfdiffusion3(
 
     _ensure_rfd3_models(RFD3_MODELS_DIR)
 
-    _ensure_rmsnorm()
+    ensure_rmsnorm()
 
     try:
       from rfd3.model.RFD3 import RFD3  # noqa: F401

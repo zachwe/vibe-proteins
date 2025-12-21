@@ -1,0 +1,118 @@
+from __future__ import annotations
+
+import json
+import string
+from pathlib import Path
+from typing import List
+
+
+def _clean_sequence(sequence: str) -> str:
+  lines = [line.strip() for line in sequence.splitlines() if line.strip()]
+  return "".join(line for line in lines if not line.startswith(">"))
+
+
+def _extract_chain_sequences(path: Path) -> List[tuple[str, str]]:
+  from Bio.PDB import PDBParser
+  from Bio.PDB.Polypeptide import PPBuilder
+
+  parser = PDBParser(QUIET=True)
+  structure = parser.get_structure("structure", str(path))
+  builder = PPBuilder()
+  sequences: List[tuple[str, str]] = []
+  for chain in structure.get_chains():
+    fragments = [str(pp.get_sequence()) for pp in builder.build_peptides(chain)]
+    if fragments:
+      sequences.append((chain.id, "".join(fragments)))
+  return sequences
+
+
+def _select_chain_id(used: set[str]) -> str:
+  for letter in string.ascii_uppercase + string.ascii_lowercase:
+    if letter not in used:
+      return letter
+  raise ValueError("Unable to select an unused chain id for the binder.")
+
+
+def _write_boltz_yaml(
+  target_sequences: List[tuple[str, str]],
+  binder_sequence: str,
+  binder_chain_id: str,
+  output_path: Path,
+  use_msa_server: bool,
+) -> Path:
+  import yaml
+
+  sequences_payload: List[dict] = []
+  for chain_id, sequence in target_sequences:
+    entry = {"protein": {"id": chain_id, "sequence": sequence}}
+    if not use_msa_server:
+      entry["protein"]["msa"] = "empty"
+    sequences_payload.append(entry)
+
+  binder_entry = {"protein": {"id": binder_chain_id, "sequence": binder_sequence}}
+  if not use_msa_server:
+    binder_entry["protein"]["msa"] = "empty"
+  sequences_payload.append(binder_entry)
+
+  payload = {"version": 1, "sequences": sequences_payload}
+  output_path.write_text(yaml.safe_dump(payload, sort_keys=False))
+  return output_path
+
+
+def _boltz_prediction_dirs(out_dir: Path, input_name: str) -> list[Path]:
+  predictions_dir = out_dir / "predictions"
+  if not predictions_dir.exists():
+    return []
+
+  manifest_path = out_dir / "processed" / "manifest.json"
+  record_ids: list[str] = []
+  if manifest_path.exists():
+    try:
+      manifest = json.loads(manifest_path.read_text())
+      record_ids = [
+        record["id"]
+        for record in manifest.get("records", [])
+        if isinstance(record, dict) and record.get("id")
+      ]
+    except json.JSONDecodeError:
+      record_ids = []
+
+  candidate_dirs: list[Path] = []
+  for record_id in record_ids or [input_name]:
+    candidate_dir = predictions_dir / record_id
+    if candidate_dir.exists():
+      candidate_dirs.append(candidate_dir)
+
+  if not candidate_dirs:
+    candidate_dirs = [path for path in predictions_dir.iterdir() if path.is_dir()]
+
+  return candidate_dirs
+
+
+def _select_boltz_prediction(out_dir: Path, input_name: str) -> Path:
+  pred_dirs = _boltz_prediction_dirs(out_dir, input_name)
+  candidates: list[Path] = []
+  for pred_dir in pred_dirs:
+    record_id = pred_dir.name
+    candidates.extend(sorted(pred_dir.glob(f"{record_id}_model_*.pdb")))
+    candidates.extend(sorted(pred_dir.glob(f"{record_id}_model_*.cif")))
+    candidates.extend(sorted(pred_dir.glob("*.pdb")))
+    candidates.extend(sorted(pred_dir.glob("*.cif")))
+
+  if not candidates:
+    raise FileNotFoundError(f"No Boltz predictions found under {out_dir / 'predictions'}")
+  return candidates[0]
+
+
+def _read_boltz_confidence(out_dir: Path, input_name: str) -> dict:
+  pred_dirs = _boltz_prediction_dirs(out_dir, input_name)
+  candidates: list[Path] = []
+  for pred_dir in pred_dirs:
+    record_id = pred_dir.name
+    candidates.extend(sorted(pred_dir.glob(f"confidence_{record_id}_model_*.json")))
+    candidates.extend(sorted(pred_dir.glob("confidence_*_model_*.json")))
+
+  if not candidates:
+    return {}
+  preferred = next((path for path in candidates if "_model_0" in path.name), candidates[0])
+  return json.loads(preferred.read_text())

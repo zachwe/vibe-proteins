@@ -78,6 +78,16 @@ modal run app.py::health_check
 modal deploy app.py
 ```
 
+### Modal Unit Tests (helpers)
+
+```bash
+cd modal
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -r requirements.txt
+uv run python -m unittest discover -s tests
+```
+
 ### Manual Modal Smoke Test (GPU-backed, optional)
 
 Use the bundled sample structures under `sample_data/` plus the helper script to exercise each Modal function. This is intentionally **not** run in CI – GPU calls can incur cost.

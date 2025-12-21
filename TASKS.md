@@ -62,6 +62,7 @@
   - [ ] AlphaFold/Boltz structure prediction
   - [x] ipSAE scoring
   - [x] Interface metrics (shape complementarity, BSA, etc.)
+- [x] Add Modal helper unit tests + CI coverage
 
 ## Phase 4: Frontend - Browse & Explore
 
@@ -182,9 +183,13 @@
 
 > Update this section with what we're actively working on
 
-**Phase 5 in progress - Design Workflow UI**
+**Phase 3 in progress - Modal inference reliability**
+
+In progress:
+- Modal inference + scoring validation
 
 Completed:
+- Modal helper unit tests + CI coverage
 - All API endpoints implemented and tested (31 tests passing)
 - Modal authenticated and health check working
 - R2 bucket created (`vibeproteins`) with credentials configured
