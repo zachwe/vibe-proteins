@@ -42,21 +42,35 @@ function urlTransform(url: string): string {
 }
 
 // Custom markdown link renderer that handles gpt: links
+// Format: [display text](gpt:topic) or [display text](gpt:topic||custom question)
 function createMarkdownComponents(): Components {
   return {
     a: ({ href, children }) => {
       // Check if this is a gpt: link for terminology explanation
       if (href?.startsWith("gpt:")) {
-        const encodedQuery = href.slice(4); // Remove "gpt:" prefix
-        const query = decodeURIComponent(encodedQuery); // Decode %20 back to spaces
-        const chatGptUrl = `https://chatgpt.com/?q=${encodeURIComponent(`Explain what "${query}" means in the context of protein biology and drug design. Keep it simple and accessible.`)}`;
+        const content = href.slice(4); // Remove "gpt:" prefix
+        const decoded = decodeURIComponent(content);
+
+        // Check for custom question format: topic||question
+        let topic: string;
+        let question: string;
+        if (decoded.includes("||")) {
+          const [topicPart, questionPart] = decoded.split("||");
+          topic = topicPart;
+          question = questionPart;
+        } else {
+          topic = decoded;
+          question = `Explain what "${topic}" means in the context of protein biology and drug design. Keep it simple and accessible.`;
+        }
+
+        const chatGptUrl = `https://chatgpt.com/?q=${encodeURIComponent(question)}`;
         return (
           <a
             href={chatGptUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-400 hover:text-blue-300 underline decoration-dotted underline-offset-2 cursor-help"
-            title={`Learn about: ${query}`}
+            title={`Learn about: ${topic}`}
           >
             {children}
           </a>
