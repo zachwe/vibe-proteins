@@ -29,6 +29,13 @@
       "when": 1766187652486,
       "tag": "0003_mature_green_goblin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1766351778597,
+      "tag": "0004_illegal_stone_men",
+      "breakpoints": true
     }
   ]
 }

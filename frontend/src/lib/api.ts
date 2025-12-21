@@ -20,6 +20,7 @@ export interface Challenge {
   level: number;
   taskType: string;
   targetPdbId: string | null;
+  targetUniprotId: string | null;
   targetStructureUrl: string | null;
   targetSequence: string | null;
   targetChainId: string | null;

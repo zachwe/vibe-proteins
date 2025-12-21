@@ -16,6 +16,7 @@ interface ChallengeInput {
   level: number;
   taskType: string;
   targetPdbId: string;
+  targetUniprotId: string;
   targetStructureUrl: string;
   targetSequence: string;
   targetChainId: string;
@@ -47,6 +48,7 @@ async function seed() {
           level: challenge.level,
           taskType: challenge.taskType,
           targetPdbId: challenge.targetPdbId,
+          targetUniprotId: challenge.targetUniprotId,
           targetStructureUrl: challenge.targetStructureUrl,
           targetSequence: challenge.targetSequence,
           targetChainId: challenge.targetChainId,

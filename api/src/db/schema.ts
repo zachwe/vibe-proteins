@@ -13,6 +13,7 @@ export const challenges = sqliteTable("challenges", {
   difficulty: integer("difficulty").notNull(), // 1-5
   level: integer("level").notNull(), // 1-4 (curriculum level)
   targetPdbId: text("target_pdb_id"), // PDB ID if available
+  targetUniprotId: text("target_uniprot_id"), // UniProt ID if available
   targetStructureUrl: text("target_structure_url"), // S3 URL to structure file
   targetSequence: text("target_sequence"),
   targetChainId: text("target_chain_id"), // Which chain in the PDB is the actual target

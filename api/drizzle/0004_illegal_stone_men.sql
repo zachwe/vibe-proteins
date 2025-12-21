@@ -1,0 +1,1 @@
+ALTER TABLE `challenges` ADD `target_uniprot_id` text;

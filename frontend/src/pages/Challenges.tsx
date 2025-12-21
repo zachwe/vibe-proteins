@@ -66,7 +66,7 @@ export default function Challenges() {
                     <h2 className="text-xl font-semibold text-white mb-2">
                       {challenge.name}
                     </h2>
-                    <p className="text-slate-400">{challenge.description}</p>
+                    <p className="text-slate-400">{challenge.mission || challenge.description}</p>
                   </div>
                   <div className="text-slate-500">
                     {"★".repeat(challenge.difficulty)}
