@@ -8,11 +8,14 @@ from pathlib import Path
 from typing import Iterable, List, Set
 
 import numpy as np
-from Bio.PDB import PDBParser
+from Bio.PDB import MMCIFParser, PDBParser
 
 
 def _load_structure(path: Path):
-  parser = PDBParser(QUIET=True)
+  if path.suffix.lower() == ".cif":
+    parser = MMCIFParser(QUIET=True)
+  else:
+    parser = PDBParser(QUIET=True)
   return parser.get_structure("structure", str(path))
 
 

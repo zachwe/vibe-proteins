@@ -113,7 +113,7 @@ RESULTS_PREFIX = os.environ.get("DESIGN_RESULTS_PREFIX", "designs").strip("/")
 BOLTZ_CACHE_DIR = "/boltz-cache"
 BOLTZ_VOLUME_NAME = os.environ.get("BOLTZ_VOLUME_NAME", "boltz-models")
 BOLTZ_MODEL_VOLUME = modal.Volume.from_name(BOLTZ_VOLUME_NAME, create_if_missing=True)
-BOLTZ_USE_MSA_SERVER = os.environ.get("BOLTZ_USE_MSA_SERVER", "1").lower() in {"1", "true", "yes", "on"}
+BOLTZ_USE_MSA_SERVER = os.environ.get("BOLTZ_USE_MSA_SERVER", "0").lower() in {"1", "true", "yes", "on"}
 BOLTZ_EXTRA_ARGS = os.environ.get("BOLTZ_EXTRA_ARGS", "")
 PROTEINMPNN_DIR = Path("/proteinmpnn")
 RFD3_MODELS_DIR = Path("/rfd3-models")
@@ -489,15 +489,59 @@ def _ensure_boltz2_cache(cache_dir: Path) -> None:
     download_boltz2(cache_dir)
 
 
-def _select_boltz_prediction(pred_dir: Path, input_name: str) -> Path:
-  candidates = sorted(pred_dir.glob(f"{input_name}_model_*.pdb"))
+def _boltz_prediction_dirs(out_dir: Path, input_name: str) -> list[Path]:
+  predictions_dir = out_dir / "predictions"
+  if not predictions_dir.exists():
+    return []
+
+  manifest_path = out_dir / "processed" / "manifest.json"
+  record_ids: list[str] = []
+  if manifest_path.exists():
+    try:
+      manifest = json.loads(manifest_path.read_text())
+      record_ids = [
+        record["id"]
+        for record in manifest.get("records", [])
+        if isinstance(record, dict) and record.get("id")
+      ]
+    except json.JSONDecodeError:
+      record_ids = []
+
+  candidate_dirs: list[Path] = []
+  for record_id in record_ids or [input_name]:
+    candidate_dir = predictions_dir / record_id
+    if candidate_dir.exists():
+      candidate_dirs.append(candidate_dir)
+
+  if not candidate_dirs:
+    candidate_dirs = [path for path in predictions_dir.iterdir() if path.is_dir()]
+
+  return candidate_dirs
+
+
+def _select_boltz_prediction(out_dir: Path, input_name: str) -> Path:
+  pred_dirs = _boltz_prediction_dirs(out_dir, input_name)
+  candidates: list[Path] = []
+  for pred_dir in pred_dirs:
+    record_id = pred_dir.name
+    candidates.extend(sorted(pred_dir.glob(f"{record_id}_model_*.pdb")))
+    candidates.extend(sorted(pred_dir.glob(f"{record_id}_model_*.cif")))
+    candidates.extend(sorted(pred_dir.glob("*.pdb")))
+    candidates.extend(sorted(pred_dir.glob("*.cif")))
+
   if not candidates:
-    raise FileNotFoundError(f"No Boltz predictions found in {pred_dir}")
+    raise FileNotFoundError(f"No Boltz predictions found under {out_dir / 'predictions'}")
   return candidates[0]
 
 
-def _read_boltz_confidence(pred_dir: Path, input_name: str) -> dict:
-  candidates = sorted(pred_dir.glob(f"confidence_{input_name}_model_*.json"))
+def _read_boltz_confidence(out_dir: Path, input_name: str) -> dict:
+  pred_dirs = _boltz_prediction_dirs(out_dir, input_name)
+  candidates: list[Path] = []
+  for pred_dir in pred_dirs:
+    record_id = pred_dir.name
+    candidates.extend(sorted(pred_dir.glob(f"confidence_{record_id}_model_*.json")))
+    candidates.extend(sorted(pred_dir.glob("confidence_*_model_*.json")))
+
   if not candidates:
     return {}
   preferred = next((path for path in candidates if "_model_0" in path.name), candidates[0])
@@ -812,13 +856,20 @@ def run_boltz2(
 
     subprocess.run(cmd, check=True)
 
-    prediction_dir = out_dir / "predictions" / input_name
-    prediction_path = _select_boltz_prediction(prediction_dir, input_name)
-    confidence = _read_boltz_confidence(prediction_dir, input_name)
+    results_dir = out_dir / f"boltz_results_{input_name}"
+    boltz_out_dir = results_dir if results_dir.exists() else out_dir
+
+    prediction_path = _select_boltz_prediction(boltz_out_dir, input_name)
+    confidence = _read_boltz_confidence(boltz_out_dir, input_name)
     metrics = compute_interface_metrics(prediction_path, target_chain_ids)
 
-    complex_key = f"{RESULTS_PREFIX}/{job_id}/boltz2_complex.pdb"
-    upload_file(prediction_path, complex_key, content_type="chemical/x-pdb")
+    complex_ext = prediction_path.suffix.lower() or ".pdb"
+    complex_key = f"{RESULTS_PREFIX}/{job_id}/boltz2_complex{complex_ext}"
+    if complex_ext == ".cif":
+      content_type = "chemical/x-mmcif"
+    else:
+      content_type = "chemical/x-pdb"
+    upload_file(prediction_path, complex_key, content_type=content_type)
     confidence_key = None
     if confidence:
       confidence_key = f"{RESULTS_PREFIX}/{job_id}/boltz2_confidence.json"
