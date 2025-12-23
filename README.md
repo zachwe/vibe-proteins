@@ -88,6 +88,17 @@ uv pip install -r requirements.txt
 uv run python -m unittest discover -s tests
 ```
 
+### Jobs API E2E Tests (real Modal)
+
+These tests hit the deployed Modal endpoint and will incur GPU usage.
+
+```bash
+# From repo root
+MODAL_E2E=true \
+MODAL_ENDPOINT=https://zach-b-ocean--vibeproteins-submit-job.modal.run \
+pnpm --filter api test -- jobs.e2e.test.ts
+```
+
 ### Manual Modal Smoke Test (GPU-backed, optional)
 
 Use the bundled sample structures under `sample_data/` plus the helper script to exercise each Modal function. This is intentionally **not** run in CI – GPU calls can incur cost.

@@ -148,7 +148,6 @@ export class ModalProvider implements InferenceProvider {
           target_pdb: input.targetPdb || input.targetStructureUrl,
           binder_sequence: input.binderSequence || input.sequence,
           binder_pdb: input.binderPdb || input.designPdb,
-          prompt: input.prompt || "",
           num_samples: input.numSamples ?? 1,
           boltz_mode: input.boltzMode || "complex",
           job_id: input.jobId,
@@ -158,7 +157,6 @@ export class ModalProvider implements InferenceProvider {
         return {
           backbone_pdb: input.backbonePdb || input.targetPdb,
           num_sequences: input.sequencesPerDesign ?? input.numSamples ?? 4,
-          binder_sequence: input.binderSequence,
           job_id: input.jobId,
         };
 

@@ -105,7 +105,6 @@ describe("ModalProvider", () => {
       });
 
       await provider.submitJob("boltz2", {
-        prompt: "design a binder",
         numSamples: 10,
         binderSequence: "AAA",
       });
@@ -113,7 +112,6 @@ describe("ModalProvider", () => {
       const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(callBody.job_type).toBe("boltz2");
       expect(callBody.params).toMatchObject({
-        prompt: "design a binder",
         num_samples: 10,
         binder_sequence: "AAA",
       });
