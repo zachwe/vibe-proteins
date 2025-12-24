@@ -17,6 +17,10 @@ interface ResultsPanelProps {
 interface JobOutput {
   structureUrl?: string;
   pdbData?: string;
+  complex?: {
+    url?: string;
+    signedUrl?: string;
+  };
   scores?: {
     plddt?: number;
     ptm?: number;
@@ -28,6 +32,13 @@ interface JobOutput {
   sequence?: string;
   designName?: string;
   message?: string;
+}
+
+function resolveStructureUrl(output: JobOutput | null): string | undefined {
+  if (!output) return undefined;
+  if (output.complex?.signedUrl) return output.complex.signedUrl;
+  if (output.complex?.url) return output.complex.url;
+  return output.structureUrl;
 }
 
 const scoreLabels: Record<string, { name: string; description: string; good: string }> = {
@@ -146,7 +157,8 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
   }
 
   // Completed job - show results
-  const hasStructure = output?.structureUrl || output?.pdbData;
+  const structureUrl = resolveStructureUrl(output);
+  const hasStructure = structureUrl || output?.pdbData;
   const hasScores = output?.scores && Object.keys(output.scores).length > 0;
 
   return (
@@ -169,7 +181,7 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
             </h3>
             <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">
               <MolstarViewer
-                pdbUrl={output.structureUrl}
+                pdbUrl={structureUrl}
                 className="w-full h-full"
               />
             </div>

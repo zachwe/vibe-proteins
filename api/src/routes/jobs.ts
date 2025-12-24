@@ -4,6 +4,7 @@ import { db, jobs, user, challenges } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider, type JobType } from "../inference";
+import { getSignedUrl } from "../storage/r2";
 
 const app = new Hono();
 
@@ -15,6 +16,46 @@ const JOB_COSTS: Record<string, number> = {
   predict: 5,
   score: 1,
 };
+
+const SIGNED_URL_TTL_SECONDS = Number.parseInt(
+  process.env.R2_SIGNED_URL_TTL_SECONDS || "900",
+  10
+);
+
+function attachSignedUrls(value: unknown, cache = new Map<string, string>()): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => attachSignedUrls(entry, cache));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+
+  for (const [key, val] of Object.entries(record)) {
+    next[key] = attachSignedUrls(val, cache);
+  }
+
+  if (typeof record.key === "string") {
+    const key = record.key;
+    const cached = cache.get(key);
+    if (cached) {
+      next.signedUrl = cached;
+    } else {
+      try {
+        const signed = getSignedUrl(key, SIGNED_URL_TTL_SECONDS);
+        cache.set(key, signed);
+        next.signedUrl = signed;
+      } catch (error) {
+        console.warn("Unable to sign R2 URL:", error);
+      }
+    }
+  }
+
+  return next;
+}
 
 // POST /api/jobs - Submit a new inference job
 app.post("/", async (c) => {
@@ -162,11 +203,13 @@ app.get("/:id", async (c) => {
     return c.json({ error: "Job not found" }, 404);
   }
 
+  const parsedOutput = job.output ? JSON.parse(job.output) : null;
+
   return c.json({
     job: {
       ...job,
       input: job.input ? JSON.parse(job.input) : null,
-      output: job.output ? JSON.parse(job.output) : null,
+      output: parsedOutput ? attachSignedUrls(parsedOutput) : null,
     },
   });
 });
@@ -188,11 +231,14 @@ app.get("/", async (c) => {
     .all();
 
   return c.json({
-    jobs: userJobs.map((job) => ({
-      ...job,
-      input: job.input ? JSON.parse(job.input) : null,
-      output: job.output ? JSON.parse(job.output) : null,
-    })),
+    jobs: userJobs.map((job) => {
+      const parsedOutput = job.output ? JSON.parse(job.output) : null;
+      return {
+        ...job,
+        input: job.input ? JSON.parse(job.input) : null,
+        output: parsedOutput ? attachSignedUrls(parsedOutput) : null,
+      };
+    }),
   });
 });
 

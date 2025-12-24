@@ -89,6 +89,19 @@ function encodeKey(key: string): string {
     .join("/");
 }
 
+function encodeQueryComponent(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, (char) =>
+    `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+function clampExpiry(seconds: number): number {
+  if (!Number.isFinite(seconds)) {
+    return 900;
+  }
+  return Math.min(Math.max(Math.floor(seconds), 1), 60 * 60 * 24 * 7);
+}
+
 export function buildSignedRequest(params: SignedRequestParams): SignedRequest {
   const config = getConfig();
   const body = params.body ?? new Uint8Array();
@@ -186,6 +199,51 @@ export function getPublicUrl(key: string): string {
     return `${config.publicBaseUrl}/${safeKey}`;
   }
   return `https://${config.accountId}.r2.cloudflarestorage.com/${config.bucket}/${encodeKey(safeKey)}`;
+}
+
+export function getSignedUrl(key: string, expiresInSeconds = 900, now: Date = new Date()): string {
+  const config = getConfig();
+  const safeKey = key.replace(/^\/+/, "");
+  const encodedKey = encodeKey(safeKey);
+  const host = `${config.accountId}.r2.cloudflarestorage.com`;
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const credentialScope = `${dateStamp}/${REGION}/${SERVICE}/aws4_request`;
+  const expires = clampExpiry(expiresInSeconds);
+
+  const queryParams: Record<string, string> = {
+    "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+    "X-Amz-Credential": `${config.accessKeyId}/${credentialScope}`,
+    "X-Amz-Date": amzDate,
+    "X-Amz-Expires": String(expires),
+    "X-Amz-SignedHeaders": "host",
+  };
+
+  const canonicalQuery = Object.keys(queryParams)
+    .sort()
+    .map((key) => `${encodeQueryComponent(key)}=${encodeQueryComponent(queryParams[key])}`)
+    .join("&");
+
+  const canonicalRequest = [
+    "GET",
+    `/${config.bucket}/${encodedKey}`,
+    canonicalQuery,
+    `host:${host}\n`,
+    "host",
+    "UNSIGNED-PAYLOAD",
+  ].join("\n");
+
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    hashHex(Buffer.from(canonicalRequest)),
+  ].join("\n");
+
+  const signatureKey = getSignatureKey(config.secretAccessKey, dateStamp);
+  const signature = hmac(signatureKey, stringToSign).toString("hex");
+
+  return `https://${host}/${config.bucket}/${encodedKey}?${canonicalQuery}&X-Amz-Signature=${signature}`;
 }
 
 export async function uploadObject(params: UploadParams): Promise<UploadResult> {
