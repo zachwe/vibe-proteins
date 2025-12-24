@@ -20,6 +20,8 @@ interface MolstarViewerProps {
   highlightResidues?: string[];
   /** CSS class for the container */
   className?: string;
+  /** Minimum height in pixels */
+  minHeight?: number;
 }
 
 export default function MolstarViewer({
@@ -27,6 +29,7 @@ export default function MolstarViewer({
   pdbId,
   highlightResidues: _highlightResidues,
   className = "",
+  minHeight = 400,
 }: MolstarViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
@@ -123,7 +126,7 @@ export default function MolstarViewer({
   const hasStructure = pdbUrl || pdbId;
 
   return (
-    <div className={`relative ${className}`} style={{ minHeight: "400px" }}>
+    <div className={`relative ${className}`} style={{ minHeight: `${minHeight}px` }}>
       {/* Mol* container */}
       <div
         ref={containerRef}

@@ -604,6 +604,9 @@ def run_rfdiffusion3(
       binder_path = tmpdir_path / f"binder_{idx}.pdb"
       _write_pdb_chains(complex_path, binder_chain_ids, binder_path)
 
+      binder_sequences = _extract_chain_sequences(binder_path)
+      backbone_sequence = binder_sequences[0][1] if binder_sequences else ""
+
       mpnn_sequences: List[dict] = []
       if sequences_per_backbone and sequences_per_backbone > 0:
         mpnn_result = run_proteinmpnn.remote(
@@ -630,16 +633,23 @@ def run_rfdiffusion3(
       upload_file(binder_path, binder_key, content_type="chemical/x-pdb")
       upload_file(complex_path, complex_key, content_type="chemical/x-pdb")
 
-      sequence = mpnn_sequences[0]["sequence"] if mpnn_sequences else ""
+      target_chain_list = sorted(target_chain_ids)
+      binder_chain_list = sorted(binder_chain_ids)
 
       results.append(
         {
           "design_id": f"{job_id}-d{idx}",
-          "sequence": sequence,
+          "sequence": backbone_sequence,
           "mpnn_sequences": mpnn_sequences,
           "backbone": {"key": binder_key, "url": object_url(binder_key)},
           "complex": {"key": complex_key, "url": object_url(complex_key)},
           "scores": {**metrics, "boltz2": boltz} if boltz else metrics,
+          "target_chains": target_chain_list,
+          "binder_chains": binder_chain_list,
+          "binder_sequences": [
+            {"chain_id": chain_id, "sequence": sequence}
+            for chain_id, sequence in binder_sequences
+          ],
         }
       )
 
@@ -651,6 +661,7 @@ def run_rfdiffusion3(
       "pipeline": "rfdiffusion3",
       "target_sequence": target_sequence,
       "hotspots": hotspot_residues or [],
+      "target_chains": sorted(target_chain_ids),
       "designs": results,
     }
     manifest_key = f"{RESULTS_PREFIX}/{job_id}/manifest.json"

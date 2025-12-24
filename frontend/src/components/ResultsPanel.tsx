@@ -4,6 +4,7 @@
  * Displays job results including the predicted structure and score breakdown.
  */
 
+import { useEffect, useMemo, useState } from "react";
 import type { Job } from "../lib/api";
 import MolstarViewer from "./MolstarViewer";
 
@@ -26,6 +27,10 @@ interface JobOutput {
     score?: number;
   }>;
   scores?: {
+    ip_sae?: number;
+    interface_area?: number;
+    shape_complementarity?: number;
+    contact_count?: number;
     plddt?: number;
     ptm?: number;
     iptm?: number;
@@ -51,7 +56,17 @@ interface JobOutput {
       url?: string;
       signedUrl?: string;
     };
+    target_chains?: string[];
+    binder_chains?: string[];
+    binder_sequences?: Array<{
+      chain_id?: string;
+      sequence?: string;
+    }>;
     scores?: {
+      ip_sae?: number;
+      interface_area?: number;
+      shape_complementarity?: number;
+      contact_count?: number;
       plddt?: number;
       ptm?: number;
       iptm?: number;
@@ -62,17 +77,16 @@ interface JobOutput {
   }>;
 }
 
-function resolveStructureUrl(output: JobOutput | null): string | undefined {
-  if (!output) return undefined;
-  const design = output.designs?.[0];
-  if (design?.complex?.signedUrl) return design.complex.signedUrl;
-  if (design?.complex?.url) return design.complex.url;
-  if (design?.backbone?.signedUrl) return design.backbone.signedUrl;
-  if (design?.backbone?.url) return design.backbone.url;
-  if (output.complex?.signedUrl) return output.complex.signedUrl;
-  if (output.complex?.url) return output.complex.url;
-  return output.structureUrl;
-}
+type StructureOption = {
+  id: string;
+  label: string;
+  url?: string;
+  description?: string;
+  chainInfo?: {
+    target?: string[];
+    binder?: string[];
+  };
+};
 
 function getInputSequence(job: Job): string | undefined {
   const input = job.input as Record<string, unknown> | null;
@@ -92,134 +106,191 @@ type SequenceEntry = {
   label: string;
   sequence: string;
   score?: number;
+  note?: string;
+  isPrimary?: boolean;
 };
 
-function extractSequences(job: Job, output: JobOutput | null): SequenceEntry[] {
-  const entries: SequenceEntry[] = [];
+type SequenceCandidate = {
+  sequence: string;
+  score?: number;
+  isPrimary?: boolean;
+  order: number;
+};
 
-  if (output?.sequence) {
-    entries.push({ label: "Design sequence", sequence: output.sequence });
+function buildSequenceEntries(
+  job: Job,
+  output: JobOutput | null,
+  hasStructure: boolean,
+  structureSequence?: string
+): SequenceEntry[] {
+  const candidates: SequenceCandidate[] = [];
+  let order = 0;
+
+  const pushCandidate = (sequence?: string, score?: number, isPrimary?: boolean) => {
+    if (!sequence) return;
+    candidates.push({
+      sequence,
+      score,
+      isPrimary,
+      order: order++,
+    });
+  };
+
+  if (structureSequence) {
+    pushCandidate(structureSequence, undefined, true);
+  }
+
+  if (output?.sequence && !structureSequence) {
+    pushCandidate(output.sequence, undefined, true);
   }
 
   if (Array.isArray(output?.sequences)) {
-    output.sequences.forEach((seq, index) => {
-      if (seq?.sequence) {
-        entries.push({
-          label: `ProteinMPNN ${index + 1}`,
-          sequence: seq.sequence,
-          score: seq.score,
-        });
-      }
+    output.sequences.forEach((seq) => {
+      pushCandidate(seq?.sequence, seq?.score);
     });
   }
 
   const design = output?.designs?.[0];
-  if (design?.sequence) {
-    entries.push({ label: "Backbone sequence", sequence: design.sequence });
-  }
   if (Array.isArray(design?.mpnn_sequences)) {
-    design.mpnn_sequences.forEach((seq, index) => {
-      if (seq?.sequence) {
-        entries.push({
-          label: `RFD3 MPNN ${index + 1}`,
-          sequence: seq.sequence,
-          score: seq.score,
-        });
-      }
+    design.mpnn_sequences.forEach((seq) => {
+      pushCandidate(seq?.sequence, seq?.score);
     });
   }
 
-  if (entries.length === 0) {
+  if (candidates.length === 0) {
     const fallback = getInputSequence(job);
-    if (fallback) {
-      entries.push({ label: "Input sequence", sequence: fallback });
+    pushCandidate(fallback, undefined, true);
+  }
+
+  const unique = new Map<string, SequenceCandidate>();
+  for (const candidate of candidates) {
+    const existing = unique.get(candidate.sequence);
+    if (!existing) {
+      unique.set(candidate.sequence, candidate);
+      continue;
+    }
+    if (candidate.isPrimary) {
+      existing.isPrimary = true;
+    }
+    if (typeof candidate.score === "number") {
+      if (typeof existing.score !== "number" || candidate.score < existing.score) {
+        existing.score = candidate.score;
+      }
     }
   }
 
-  return entries.slice(0, 5);
+  const all = Array.from(unique.values());
+  const primary = all.find((entry) => entry.isPrimary) || all[0];
+  if (primary) {
+    primary.isPrimary = true;
+  }
+
+  const rest = all.filter((entry) => !entry.isPrimary);
+  rest.sort((a, b) => {
+    if (typeof a.score === "number" && typeof b.score === "number") {
+      return a.score - b.score;
+    }
+    if (typeof a.score === "number") return -1;
+    if (typeof b.score === "number") return 1;
+    return a.order - b.order;
+  });
+
+  const ordered = primary ? [primary, ...rest] : rest;
+  let altIndex = 1;
+
+  return ordered.slice(0, 6).map((entry) => {
+    const label = entry.isPrimary
+      ? hasStructure
+        ? "Top (structure)"
+        : "Top"
+      : `Alt ${altIndex++}`;
+    const note = entry.isPrimary && hasStructure ? "Displayed in structure viewer" : undefined;
+    return {
+      label,
+      sequence: entry.sequence,
+      score: entry.score,
+      note,
+      isPrimary: entry.isPrimary,
+    };
+  });
 }
 
-const scoreLabels: Record<string, { name: string; description: string; good: string }> = {
-  plddt: {
-    name: "pLDDT",
-    description: "Per-residue confidence (0-100)",
-    good: "> 70",
-  },
-  ptm: {
-    name: "pTM",
-    description: "Template modeling score (0-1)",
-    good: "> 0.5",
-  },
-  iptm: {
-    name: "ipTM",
-    description: "Interface template modeling score (0-1)",
-    good: "> 0.6",
-  },
-  bindingAffinity: {
-    name: "Binding Affinity",
-    description: "Predicted binding strength (kcal/mol)",
-    good: "< -7",
-  },
-  shapeComplementarity: {
-    name: "Shape Complementarity",
-    description: "Interface geometric fit (0-1)",
-    good: "> 0.65",
-  },
-  buriedSurfaceArea: {
-    name: "Buried Surface Area",
-    description: "Interface contact area (Å²)",
-    good: "> 800",
-  },
-};
+function buildStructureOptions(output: JobOutput | null): StructureOption[] {
+  if (!output) return [];
 
-function getScoreColor(key: string, value: number): string {
-  switch (key) {
-    case "plddt":
-      return value > 70 ? "text-green-400" : value > 50 ? "text-yellow-400" : "text-red-400";
-    case "ptm":
-      return value > 0.5 ? "text-green-400" : value > 0.3 ? "text-yellow-400" : "text-red-400";
-    case "iptm":
-      return value > 0.6 ? "text-green-400" : value > 0.4 ? "text-yellow-400" : "text-red-400";
-    case "bindingAffinity":
-      return value < -7 ? "text-green-400" : value < -5 ? "text-yellow-400" : "text-red-400";
-    case "shapeComplementarity":
-      return value > 0.65 ? "text-green-400" : value > 0.5 ? "text-yellow-400" : "text-red-400";
-    case "buriedSurfaceArea":
-      return value > 800 ? "text-green-400" : value > 500 ? "text-yellow-400" : "text-red-400";
-    default:
-      return "text-slate-300";
-  }
-}
+  const options: StructureOption[] = [];
+  const seen = new Set<string>();
+  const design = output.designs?.[0];
 
-function coerceScore(value: unknown): number | null {
-  if (typeof value === "number") {
-    return Number.isNaN(value) ? null : value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number.parseFloat(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-}
+  const addOption = (option: StructureOption) => {
+    if (!option.url || seen.has(option.url)) return;
+    seen.add(option.url);
+    options.push(option);
+  };
 
-function formatScore(key: string, value: number): string {
-  if (key === "buriedSurfaceArea") {
-    return `${Math.round(value)} Å²`;
+  if (design?.complex) {
+    addOption({
+      id: "rfd3-complex",
+      label: "Complex (target + binder)",
+      url: design.complex.signedUrl || design.complex.url,
+      description: "RFD3 complex backbone for design 1.",
+      chainInfo: {
+        target: design.target_chains,
+        binder: design.binder_chains,
+      },
+    });
   }
-  if (key === "bindingAffinity") {
-    return `${value.toFixed(1)} kcal/mol`;
+
+  if (design?.backbone) {
+    addOption({
+      id: "rfd3-binder",
+      label: "Binder backbone",
+      url: design.backbone.signedUrl || design.backbone.url,
+      description: "Binder backbone only.",
+      chainInfo: {
+        binder: design.binder_chains,
+      },
+    });
   }
-  if (key === "plddt") {
-    return value.toFixed(1);
+
+  if (output.complex) {
+    addOption({
+      id: "boltz-complex",
+      label: "Complex (predicted)",
+      url: output.complex.signedUrl || output.complex.url,
+      description: "Boltz-2 predicted complex.",
+    });
   }
-  return value.toFixed(2);
+
+  if (output.structureUrl) {
+    addOption({
+      id: "structure-url",
+      label: "Predicted structure",
+      url: output.structureUrl,
+    });
+  }
+
+  return options;
 }
 
 export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanelProps) {
   const output = job.output as JobOutput | null;
-  const designScores = output?.designs?.[0]?.scores;
-  const scores = output?.scores || designScores;
-  const sequences = extractSequences(job, output);
+  const design = output?.designs?.[0];
+  const structureOptions = useMemo(() => buildStructureOptions(output), [output]);
+  const [activeStructureId, setActiveStructureId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (structureOptions.length === 0) {
+      setActiveStructureId(null);
+      return;
+    }
+    if (!activeStructureId || !structureOptions.some((opt) => opt.id === activeStructureId)) {
+      setActiveStructureId(structureOptions[0].id);
+    }
+  }, [structureOptions, activeStructureId]);
+
+  const activeStructure = structureOptions.find((opt) => opt.id === activeStructureId);
+  const structureUrl = activeStructure?.url;
 
   // If job failed, show error state
   if (job.status === "failed") {
@@ -269,9 +340,13 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
   }
 
   // Completed job - show results
-  const structureUrl = resolveStructureUrl(output);
   const hasStructure = structureUrl || output?.pdbData;
-  const hasScores = scores && Object.keys(scores).length > 0;
+  const designCount = output?.designs?.length ?? 0;
+  const sequences = buildSequenceEntries(job, output, Boolean(hasStructure), design?.sequence);
+  const chainInfo = activeStructure?.chainInfo ?? {
+    target: design?.target_chains,
+    binder: design?.binder_chains,
+  };
 
   return (
     <div className="bg-slate-800 rounded-xl p-6">
@@ -285,92 +360,113 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
       </div>
 
       <div className="space-y-6">
-        {/* Structure viewer */}
-        {hasStructure && (
-          <div>
-            <h3 className="text-sm font-medium text-slate-300 mb-2">
-              Predicted Fold
-            </h3>
-            <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">
-              <MolstarViewer
-                pdbUrl={structureUrl}
-                className="w-full h-full"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Score breakdown */}
-        {hasScores && (
-          <div>
-            <h3 className="text-sm font-medium text-slate-300 mb-3">
-              Score Breakdown
-            </h3>
-            <div className="grid gap-3">
-              {Object.entries(scores!).map(([key, value]) => {
-                const numericValue = coerceScore(value);
-                if (numericValue === null) return null;
-                const info = scoreLabels[key];
-                return (
-                  <div
-                    key={key}
-                    className="bg-slate-700 rounded-lg p-3 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-white font-medium">
-                        {info?.name || key}
-                      </p>
-                      <p className="text-slate-400 text-xs">
-                        {info?.description || ""}
-                        {info?.good && (
-                          <span className="ml-2 text-green-400">
-                            (Good: {info.good})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-lg font-semibold ${getScoreColor(key, numericValue)}`}
-                    >
-                      {formatScore(key, numericValue)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Designed sequence */}
-        {sequences.length > 0 && (
-          <div>
-            <h3 className="text-sm font-medium text-slate-300 mb-2">
-              Predicted Binder Sequence{sequences.length > 1 ? "s" : ""}
-            </h3>
-            <div className="space-y-3">
-              {sequences.map((entry, index) => (
-                <div key={`${entry.label}-${index}`} className="bg-slate-700 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs uppercase tracking-wide text-slate-400">
-                      {entry.label}
-                    </span>
-                    {entry.score !== undefined && (
-                      <span className="text-xs text-slate-300">
-                        Score: {entry.score.toFixed(2)}
-                      </span>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="space-y-4">
+            {/* Structure viewer */}
+            {hasStructure && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-300">Predicted Fold</h3>
+                    {designCount > 0 && (
+                      <p className="text-xs text-slate-500">Design 1 of {designCount}</p>
                     )}
                   </div>
-                  <div className="font-mono text-xs text-slate-300 break-all max-h-24 overflow-y-auto">
-                    {entry.sequence}
-                  </div>
+                  {structureOptions.length > 1 && (
+                    <label className="text-xs text-slate-400 flex items-center gap-2">
+                      Structure
+                      <select
+                        value={activeStructureId || ""}
+                        onChange={(event) => setActiveStructureId(event.target.value)}
+                        className="bg-slate-700 border border-slate-600 rounded-md px-2 py-1 text-xs text-slate-200"
+                      >
+                        {structureOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                 </div>
-              ))}
-            </div>
+                {chainInfo?.target || chainInfo?.binder ? (
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    {chainInfo.target?.length ? (
+                      <div className="flex items-center gap-2 bg-slate-700/60 border border-slate-600 rounded-full px-3 py-1">
+                        <span className="text-slate-400">Target</span>
+                        <span className="text-blue-300 font-semibold">
+                          {chainInfo.target.join(", ")}
+                        </span>
+                      </div>
+                    ) : null}
+                    {chainInfo.binder?.length ? (
+                      <div className="flex items-center gap-2 bg-slate-700/60 border border-slate-600 rounded-full px-3 py-1">
+                        <span className="text-slate-400">Binder</span>
+                        <span className="text-amber-300 font-semibold">
+                          {chainInfo.binder.join(", ")}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                {activeStructure?.description && (
+                  <p className="text-xs text-slate-500">{activeStructure.description}</p>
+                )}
+                <div className="h-[320px] md:h-[380px] lg:h-[420px] bg-slate-700 rounded-lg overflow-hidden">
+                  <MolstarViewer
+                    pdbUrl={structureUrl}
+                    className="w-full h-full"
+                    minHeight={280}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="space-y-6">
+            {/* Designed sequence */}
+            {sequences.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-slate-300 mb-2">
+                  Predicted Binder Sequence{sequences.length > 1 ? "s" : ""}
+                </h3>
+              <p className="text-xs text-slate-500 mb-3">
+                The top sequence is the binder shown in the structure viewer. Other sequences are
+                alternative designs ranked by score when available.
+              </p>
+                <div className="space-y-3">
+                  {sequences.map((entry, index) => (
+                    <div key={`${entry.label}-${index}`} className="bg-slate-700 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs uppercase tracking-wide text-slate-400">
+                            {entry.label}
+                          </span>
+                          {entry.note && (
+                            <span className="text-[10px] text-slate-400 bg-slate-600/60 px-2 py-0.5 rounded-full">
+                              {entry.note}
+                            </span>
+                          )}
+                        </div>
+                        {entry.score !== undefined && (
+                          <span className="text-xs text-slate-300">
+                            Score: {entry.score.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs text-slate-300 break-all max-h-24 overflow-y-auto">
+                        {entry.sequence}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* No results placeholder */}
-        {!hasStructure && !hasScores && sequences.length === 0 && (
+        {!hasStructure && sequences.length === 0 && (
           <div className="text-center py-8 text-slate-400">
             <p>No detailed results available yet.</p>
             <p className="text-sm mt-2">
