@@ -9,6 +9,8 @@ import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Challenges from "./pages/Challenges";
 import ChallengeDetail from "./pages/ChallengeDetail";
+import Jobs from "./pages/Jobs";
+import JobDetail from "./pages/JobDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -31,6 +33,8 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/" element={<Home />} />
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/challenges/:id" element={<ChallengeDetail />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
           </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

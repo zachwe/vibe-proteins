@@ -134,12 +134,20 @@ export default function DesignPanel({
               <p className="text-slate-300 text-sm">
                 Your binder design has been generated. View the results to see the predicted structure and scores.
               </p>
-              <button
-                onClick={() => setShowResults(true)}
-                className="mt-3 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                View Results
-              </button>
+              <div className="flex flex-wrap gap-3 mt-3">
+                <button
+                  onClick={() => setShowResults(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  View Results
+                </button>
+                <button
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Open Job Page
+                </button>
+              </div>
             </div>
           )}
 

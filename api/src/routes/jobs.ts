@@ -135,34 +135,42 @@ app.post("/", async (c) => {
   // Submit to inference provider (async, don't await for long-running jobs)
   const provider = getInferenceProvider();
 
-  // Fire off the job - for now we do this synchronously since placeholders are fast
-  // TODO: For real inference, use background processing
-  try {
-    const result = await provider.submitJob(type as JobType, {
-      ...normalizedInput,
-      jobId,
-      challengeId,
-    });
+  void (async () => {
+    try {
+      await db.update(jobs).set({ status: "running" }).where(eq(jobs.id, jobId));
 
-    const updatePayload: Record<string, unknown> = {
-      status: result.status,
-      output: JSON.stringify(result.result?.output ?? { callId: result.callId }),
-    };
+      const result = await provider.submitJob(type as JobType, {
+        ...normalizedInput,
+        jobId,
+        challengeId,
+      });
 
-    if (result.status === "completed") {
-      updatePayload.completedAt = new Date();
-    } else if (result.status === "failed") {
-      updatePayload.error =
-        result.result?.error ||
-        (result.result?.output?.message as string | undefined) ||
-        "Modal job failed";
+      const updatePayload: Record<string, unknown> = {
+        status: result.status,
+        output: JSON.stringify(result.result?.output ?? { callId: result.callId }),
+      };
+
+      if (result.status === "completed") {
+        updatePayload.completedAt = new Date();
+      } else if (result.status === "failed") {
+        updatePayload.error =
+          result.result?.error ||
+          (result.result?.output?.message as string | undefined) ||
+          "Modal job failed";
+      }
+
+      await db.update(jobs).set(updatePayload).where(eq(jobs.id, jobId));
+    } catch (error) {
+      console.error("Failed to submit job to inference provider:", error);
+      await db
+        .update(jobs)
+        .set({
+          status: "failed",
+          error: error instanceof Error ? error.message : "Modal job failed",
+        })
+        .where(eq(jobs.id, jobId));
     }
-
-    await db.update(jobs).set(updatePayload).where(eq(jobs.id, jobId));
-  } catch (error) {
-    console.error("Failed to submit job to inference provider:", error);
-    // Job stays in pending state, can be retried
-  }
+  })();
 
   return c.json({
     job: {

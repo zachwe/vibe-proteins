@@ -35,6 +35,12 @@ export default function Header() {
               <div className="w-20 h-8 bg-slate-700 rounded animate-pulse" />
             ) : session?.user ? (
               <div className="flex items-center gap-4">
+                <Link
+                  to="/jobs"
+                  className="text-slate-300 hover:text-white transition-colors"
+                >
+                  Jobs
+                </Link>
                 <span className="text-slate-300 text-sm">
                   {session.user.name || session.user.email}
                 </span>

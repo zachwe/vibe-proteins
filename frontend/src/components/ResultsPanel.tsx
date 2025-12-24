@@ -21,6 +21,10 @@ interface JobOutput {
     url?: string;
     signedUrl?: string;
   };
+  sequences?: Array<{
+    sequence?: string;
+    score?: number;
+  }>;
   scores?: {
     plddt?: number;
     ptm?: number;
@@ -32,13 +36,107 @@ interface JobOutput {
   sequence?: string;
   designName?: string;
   message?: string;
+  designs?: Array<{
+    design_id?: string;
+    sequence?: string;
+    mpnn_sequences?: Array<{
+      sequence?: string;
+      score?: number;
+    }>;
+    complex?: {
+      url?: string;
+      signedUrl?: string;
+    };
+    backbone?: {
+      url?: string;
+      signedUrl?: string;
+    };
+    scores?: {
+      plddt?: number;
+      ptm?: number;
+      iptm?: number;
+      bindingAffinity?: number;
+      shapeComplementarity?: number;
+      buriedSurfaceArea?: number;
+    };
+  }>;
 }
 
 function resolveStructureUrl(output: JobOutput | null): string | undefined {
   if (!output) return undefined;
+  const design = output.designs?.[0];
+  if (design?.complex?.signedUrl) return design.complex.signedUrl;
+  if (design?.complex?.url) return design.complex.url;
+  if (design?.backbone?.signedUrl) return design.backbone.signedUrl;
+  if (design?.backbone?.url) return design.backbone.url;
   if (output.complex?.signedUrl) return output.complex.signedUrl;
   if (output.complex?.url) return output.complex.url;
   return output.structureUrl;
+}
+
+function getInputSequence(job: Job): string | undefined {
+  const input = job.input as Record<string, unknown> | null;
+  if (!input) return undefined;
+  const binderSequence = input.binderSequence;
+  if (typeof binderSequence === "string" && binderSequence.length > 0) {
+    return binderSequence;
+  }
+  const sequence = input.sequence;
+  if (typeof sequence === "string" && sequence.length > 0) {
+    return sequence;
+  }
+  return undefined;
+}
+
+type SequenceEntry = {
+  label: string;
+  sequence: string;
+  score?: number;
+};
+
+function extractSequences(job: Job, output: JobOutput | null): SequenceEntry[] {
+  const entries: SequenceEntry[] = [];
+
+  if (output?.sequence) {
+    entries.push({ label: "Design sequence", sequence: output.sequence });
+  }
+
+  if (Array.isArray(output?.sequences)) {
+    output.sequences.forEach((seq, index) => {
+      if (seq?.sequence) {
+        entries.push({
+          label: `ProteinMPNN ${index + 1}`,
+          sequence: seq.sequence,
+          score: seq.score,
+        });
+      }
+    });
+  }
+
+  const design = output?.designs?.[0];
+  if (design?.sequence) {
+    entries.push({ label: "Backbone sequence", sequence: design.sequence });
+  }
+  if (Array.isArray(design?.mpnn_sequences)) {
+    design.mpnn_sequences.forEach((seq, index) => {
+      if (seq?.sequence) {
+        entries.push({
+          label: `RFD3 MPNN ${index + 1}`,
+          sequence: seq.sequence,
+          score: seq.score,
+        });
+      }
+    });
+  }
+
+  if (entries.length === 0) {
+    const fallback = getInputSequence(job);
+    if (fallback) {
+      entries.push({ label: "Input sequence", sequence: fallback });
+    }
+  }
+
+  return entries.slice(0, 5);
 }
 
 const scoreLabels: Record<string, { name: string; description: string; good: string }> = {
@@ -93,6 +191,17 @@ function getScoreColor(key: string, value: number): string {
   }
 }
 
+function coerceScore(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isNaN(value) ? null : value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number.parseFloat(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
 function formatScore(key: string, value: number): string {
   if (key === "buriedSurfaceArea") {
     return `${Math.round(value)} Å²`;
@@ -108,6 +217,9 @@ function formatScore(key: string, value: number): string {
 
 export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanelProps) {
   const output = job.output as JobOutput | null;
+  const designScores = output?.designs?.[0]?.scores;
+  const scores = output?.scores || designScores;
+  const sequences = extractSequences(job, output);
 
   // If job failed, show error state
   if (job.status === "failed") {
@@ -159,7 +271,7 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
   // Completed job - show results
   const structureUrl = resolveStructureUrl(output);
   const hasStructure = structureUrl || output?.pdbData;
-  const hasScores = output?.scores && Object.keys(output.scores).length > 0;
+  const hasScores = scores && Object.keys(scores).length > 0;
 
   return (
     <div className="bg-slate-800 rounded-xl p-6">
@@ -177,7 +289,7 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
         {hasStructure && (
           <div>
             <h3 className="text-sm font-medium text-slate-300 mb-2">
-              Predicted Structure
+              Predicted Fold
             </h3>
             <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">
               <MolstarViewer
@@ -195,8 +307,9 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
               Score Breakdown
             </h3>
             <div className="grid gap-3">
-              {Object.entries(output.scores!).map(([key, value]) => {
-                if (value === undefined || value === null) return null;
+              {Object.entries(scores!).map(([key, value]) => {
+                const numericValue = coerceScore(value);
+                if (numericValue === null) return null;
                 const info = scoreLabels[key];
                 return (
                   <div
@@ -217,9 +330,9 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
                       </p>
                     </div>
                     <span
-                      className={`text-lg font-semibold ${getScoreColor(key, value)}`}
+                      className={`text-lg font-semibold ${getScoreColor(key, numericValue)}`}
                     >
-                      {formatScore(key, value)}
+                      {formatScore(key, numericValue)}
                     </span>
                   </div>
                 );
@@ -229,19 +342,35 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
         )}
 
         {/* Designed sequence */}
-        {output?.sequence && (
+        {sequences.length > 0 && (
           <div>
             <h3 className="text-sm font-medium text-slate-300 mb-2">
-              Designed Sequence
+              Predicted Binder Sequence{sequences.length > 1 ? "s" : ""}
             </h3>
-            <div className="bg-slate-700 rounded-lg p-3 font-mono text-xs text-slate-300 break-all max-h-24 overflow-y-auto">
-              {output.sequence}
+            <div className="space-y-3">
+              {sequences.map((entry, index) => (
+                <div key={`${entry.label}-${index}`} className="bg-slate-700 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs uppercase tracking-wide text-slate-400">
+                      {entry.label}
+                    </span>
+                    {entry.score !== undefined && (
+                      <span className="text-xs text-slate-300">
+                        Score: {entry.score.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-mono text-xs text-slate-300 break-all max-h-24 overflow-y-auto">
+                    {entry.sequence}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* No results placeholder */}
-        {!hasStructure && !hasScores && !output?.sequence && (
+        {!hasStructure && !hasScores && sequences.length === 0 && (
           <div className="text-center py-8 text-slate-400">
             <p>No detailed results available yet.</p>
             <p className="text-sm mt-2">

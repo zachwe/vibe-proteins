@@ -116,6 +116,38 @@ function assertRFDiffusion3Output(output: Record<string, unknown>) {
   expectSignedUrl((output.manifest as Record<string, unknown>)?.signedUrl);
 }
 
+async function waitForJob(
+  app: ReturnType<typeof import("../app").createApp>,
+  jobId: string,
+  authCookie: string,
+  timeoutMs: number
+) {
+  const start = Date.now();
+  let lastJob: Record<string, unknown> | null = null;
+
+  while (Date.now() - start < timeoutMs) {
+    const jobRes = await app.request(`/api/jobs/${jobId}`, {
+      headers: { Cookie: authCookie },
+    });
+
+    if (!jobRes.ok) {
+      const text = await jobRes.text();
+      throw new Error(`Job fetch failed: ${jobRes.status} ${text}`);
+    }
+
+    const jobData = (await jobRes.json()) as { job: Record<string, unknown> };
+    lastJob = jobData.job;
+    const status = jobData.job.status as string;
+    if (status === "completed" || status === "failed") {
+      return jobData.job;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  throw new Error(`Job did not complete in time. Last status: ${lastJob?.status}`);
+}
+
 async function signUpAndGetCookie(app: ReturnType<typeof import("../app").createApp>) {
   const email = `e2e-${randomUUID()}@example.com`;
   const response = await app.request("/api/auth/sign-up/email", {
@@ -192,14 +224,9 @@ describeIf("Jobs API e2e (Modal)", () => {
       const created = await createRes.json();
       const jobId = created.job.id as string;
 
-      const jobRes = await app.request(`/api/jobs/${jobId}`, {
-        headers: { Cookie: authCookie },
-      });
-      expect(jobRes.status).toBe(200);
-
-      const jobData = await jobRes.json();
-      expect(jobData.job.status).toBe("completed");
-      assertBoltz2Output(jobData.job.output as Record<string, unknown>);
+      const job = await waitForJob(app, jobId, authCookie, 600000);
+      expect(job.status).toBe("completed");
+      assertBoltz2Output(job.output as Record<string, unknown>);
     }
   );
 
@@ -227,14 +254,9 @@ describeIf("Jobs API e2e (Modal)", () => {
       const created = await createRes.json();
       const jobId = created.job.id as string;
 
-      const jobRes = await app.request(`/api/jobs/${jobId}`, {
-        headers: { Cookie: authCookie },
-      });
-      expect(jobRes.status).toBe(200);
-
-      const jobData = await jobRes.json();
-      expect(jobData.job.status).toBe("completed");
-      assertProteinMPNNOutput(jobData.job.output as Record<string, unknown>);
+      const job = await waitForJob(app, jobId, authCookie, 600000);
+      expect(job.status).toBe("completed");
+      assertProteinMPNNOutput(job.output as Record<string, unknown>);
     }
   );
 
@@ -265,14 +287,9 @@ describeIf("Jobs API e2e (Modal)", () => {
       const created = await createRes.json();
       const jobId = created.job.id as string;
 
-      const jobRes = await app.request(`/api/jobs/${jobId}`, {
-        headers: { Cookie: authCookie },
-      });
-      expect(jobRes.status).toBe(200);
-
-      const jobData = await jobRes.json();
-      expect(jobData.job.status).toBe("completed");
-      assertRFDiffusion3Output(jobData.job.output as Record<string, unknown>);
+      const job = await waitForJob(app, jobId, authCookie, 900000);
+      expect(job.status).toBe("completed");
+      assertRFDiffusion3Output(job.output as Record<string, unknown>);
     }
   );
 });

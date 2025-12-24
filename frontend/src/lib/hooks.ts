@@ -58,6 +58,14 @@ export function useJobs() {
       const data = await jobsApi.list();
       return data.jobs;
     },
+    refetchInterval: (query) => {
+      const jobs = query.state.data;
+      if (!jobs) return false;
+      const hasActive = jobs.some(
+        (job) => job.status === "pending" || job.status === "running"
+      );
+      return hasActive ? 5000 : false;
+    },
   });
 }
 

@@ -174,6 +174,45 @@ def _chain_lengths_from_pdb(path: Path) -> dict[str, int]:
   return lengths
 
 
+def _chain_residue_segments_from_pdb(path: Path) -> dict[str, list[tuple[int, int]]]:
+  residues_by_chain: dict[str, list[int]] = {}
+  for line in path.read_text().splitlines():
+    if not line.startswith("ATOM"):
+      continue
+    if line[12:16].strip() != "CA":
+      continue
+    chain_id = line[21].strip() or "_"
+    residue_field = line[22:26].strip()
+    if not residue_field:
+      continue
+    try:
+      residue_id = int(residue_field)
+    except ValueError:
+      continue
+    residues = residues_by_chain.setdefault(chain_id, [])
+    if not residues or residues[-1] != residue_id:
+      residues.append(residue_id)
+
+  segments_by_chain: dict[str, list[tuple[int, int]]] = {}
+  for chain_id, residues in residues_by_chain.items():
+    if not residues:
+      continue
+    segments: list[tuple[int, int]] = []
+    start = residues[0]
+    prev = residues[0]
+    for residue_id in residues[1:]:
+      if residue_id == prev + 1:
+        prev = residue_id
+        continue
+      segments.append((start, prev))
+      start = residue_id
+      prev = residue_id
+    segments.append((start, prev))
+    segments_by_chain[chain_id] = segments
+
+  return segments_by_chain
+
+
 def _ordered_chain_ids_from_pdb(path: Path) -> List[str]:
   seen: List[str] = []
   for line in path.read_text().splitlines():
@@ -266,7 +305,7 @@ def _rfd3_hotspot_selection(
 
 def _rfd3_contig_string(
   ordered_chain_ids: List[str],
-  chain_lengths: dict[str, int],
+  chain_segments: dict[str, list[tuple[int, int]]],
   binder_length: int | str,
 ) -> str:
   if isinstance(binder_length, str):
@@ -278,10 +317,22 @@ def _rfd3_contig_string(
   else:
     binder_range = f"{int(binder_length)}-{int(binder_length)}"
 
-  target_segments = [f"{chain_id}1-{chain_lengths[chain_id]}" for chain_id in ordered_chain_ids]
-  if not target_segments:
+  target_tokens: List[str] = []
+  for chain_id in ordered_chain_ids:
+    segments = chain_segments.get(chain_id) or []
+    if not segments:
+      continue
+    if target_tokens:
+      target_tokens.append("/0")
+    for start, end in segments:
+      if start == end:
+        target_tokens.append(f"{chain_id}{start}")
+      else:
+        target_tokens.append(f"{chain_id}{start}-{end}")
+
+  if not target_tokens:
     return binder_range
-  return f"{binder_range},/0," + ",/0,".join(target_segments)
+  return f"{binder_range},/0," + ",".join(target_tokens)
 
 
 def _ensure_rfd3_models(models_dir: Path) -> None:
@@ -444,16 +495,22 @@ def run_rfdiffusion3(
   with tempfile.TemporaryDirectory() as tmpdir:
     tmpdir_path = Path(tmpdir)
     target_path = download_to_path(target_source, tmpdir_path / "target.pdb")
-    chain_lengths = _chain_lengths_from_pdb(target_path)
-    if not chain_lengths:
+    chain_segments = _chain_residue_segments_from_pdb(target_path)
+    if not chain_segments:
       raise ValueError("Target PDB does not contain any protein chains.")
     ordered_chain_ids = _ordered_chain_ids_from_pdb(target_path)
-    target_chain_ids = set(chain_lengths.keys())
+    target_chain_ids = set(chain_segments.keys())
+    default_chain_id = next(
+      (chain_id for chain_id in ordered_chain_ids if chain_id in target_chain_ids),
+      None,
+    )
+    if not default_chain_id:
+      raise ValueError("Target PDB does not contain any protein chains.")
 
-    contig_str = _rfd3_contig_string(ordered_chain_ids, chain_lengths, binder_length)
+    contig_str = _rfd3_contig_string(ordered_chain_ids, chain_segments, binder_length)
     hotspot_selection = _rfd3_hotspot_selection(
       hotspot_residues,
-      ordered_chain_ids[0],
+      default_chain_id,
       RFD3_HOTSPOT_ATOMS,
     )
 
