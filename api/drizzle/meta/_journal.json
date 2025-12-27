@@ -36,6 +36,20 @@
       "when": 1766351778597,
       "tag": "0004_illegal_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1766769806690,
+      "tag": "0005_wakeful_zombie",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1735257600000,
+      "tag": "0006_usage_based_billing",
+      "breakpoints": true
     }
   ]
 }

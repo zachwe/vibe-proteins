@@ -20,6 +20,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import List
@@ -486,6 +487,8 @@ def run_rfdiffusion3(
   """
   RFdiffusion3 (RFD3) + ProteinMPNN + Boltz-2 pipeline for binder design.
   """
+  start_time = time.time()
+  gpu_type = "A10G"
 
   job_id = job_id or str(uuid.uuid4())
   rng = _rng_from_job(job_id)
@@ -667,6 +670,8 @@ def run_rfdiffusion3(
     manifest_key = f"{RESULTS_PREFIX}/{job_id}/manifest.json"
     upload_bytes(json.dumps(manifest, indent=2).encode("utf-8"), manifest_key, "application/json")
 
+  execution_seconds = round(time.time() - start_time, 2)
+
   return {
     "status": "completed",
     "job_id": job_id,
@@ -675,6 +680,10 @@ def run_rfdiffusion3(
     "designs": results,
     "mode": "inference",
     "pipeline": "rfdiffusion3",
+    "usage": {
+      "gpu_type": gpu_type,
+      "execution_seconds": execution_seconds,
+    },
   }
 
 
@@ -686,6 +695,9 @@ def run_proteinmpnn(
   job_id: str | None = None,
 ) -> dict:
   """Direct ProteinMPNN call for a provided backbone."""
+  start_time = time.time()
+  gpu_type = "A10G"
+
   job_id = job_id or str(uuid.uuid4())
   backbone_source = _resolve_structure_source(backbone_pdb, target_pdb)
 
@@ -699,12 +711,18 @@ def run_proteinmpnn(
       seed=_rng_from_job(job_id).randint(1, 10_000_000),
     )
 
+  execution_seconds = round(time.time() - start_time, 2)
+
   return {
     "status": "completed",
     "job_id": job_id,
     "sequences": sequences,
     "backbone_length": estimated_length,
     "mode": "inference",
+    "usage": {
+      "gpu_type": gpu_type,
+      "execution_seconds": execution_seconds,
+    },
   }
 
 
@@ -724,6 +742,9 @@ def run_boltz2(
   job_id: str | None = None,
 ) -> dict:
   """Boltz-2 sanity check wrapper."""
+  start_time = time.time()
+  gpu_type = "A10G"
+
   job_id = job_id or str(uuid.uuid4())
   num_samples = max(int(num_samples), 1)
 
@@ -824,6 +845,8 @@ def run_boltz2(
     "buriedSurfaceArea": metrics.get("interface_area"),
   }
 
+  execution_seconds = round(time.time() - start_time, 2)
+
   return {
     "status": "completed",
     "job_id": job_id,
@@ -835,6 +858,10 @@ def run_boltz2(
     "structureUrl": object_url(complex_key),
     "confidence": {"key": confidence_key, "url": object_url(confidence_key)} if confidence_key else None,
     "designName": "Boltz-2 prediction",
+    "usage": {
+      "gpu_type": gpu_type,
+      "execution_seconds": execution_seconds,
+    },
   }
 
 
@@ -847,6 +874,9 @@ def run_structure_prediction(
   """
   Placeholder structure prediction hook – returns a stub response for now.
   """
+  start_time = time.time()
+  gpu_type = "A10G"
+
   job_id = job_id or str(uuid.uuid4())
   rng = _rng_from_job(job_id)
   length = len(sequence)
@@ -855,12 +885,18 @@ def run_structure_prediction(
     "ptm": round(0.5 + rng.random() * 0.3, 3),
   }
 
+  execution_seconds = round(time.time() - start_time, 2)
+
   return {
     "status": "completed",
     "job_id": job_id,
     "sequence": sequence,
     "target_sequence": target_sequence,
     "scores": mock_scores,
+    "usage": {
+      "gpu_type": gpu_type,
+      "execution_seconds": execution_seconds,
+    },
   }
 
 
@@ -871,6 +907,8 @@ def compute_scores(
   job_id: str | None = None,
 ) -> dict:
   """CPU scoring pass computing ipSAE-style metrics."""
+  start_time = time.time()
+
   job_id = job_id or str(uuid.uuid4())
   with tempfile.TemporaryDirectory() as tmpdir:
     tmpdir_path = Path(tmpdir)
@@ -878,10 +916,16 @@ def compute_scores(
     target_path = download_to_path(target_pdb, tmpdir_path / "target.pdb")
     metrics = compute_interface_metrics(design_path, chain_ids_from_structure(target_path))
 
+  execution_seconds = round(time.time() - start_time, 2)
+
   return {
     "status": "completed",
     "job_id": job_id,
     "scores": metrics,
+    "usage": {
+      "gpu_type": "CPU",  # CPU-only, no GPU
+      "execution_seconds": execution_seconds,
+    },
   }
 
 

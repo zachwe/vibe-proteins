@@ -9,8 +9,8 @@ export default function setup() {
     unlinkSync(TEST_DB);
   }
 
-  // Run migrations on the test database
-  execSync(`DATABASE_URL=${TEST_DB} pnpm db:migrate`, {
+  // Push schema to test database (faster than migrations for testing)
+  execSync(`DATABASE_URL=${TEST_DB} pnpm exec drizzle-kit push`, {
     stdio: "inherit",
     cwd: process.cwd(),
   });

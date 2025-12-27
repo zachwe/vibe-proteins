@@ -21,7 +21,7 @@ Consult PLAN.md for architectural decisions, scoring algorithms, and feature req
 
 The implementation task tracker. Contains:
 
-- **Phase-by-phase checklists**: Setup, infrastructure, inference, frontend, scoring, credits, content
+- **Phase-by-phase checklists**: Setup, infrastructure, inference, frontend, scoring, billing, content
 - **Current Focus section**: What's actively being worked on
 - **Completed work**: Historical record of finished tasks
 
@@ -69,6 +69,7 @@ uv run python <script>
 - Jobs: `/api/jobs`, `/api/jobs/:id`
 - Submissions: `/api/submissions`, `/api/submissions/:id`
 - Users: `/api/users/me`
+- Billing: `/api/billing/deposit`, `/api/billing/presets`, `/api/billing/gpu-pricing`, `/api/billing/transactions`
 
 ## Current State
 

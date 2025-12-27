@@ -40,7 +40,10 @@ export const jobs = sqliteTable("jobs", {
   status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
   input: text("input"), // JSON input parameters
   output: text("output"), // JSON output or S3 URL
-  creditsUsed: integer("credits_used").notNull().default(0),
+  // Usage tracking (populated on completion)
+  gpuType: text("gpu_type"), // e.g., 'A10G', 'A100_40GB', etc.
+  executionSeconds: real("execution_seconds"), // Actual GPU time used
+  costUsdCents: integer("cost_usd_cents"), // Calculated cost in cents
   error: text("error"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
@@ -74,16 +77,42 @@ export const submissions = sqliteTable("submissions", {
     .$defaultFn(() => new Date()),
 });
 
-// Credit transactions
-export const creditTransactions = sqliteTable("credit_transactions", {
+// Transactions (balance changes in USD cents)
+export const transactions = sqliteTable("transactions", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id),
-  amount: integer("amount").notNull(), // Positive for purchases, negative for usage
-  type: text("type").notNull(), // 'signup_bonus', 'purchase', 'job_usage'
+  amountCents: integer("amount_cents").notNull(), // Positive for deposits, negative for usage
+  type: text("type").notNull(), // 'deposit', 'job_usage', 'refund'
   jobId: text("job_id").references(() => jobs.id),
+  stripeSessionId: text("stripe_session_id"), // For deposit transactions
   description: text("description"),
+  balanceAfterCents: integer("balance_after_cents"), // User's balance after this transaction
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+// GPU pricing (Modal rates + markup, per second)
+export const gpuPricing = sqliteTable("gpu_pricing", {
+  id: text("id").primaryKey(), // e.g., 'A10G', 'A100_40GB', 'H100'
+  name: text("name").notNull(), // Display name e.g., "NVIDIA A10G"
+  modalRatePerSec: real("modal_rate_per_sec").notNull(), // Modal's rate in USD
+  markupPercent: real("markup_percent").notNull().default(30), // Our markup (default 30%)
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+// Preset deposit amounts (for quick "Add $X" buttons)
+export const depositPresets = sqliteTable("deposit_presets", {
+  id: text("id").primaryKey(),
+  amountCents: integer("amount_cents").notNull(), // e.g., 500 = $5.00
+  label: text("label").notNull(), // e.g., "$5"
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

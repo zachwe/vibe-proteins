@@ -10,9 +10,14 @@
     "db:generate": "pnpm --filter api db:generate",
     "db:migrate": "pnpm --filter api db:migrate",
     "db:studio": "pnpm --filter api db:studio",
+    "db:seed": "pnpm --filter api db:seed",
     "db:shell": "sqlite3 api/vibeproteins.db",
     "test": "pnpm --filter api test",
-    "test:watch": "pnpm --filter api test:watch"
+    "test:watch": "pnpm --filter api test:watch",
+    "prod:db": "./scripts/prod-db.sh",
+    "prod:seed": "./scripts/prod-seed.sh",
+    "prod:migrate": "./scripts/prod-migrate.sh",
+    "prod:reset-db": "./scripts/prod-reset-db.sh"
   },
   "engines": {
     "node": ">=20"

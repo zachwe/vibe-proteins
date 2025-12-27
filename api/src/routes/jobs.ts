@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
-import { db, jobs, user, challenges } from "../db";
+import { db, jobs, user, challenges, transactions, gpuPricing } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider, type JobType } from "../inference";
@@ -8,14 +8,28 @@ import { getSignedUrl } from "../storage/r2";
 
 const app = new Hono();
 
-// Credit costs for different job types
-const JOB_COSTS: Record<string, number> = {
-  rfdiffusion3: 12,
-  boltz2: 6,
-  proteinmpnn: 4,
-  predict: 5,
-  score: 1,
-};
+// Minimum balance required to submit a job (in cents) - prevents users with $0 from submitting
+const MIN_BALANCE_CENTS = 10; // $0.10 minimum
+
+// Helper to calculate cost from GPU usage
+async function calculateJobCost(gpuType: string, executionSeconds: number): Promise<number> {
+  // Look up GPU pricing
+  const pricing = await db
+    .select()
+    .from(gpuPricing)
+    .where(eq(gpuPricing.id, gpuType))
+    .get();
+
+  if (!pricing) {
+    // Fallback to A10G rate if GPU type not found
+    const fallbackRate = 0.000306 * 1.3; // A10G + 30%
+    return Math.ceil(fallbackRate * executionSeconds * 100); // Convert to cents
+  }
+
+  // Calculate: modalRate * (1 + markup%) * seconds * 100 (to cents)
+  const ourRate = pricing.modalRatePerSec * (1 + pricing.markupPercent / 100);
+  return Math.ceil(ourRate * executionSeconds * 100);
+}
 
 const SIGNED_URL_TTL_SECONDS = Number.parseInt(
   process.env.R2_SIGNED_URL_TTL_SECONDS || "900",
@@ -87,19 +101,22 @@ app.post("/", async (c) => {
     return c.json({ error: "Challenge not found" }, 404);
   }
 
-  // Check credit cost
-  const cost = JOB_COSTS[type] ?? 5;
-
-  // Get user's current credits
+  // Get user's current balance (in cents)
   const currentUser = await db
-    .select({ credits: user.credits })
+    .select({ balanceUsdCents: user.balanceUsdCents })
     .from(user)
     .where(eq(user.id, session.user.id))
     .get();
 
-  if (!currentUser || currentUser.credits < cost) {
+  // Require minimum balance to submit jobs
+  if (!currentUser || currentUser.balanceUsdCents < MIN_BALANCE_CENTS) {
     return c.json(
-      { error: "Insufficient credits", required: cost, available: currentUser?.credits ?? 0 },
+      {
+        error: "Insufficient balance",
+        message: "Please add funds to your account to run jobs",
+        requiredCents: MIN_BALANCE_CENTS,
+        availableCents: currentUser?.balanceUsdCents ?? 0
+      },
       402
     );
   }
@@ -115,6 +132,7 @@ app.post("/", async (c) => {
     ...(input ?? {}),
   };
 
+  // Create job without charging - billing happens on completion
   await db.insert(jobs).values({
     id: jobId,
     userId: session.user.id,
@@ -122,15 +140,8 @@ app.post("/", async (c) => {
     type,
     status: "pending",
     input: JSON.stringify(normalizedInput ?? {}),
-    creditsUsed: cost,
     createdAt: now,
   });
-
-  // Deduct credits
-  await db
-    .update(user)
-    .set({ credits: currentUser.credits - cost })
-    .where(eq(user.id, session.user.id));
 
   // Submit to inference provider (async, don't await for long-running jobs)
   const provider = getInferenceProvider();
@@ -145,13 +156,53 @@ app.post("/", async (c) => {
         challengeId,
       });
 
+      const output = result.result?.output ?? { callId: result.callId };
       const updatePayload: Record<string, unknown> = {
         status: result.status,
-        output: JSON.stringify(result.result?.output ?? { callId: result.callId }),
+        output: JSON.stringify(output),
       };
 
       if (result.status === "completed") {
         updatePayload.completedAt = new Date();
+
+        // Extract usage data and calculate cost
+        const usage = output?.usage as { gpu_type?: string; execution_seconds?: number } | undefined;
+        if (usage?.gpu_type && usage?.execution_seconds) {
+          const gpuType = usage.gpu_type;
+          const executionSeconds = usage.execution_seconds;
+          const costCents = await calculateJobCost(gpuType, executionSeconds);
+
+          updatePayload.gpuType = gpuType;
+          updatePayload.executionSeconds = executionSeconds;
+          updatePayload.costUsdCents = costCents;
+
+          // Deduct from user balance
+          const jobUser = await db
+            .select({ balanceUsdCents: user.balanceUsdCents })
+            .from(user)
+            .where(eq(user.id, session.user.id))
+            .get();
+
+          if (jobUser) {
+            const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
+            await db
+              .update(user)
+              .set({ balanceUsdCents: newBalance })
+              .where(eq(user.id, session.user.id));
+
+            // Record transaction
+            await db.insert(transactions).values({
+              id: randomUUID(),
+              userId: session.user.id,
+              amountCents: -costCents,
+              type: "job_usage",
+              jobId,
+              description: `${type} job (${gpuType}, ${executionSeconds.toFixed(1)}s)`,
+              balanceAfterCents: newBalance,
+              createdAt: new Date(),
+            });
+          }
+        }
       } else if (result.status === "failed") {
         updatePayload.error =
           result.result?.error ||
@@ -177,7 +228,6 @@ app.post("/", async (c) => {
       id: jobId,
       status: "pending",
       type,
-      creditsUsed: cost,
     },
   }, 201);
 });

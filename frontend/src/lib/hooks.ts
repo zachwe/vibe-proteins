@@ -3,7 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { challengesApi, usersApi, jobsApi, submissionsApi } from "./api";
+import { challengesApi, usersApi, jobsApi, submissionsApi, billingApi } from "./api";
 
 // Query keys for cache management
 export const queryKeys = {
@@ -14,6 +14,9 @@ export const queryKeys = {
   job: (id: string) => ["jobs", id] as const,
   submissions: ["submissions"] as const,
   submission: (id: string) => ["submissions", id] as const,
+  depositPresets: ["depositPresets"] as const,
+  gpuPricing: ["gpuPricing"] as const,
+  transactions: ["transactions"] as const,
 };
 
 // Challenge hooks
@@ -95,7 +98,7 @@ export function useCreateJob() {
     mutationFn: jobsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs });
-      queryClient.invalidateQueries({ queryKey: queryKeys.user }); // Credits changed
+      queryClient.invalidateQueries({ queryKey: queryKeys.user }); // Balance may change after job
     },
   });
 }
@@ -129,6 +132,56 @@ export function useCreateSubmission() {
     mutationFn: submissionsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.submissions });
+    },
+  });
+}
+
+// Billing hooks
+export function useDepositPresets() {
+  return useQuery({
+    queryKey: queryKeys.depositPresets,
+    queryFn: async () => {
+      const data = await billingApi.getPresets();
+      return data.presets;
+    },
+  });
+}
+
+export function useGpuPricing() {
+  return useQuery({
+    queryKey: queryKeys.gpuPricing,
+    queryFn: async () => {
+      const data = await billingApi.getPricing();
+      return data.pricing;
+    },
+  });
+}
+
+export function useTransactions() {
+  return useQuery({
+    queryKey: queryKeys.transactions,
+    queryFn: async () => {
+      const data = await billingApi.getTransactions();
+      return data.transactions;
+    },
+  });
+}
+
+export function useCreateDeposit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: billingApi.createDeposit,
+    onSuccess: (data) => {
+      // Redirect to Stripe checkout
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onSettled: () => {
+      // Refresh user data after deposit
+      queryClient.invalidateQueries({ queryKey: queryKeys.user });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
     },
   });
 }

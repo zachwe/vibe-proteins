@@ -117,7 +117,7 @@ export default function Signup() {
 
         <div className="mt-4 p-3 bg-slate-700/50 rounded-lg">
           <p className="text-slate-400 text-sm text-center">
-            You'll receive <span className="text-white font-semibold">100 free credits</span> to start designing proteins!
+            Pay only for what you use - <span className="text-white font-semibold">per-second GPU billing</span>
           </p>
         </div>
 

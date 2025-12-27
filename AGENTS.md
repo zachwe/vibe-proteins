@@ -21,7 +21,7 @@ Consult PLAN.md for architectural decisions, scoring algorithms, and feature req
 
 The implementation task tracker. Contains:
 
-- **Phase-by-phase checklists**: Setup, infrastructure, inference, frontend, scoring, credits, content
+- **Phase-by-phase checklists**: Setup, infrastructure, inference, frontend, scoring, billing, content
 - **Current Focus section**: What's actively being worked on
 - **Completed work**: Historical record of finished tasks
 

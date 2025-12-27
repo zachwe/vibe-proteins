@@ -28,7 +28,7 @@
   - [x] Challenges table
   - [x] Submissions table
   - [x] Jobs table (for tracking inference jobs)
-  - [x] Credits/transactions table
+  - [x] Billing/transactions table
 - [x] API endpoints
   - [x] Auth routes (handled by BetterAuth)
   - [x] `GET /challenges` - list challenges
@@ -39,7 +39,7 @@
   - [x] `POST /submissions` - submit design for scoring
   - [x] `GET /submissions` - user's submission history
   - [x] `GET /submissions/:id` - single submission
-  - [x] `GET /users/me` - current user + credits
+  - [x] `GET /users/me` - current user + balance
   - [x] API tests (vitest)
 - [x] Inference provider abstraction
   - [x] Define `InferenceProvider` interface
@@ -104,15 +104,21 @@
   - [ ] etc.
 - [ ] Leaderboard per challenge
 
-## Phase 7: Progress & Credits
+## Phase 7: Progress & Billing
 
 - [ ] User dashboard
   - [ ] Curriculum progress
   - [ ] Submission history
-- [ ] Credits system
-  - [ ] Track credit balance
-  - [ ] Deduct credits on job run
-  - [ ] Credit purchase flow (Stripe?)
+- [x] Usage-based billing system
+  - [x] Track USD balance in cents (displayed in header)
+  - [x] Per-second GPU billing (Modal rates + 30% markup)
+  - [x] Self-timing in Modal functions (returns gpu_type + execution_seconds)
+  - [x] Post-completion billing (charge after job completes, not upfront)
+  - [x] GPU pricing table in database (flexible, easy to update)
+  - [x] Deposit presets ($5, $10, $25, $50)
+  - [x] Stripe Checkout for deposits (dynamic price_data)
+  - [x] Billing page (/billing) with GPU pricing, deposit buttons, transaction history
+  - [x] Stripe webhook for payment confirmation
 
 ## Phase 8: Content
 
@@ -204,13 +210,23 @@ Completed:
 - DesignPanel component with tool selection, job submission, and status tracking
 - Job status UI with pending/running/completed/failed states
 - ResultsPanel component with Mol* viewer and score breakdown display
+- **Usage-based billing with Stripe integration**:
+  - Per-second GPU billing (Modal rates + 30% markup)
+  - Self-timing in Modal functions (gpu_type + execution_seconds)
+  - Post-completion billing (not upfront deduction)
+  - GPU pricing table in database (9 GPU types seeded)
+  - Deposit presets ($5, $10, $25, $50)
+  - Stripe Checkout with dynamic `price_data`
+  - Webhook for payment confirmation
+  - USD balance display in header
+  - Billing page (/billing) with deposits, GPU pricing, transaction history
 
 Currently working on:
 - Phase 3: Modal inference + scoring (RFDiffusion3 + ProteinMPNN real inference integration + validation)
 - Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
 
 Next up:
-- Phase 3: Modal Inference Functions (actual AI design implementation)
+- Phase 9: Production configuration (R2/Modal credentials in Fly.io)
 
 ---
 

@@ -20,7 +20,7 @@ app.get("/me", async (c) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      credits: user.credits,
+      balanceUsdCents: user.balanceUsdCents,
       createdAt: user.createdAt,
     })
     .from(user)
@@ -31,7 +31,13 @@ app.get("/me", async (c) => {
     return c.json({ error: "User not found" }, 404);
   }
 
-  return c.json({ user: currentUser });
+  // Also return formatted balance for convenience
+  return c.json({
+    user: {
+      ...currentUser,
+      balanceFormatted: `$${(currentUser.balanceUsdCents / 100).toFixed(2)}`,
+    },
+  });
 });
 
 export default app;

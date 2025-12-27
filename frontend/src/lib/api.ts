@@ -35,7 +35,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  credits: number;
+  balanceUsdCents: number;
+  balanceFormatted: string;
 }
 
 export interface Job {
@@ -46,7 +47,9 @@ export interface Job {
   status: "pending" | "running" | "completed" | "failed";
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
-  creditsUsed: number;
+  gpuType: string | null;
+  executionSeconds: number | null;
+  costUsdCents: number | null;
   createdAt: string;
 }
 
@@ -59,6 +62,35 @@ export interface Submission {
   score: number | null;
   scoreBreakdown: Record<string, unknown> | null;
   feedback: string | null;
+  createdAt: string;
+}
+
+export interface DepositPreset {
+  id: string;
+  amountCents: number;
+  label: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface GpuPricing {
+  id: string;
+  name: string;
+  modalRatePerSec: number;
+  markupPercent: number;
+  ourRatePerSec: number;
+  ourRatePerMin: number;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  amountCents: number;
+  type: "deposit" | "job_usage" | "refund";
+  jobId: string | null;
+  stripeSessionId: string | null;
+  description: string | null;
+  balanceAfterCents: number | null;
   createdAt: string;
 }
 
@@ -135,4 +167,22 @@ export const submissionsApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+};
+
+// Billing API
+export const billingApi = {
+  getPresets: () => apiFetch<{ presets: DepositPreset[] }>("/api/billing/presets"),
+
+  getPricing: () => apiFetch<{ pricing: GpuPricing[] }>("/api/billing/pricing"),
+
+  createDeposit: (amountCents: number) =>
+    apiFetch<{ url: string }>("/api/billing/deposit", {
+      method: "POST",
+      body: JSON.stringify({ amountCents }),
+    }),
+
+  getTransactions: () =>
+    apiFetch<{ transactions: Transaction[] }>("/api/billing/transactions"),
+
+  getPortalUrl: () => apiFetch<{ url: string }>("/api/billing/portal"),
 };

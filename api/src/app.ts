@@ -7,6 +7,7 @@ import challengesRoutes from "./routes/challenges";
 import usersRoutes from "./routes/users";
 import jobsRoutes from "./routes/jobs";
 import submissionsRoutes from "./routes/submissions";
+import billingRoutes from "./routes/billing";
 
 // CORS origins based on environment
 const corsOrigins =
@@ -42,6 +43,7 @@ export function createApp() {
   app.route("/api/users", usersRoutes);
   app.route("/api/jobs", jobsRoutes);
   app.route("/api/submissions", submissionsRoutes);
+  app.route("/api/billing", billingRoutes);
 
   return app;
 }

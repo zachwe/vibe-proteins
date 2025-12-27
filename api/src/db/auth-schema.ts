@@ -10,7 +10,8 @@ export const user = sqliteTable("user", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   // Custom fields
-  credits: integer("credits").notNull().default(100),
+  balanceUsdCents: integer("balance_usd_cents").notNull().default(0), // USD balance in cents (e.g., 1000 = $10.00)
+  stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for payments
 });
 
 export const session = sqliteTable("session", {

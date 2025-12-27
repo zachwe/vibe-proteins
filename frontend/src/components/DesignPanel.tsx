@@ -19,21 +19,25 @@ interface DesignPanelProps {
 
 type DesignTool = "rfdiffusion3" | "boltz2" | "proteinmpnn";
 
-const toolInfo: Record<DesignTool, { name: string; description: string; credits: number }> = {
+// Estimated costs based on typical run times (A10G at ~$0.024/min)
+const toolInfo: Record<DesignTool, { name: string; description: string; estimatedCost: string; estimatedTime: string }> = {
   rfdiffusion3: {
     name: "RFDiffusion3",
     description: "RFDiffusion3 backbone design + ProteinMPNN sequences + Boltz-2 sanity check",
-    credits: 12,
+    estimatedCost: "$0.50-2.00",
+    estimatedTime: "2-5 min",
   },
   boltz2: {
     name: "Boltz-2",
     description: "Fast co-fold sanity check for binder + target complexes",
-    credits: 6,
+    estimatedCost: "$0.10-0.50",
+    estimatedTime: "30s-2 min",
   },
   proteinmpnn: {
     name: "ProteinMPNN",
     description: "Sequence design for a given backbone structure",
-    credits: 4,
+    estimatedCost: "$0.05-0.20",
+    estimatedTime: "15s-1 min",
   },
 };
 
@@ -117,7 +121,12 @@ export default function DesignPanel({
 
           <div className="text-sm text-slate-400">
             <p>Tool: {toolInfo[job.type as DesignTool]?.name || job.type}</p>
-            <p>Credits used: {job.creditsUsed}</p>
+            {job.costUsdCents !== null && (
+              <p>Cost: ${(job.costUsdCents / 100).toFixed(2)}</p>
+            )}
+            {job.executionSeconds !== null && job.gpuType && (
+              <p>GPU time: {job.executionSeconds.toFixed(1)}s on {job.gpuType}</p>
+            )}
             <p>Started: {new Date(job.createdAt).toLocaleString()}</p>
           </div>
 
@@ -215,7 +224,7 @@ export default function DesignPanel({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-white font-medium">{info.name}</span>
-                    <span className="text-slate-400 text-sm">{info.credits} credits</span>
+                    <span className="text-slate-400 text-sm">{info.estimatedCost} ({info.estimatedTime})</span>
                   </div>
                   <p className="text-slate-400 text-sm mt-1">{info.description}</p>
                 </button>
@@ -246,7 +255,7 @@ export default function DesignPanel({
               Submitting...
             </span>
           ) : (
-            `Run ${toolInfo[selectedTool].name} (${toolInfo[selectedTool].credits} credits)`
+            `Run ${toolInfo[selectedTool].name} (${toolInfo[selectedTool].estimatedCost})`
           )}
         </button>
 

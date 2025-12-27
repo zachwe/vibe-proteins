@@ -176,6 +176,7 @@ modal secret create r2-credentials \
 | `pnpm lint` | Lint all packages |
 | `pnpm db:generate` | Generate Drizzle migrations |
 | `pnpm db:migrate` | Apply pending migrations |
+| `pnpm db:seed` | Seed challenges to local database |
 | `pnpm db:studio` | Open Drizzle Studio (browser DB UI) |
 | `pnpm db:shell` | Open SQLite shell |
 | `pnpm test` | Run API tests |
@@ -211,12 +212,14 @@ SQLite database stored at `api/vibeproteins.db`.
 
 **App tables:**
 - `challenges` - Protein design challenges
-- `jobs` - GPU inference job tracking
+- `jobs` - GPU inference job tracking (includes GPU usage and cost)
 - `submissions` - User design submissions
-- `credit_transactions` - Credit usage history
+- `gpu_pricing` - GPU rates for billing (Modal rates + markup)
+- `deposit_presets` - Preset deposit amounts ($5, $10, etc.)
+- `transactions` - Balance deposits and job usage charges
 
 **Auth tables (BetterAuth):**
-- `user` - User accounts (includes `credits` field)
+- `user` - User accounts (includes `balance_usd_cents` field)
 - `session` - Active sessions
 - `account` - OAuth/credential accounts
 - `verification` - Email verification tokens
@@ -266,7 +269,63 @@ SELECT * FROM user;  -- Query data
 - **API**: Hono, TypeScript, Drizzle ORM, BetterAuth
 - **Database**: SQLite (dev), S3/R2 (file storage)
 - **Inference**: Modal (Python), RFDiffusion3 + ProteinMPNN, Boltz-2, AlphaFold
+- **Payments**: Stripe (balance deposits)
 - **Visualization**: Mol* (molecular viewer)
+
+## Usage-Based Billing
+
+Users pay for GPU inference jobs based on actual GPU time used. Billing is per-second with Modal's rates plus a 30% markup.
+
+### How it works
+
+1. **User balance** is stored in cents (`balance_usd_cents` on user table)
+2. **GPU pricing** is stored in `gpu_pricing` table (seeded via `pnpm db:seed`)
+3. **Deposit presets** ($5, $10, $25, $50) are stored in `deposit_presets` table
+4. **Stripe Checkout** is used with dynamic `price_data` for deposits
+5. **Self-timing** in Modal functions tracks GPU usage (returns `gpu_type` + `execution_seconds`)
+6. **Post-completion billing** deducts cost from balance after job completes
+
+### Estimated costs (A10G GPU)
+
+| Job Type | Estimated Cost | Estimated Time |
+|----------|----------------|----------------|
+| RFDiffusion3 (binder design) | $0.50-2.00 | 2-5 min |
+| Boltz-2 (co-fold) | $0.10-0.50 | 30s-2 min |
+| ProteinMPNN (sequence design) | $0.05-0.20 | 15s-1 min |
+
+### GPU Pricing
+
+GPU rates are based on Modal's pricing plus 30% markup:
+
+| GPU | Modal Rate/sec | Our Rate/sec |
+|-----|----------------|--------------|
+| A10G | $0.000306 | $0.000398 |
+| H100 | $0.001097 | $0.001426 |
+
+### Updating pricing
+
+To change GPU pricing or deposit presets:
+1. Edit `api/src/db/seed.ts`
+2. Run `pnpm db:seed` locally or `pnpm prod:seed` for production
+
+To update estimated costs in the UI:
+1. Edit `toolInfo` in `frontend/src/components/DesignPanel.tsx`
+
+### Stripe webhook setup
+
+For local development:
+```bash
+# Install Stripe CLI and login
+stripe login
+
+# Forward webhooks to local API
+stripe listen --forward-to localhost:3000/api/billing/webhook
+
+# Copy the webhook secret (whsec_...) to your .env
+```
+
+For production, create a webhook endpoint in the Stripe dashboard pointing to:
+`https://your-api-domain.com/api/billing/webhook`
 
 ## Environment Variables
 
@@ -277,6 +336,9 @@ SELECT * FROM user;  -- Query data
 BETTER_AUTH_SECRET=<generate with: openssl rand -base64 32>
 BETTER_AUTH_URL=http://localhost:3000
 
+# Frontend URL (for Stripe redirects)
+FRONTEND_URL=http://localhost:5173
+
 # R2 Storage (optional for dev, required for inference)
 R2_ACCOUNT_ID=<your cloudflare account id>
 R2_ACCESS_KEY_ID=<from R2 API token>
@@ -284,6 +346,10 @@ R2_SECRET_ACCESS_KEY=<from R2 API token>
 R2_BUCKET_NAME=vibeproteins
 R2_PUBLIC_BASE_URL=<optional CDN base for serving artifacts>
 DESIGN_RESULTS_PREFIX=designs
+
+# Stripe (for balance deposits)
+STRIPE_SECRET_KEY=<from Stripe dashboard>
+STRIPE_WEBHOOK_SECRET=<from Stripe CLI or dashboard>
 ```
 
 ### Modal
@@ -414,6 +480,47 @@ gh secret set FLY_API_TOKEN --body "<token>"
 - `api/fly.toml` - Fly.io app configuration
 - `api/Dockerfile` - Production Docker image
 - `.github/workflows/deploy-api.yml` - CI/CD pipeline
+
+### Production Database Management
+
+Scripts for managing the production SQLite database on Fly.io:
+
+| Command | Description |
+|---------|-------------|
+| `pnpm prod:seed` | Seed/update challenges from `api/src/db/challenges.json` |
+| `pnpm prod:db` | Open interactive SQLite shell on production |
+| `pnpm prod:migrate` | Run database migrations on production |
+| `pnpm prod:reset-db` | **Delete all data** and recreate database (requires confirmation) |
+
+**Seeding Challenges:**
+
+Challenge data is stored in `api/src/db/challenges.json`. To add or update challenges:
+
+1. Edit `api/src/db/challenges.json`
+2. Run `pnpm prod:seed` to push changes to production
+
+The seed script uses upsert, so existing challenges are updated and new ones are added without affecting user data (jobs, submissions, etc.).
+
+**Quick Database Queries:**
+
+```bash
+# Open production SQLite shell
+pnpm prod:db
+
+# Or run a single query
+flyctl ssh console --app vibe-proteins-api --command "sqlite3 /data/vibeproteins.db 'SELECT id, name FROM challenges'"
+```
+
+**Resetting the Database:**
+
+For backwards-incompatible schema changes during early development:
+
+```bash
+pnpm prod:reset-db  # Prompts for confirmation
+pnpm prod:seed      # Re-seed challenge data
+```
+
+⚠️ This deletes all data including user accounts, jobs, and submissions.
 
 ## Contributing
 

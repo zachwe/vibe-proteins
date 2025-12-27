@@ -261,13 +261,13 @@ class LocalGPUProvider implements InferenceProvider { ... }   // Future
 
 1. **Authentication**
    - Users can sign up / log in (BetterAuth)
-   - Users start with N free credits
+   - Users have a USD balance for GPU usage
 
 2. **Browse Challenges**
    - View list of protein design challenges organized by difficulty level
    - Read educational content about each target (biology, disease relevance, why it matters)
    - See challenge requirements (design a binder, block a PPI, etc.)
-   - View difficulty rating and estimated credit cost
+   - View difficulty rating and estimated GPU cost
 
 3. **Work on a Challenge** (Guided workflow)
 
@@ -281,7 +281,7 @@ class LocalGPUProvider implements InferenceProvider { ... }   // Future
    - Select binding site (click residues or use suggested hotspot)
    - Choose design tool (RFDiffusion3, BoltzGen, etc.)
    - Set parameters (binder length, number of designs)
-   - Run generation (costs credits)
+   - Run generation (charged per GPU-second)
    - View generated candidates
 
    **Step 3: Evaluate**
@@ -307,18 +307,19 @@ class LocalGPUProvider implements InferenceProvider { ... }   // Future
    - Export designs (PDB, FASTA)
    - Save work-in-progress drafts
 
-6. **Credits System**
-   - Free credits on signup
-   - Purchase additional credits
-   - Different operations have different costs:
+6. **Usage-Based Billing**
+   - Users have a USD balance
+   - Charged per GPU-second (Modal rates + 30% markup)
+   - Add funds via Stripe ($5, $10, $25, $50 presets or custom)
+   - Browsing and exploration is free
 
-   | Operation | Cost |
-   |-----------|------|
+   | Operation | Estimated Cost |
+   |-----------|----------------|
    | Browse / explore target | Free |
-   | Run scoring metrics | Free or minimal |
-   | Run AlphaFold prediction | Low-Medium |
-   | Run RFDiffusion3 pipeline | Medium |
-   | Run BoltzGen | High |
+   | Run scoring metrics | Free |
+   | Run Boltz-2 prediction | $0.10-0.50 (30s-2min) |
+   | Run RFDiffusion3 pipeline | $0.50-2.00 (2-5min) |
+   | Run ProteinMPNN | $0.05-0.20 (15s-1min) |
 
 ### Design Decisions
 

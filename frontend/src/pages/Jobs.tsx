@@ -47,7 +47,13 @@ function renderJobRow(job: Job) {
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">Credits: {job.creditsUsed}</p>
+        <p className="text-xs text-slate-500">
+          {job.costUsdCents !== null
+            ? `Cost: $${(job.costUsdCents / 100).toFixed(2)}`
+            : job.executionSeconds !== null
+            ? `${job.executionSeconds.toFixed(1)}s on ${job.gpuType}`
+            : "Pending"}
+        </p>
         <Link
           to={`/jobs/${job.id}`}
           className="text-sm text-blue-400 hover:text-blue-300"
