@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { useSession } from "../lib/auth";
 
 export default function Home() {
+  const { data: session } = useSession();
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800">
       <Helmet>
@@ -33,12 +35,14 @@ export default function Home() {
             >
               Browse Challenges
             </Link>
-            <Link
-              to="/login"
-              className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              Sign In
-            </Link>
+            {!session?.user && (
+              <Link
+                to="/login"
+                className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
 

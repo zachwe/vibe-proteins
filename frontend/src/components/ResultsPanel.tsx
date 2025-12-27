@@ -412,12 +412,41 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
                 {activeStructure?.description && (
                   <p className="text-xs text-slate-500">{activeStructure.description}</p>
                 )}
-                <div className="h-[320px] md:h-[380px] lg:h-[420px] bg-slate-700 rounded-lg overflow-hidden">
+                <div className="relative h-[320px] md:h-[380px] lg:h-[420px] bg-slate-700 rounded-lg overflow-hidden">
                   <MolstarViewer
                     pdbUrl={structureUrl}
                     className="w-full h-full"
                     minHeight={280}
+                    chainColors={{
+                      target: chainInfo?.target,
+                      binder: chainInfo?.binder,
+                    }}
                   />
+                  {(chainInfo?.target?.length || chainInfo?.binder?.length) && (
+                    <div className="absolute top-3 right-3 bg-slate-900/85 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 shadow-lg">
+                      <p className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">
+                        Chain Key
+                      </p>
+                      {chainInfo.target?.length ? (
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="w-2 h-2 rounded-full bg-blue-400" />
+                          <span className="text-slate-200">Target</span>
+                          <span className="text-slate-400">
+                            {chainInfo.target.join(", ")}
+                          </span>
+                        </div>
+                      ) : null}
+                      {chainInfo.binder?.length ? (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-amber-300" />
+                          <span className="text-slate-200">Binder</span>
+                          <span className="text-slate-400">
+                            {chainInfo.binder.join(", ")}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

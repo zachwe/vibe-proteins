@@ -5,9 +5,10 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCreateJob, useJob } from "../lib/hooks";
 import { useSession } from "../lib/auth";
+import { ApiError } from "../lib/api";
 import ResultsPanel from "./ResultsPanel";
 
 interface DesignPanelProps {
@@ -261,7 +262,17 @@ export default function DesignPanel({
 
         {createJob.isError && (
           <div className="bg-red-500/10 border border-red-500 text-red-400 rounded-lg p-3 text-sm">
-            Failed to submit job. Please try again.
+            {createJob.error instanceof ApiError && createJob.error.status === 402 ? (
+              <>
+                Insufficient balance.{" "}
+                <Link to="/billing" className="text-blue-400 hover:text-blue-300 underline">
+                  Add funds
+                </Link>{" "}
+                to run design jobs.
+              </>
+            ) : (
+              "Failed to submit job. Please try again."
+            )}
           </div>
         )}
       </div>
