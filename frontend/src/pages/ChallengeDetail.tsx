@@ -145,32 +145,63 @@ function ChainLegend({
   pdbDescription: string | null;
 }) {
   const chains = Object.entries(chainAnnotations);
+  const targetChains = chains.filter(([, ann]) => ann.role === "target");
+  const contextChains = chains.filter(([, ann]) => ann.role === "context");
 
   return (
     <div className="bg-slate-700/50 rounded-lg p-3 mb-2">
       {pdbDescription && (
         <p className="text-xs text-slate-400 mb-2 italic">{pdbDescription}</p>
       )}
-      <div className="space-y-1">
-        {chains.map(([chainId, annotation]) => (
-          <div key={chainId} className="flex items-start gap-2 text-xs">
-            <span
-              className={`inline-flex items-center justify-center w-5 h-5 rounded text-white font-bold text-xs ${
-                annotation.role === "target" ? "bg-blue-600" : "bg-slate-500"
-              }`}
-            >
-              {chainId}
-            </span>
-            <div className="flex-1">
-              <span className="font-medium text-slate-300">{annotation.name}</span>
-              {annotation.role === "target" && (
-                <span className="ml-1 text-xs text-blue-400">(target)</span>
-              )}
-              <p className="text-slate-500 mt-0.5">{annotation.description}</p>
-            </div>
+
+      {/* Target chains */}
+      {targetChains.length > 0 && (
+        <div className="mb-2">
+          <p className="text-[10px] uppercase tracking-wide text-blue-400 mb-1.5 font-medium">
+            Target {targetChains.length > 1 ? `(${targetChains.length} chains)` : ""}
+          </p>
+          <div className="space-y-1.5">
+            {targetChains.map(([chainId, annotation]) => (
+              <div key={chainId} className="flex items-start gap-2 text-xs">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-blue-600 text-white font-bold text-xs flex-shrink-0">
+                  {chainId}
+                </span>
+                <div className="flex-1">
+                  <span className="font-medium text-slate-200">{annotation.name}</span>
+                  <p className="text-slate-400 mt-0.5 leading-tight">{annotation.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Context chains (e.g., binding partners, receptors) */}
+      {contextChains.length > 0 && (
+        <div className="pt-2 border-t border-slate-600/50">
+          <p className="text-[10px] uppercase tracking-wide text-slate-400 mb-1.5 font-medium">
+            Also in structure
+          </p>
+          <div className="space-y-1.5">
+            {contextChains.map(([chainId, annotation]) => (
+              <div key={chainId} className="flex items-start gap-2 text-xs">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-slate-500 text-white font-bold text-xs flex-shrink-0">
+                  {chainId}
+                </span>
+                <div className="flex-1">
+                  <span className="font-medium text-slate-300">{annotation.name}</span>
+                  <p className="text-slate-500 mt-0.5 leading-tight">{annotation.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Note about crystallographic artifacts */}
+      <p className="text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-600/30">
+        Small dots are water molecules from the crystal structure - you can ignore them.
+      </p>
     </div>
   );
 }
@@ -471,6 +502,7 @@ export default function ChallengeDetail() {
           {showDesignPanel ? (
             <DesignPanel
               challengeId={challenge.id}
+              challengeName={challenge.name}
               targetSequence={challenge.targetSequence}
               targetStructureUrl={challenge.targetStructureUrl}
               onClose={() => setShowDesignPanel(false)}

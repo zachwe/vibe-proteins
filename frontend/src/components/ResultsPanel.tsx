@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import type { Job } from "../lib/api";
 import MolstarViewer from "./MolstarViewer";
 
@@ -12,6 +13,8 @@ interface ResultsPanelProps {
   job: Job;
   onClose: () => void;
   onNewDesign: () => void;
+  challengeName?: string;
+  targetSequence?: string;
 }
 
 // Expected output structure from inference jobs
@@ -358,7 +361,7 @@ function buildStructureOptions(output: JobOutput | null): StructureOption[] {
       id: "rfd3-complex",
       label: "Complex (target + binder)",
       url: design.complex.signedUrl || design.complex.url,
-      description: "RFD3 complex backbone for design 1.",
+      description: "Full complex showing your designed binder (gold) docked to the target (blue).",
       chainInfo: {
         target: design.target_chains,
         binder: design.binder_chains,
@@ -369,9 +372,9 @@ function buildStructureOptions(output: JobOutput | null): StructureOption[] {
   if (design?.backbone) {
     addOption({
       id: "rfd3-binder",
-      label: "Binder backbone",
+      label: "Binder only",
       url: design.backbone.signedUrl || design.backbone.url,
-      description: "Binder backbone only.",
+      description: "Just your designed binder protein, without the target.",
       chainInfo: {
         binder: design.binder_chains,
       },
@@ -381,9 +384,9 @@ function buildStructureOptions(output: JobOutput | null): StructureOption[] {
   if (output.complex) {
     addOption({
       id: "boltz-complex",
-      label: "Complex (predicted)",
+      label: "Boltz-2 prediction",
       url: output.complex.signedUrl || output.complex.url,
-      description: "Boltz-2 predicted complex.",
+      description: "Boltz-2's prediction of how your binder actually binds to the target.",
     });
   }
 
@@ -398,7 +401,13 @@ function buildStructureOptions(output: JobOutput | null): StructureOption[] {
   return options;
 }
 
-export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanelProps) {
+export default function ResultsPanel({
+  job,
+  onClose,
+  onNewDesign,
+  challengeName,
+  targetSequence,
+}: ResultsPanelProps) {
   const output = job.output as JobOutput | null;
   const design = output?.designs?.[0];
   const structureOptions = useMemo(() => buildStructureOptions(output), [output]);
@@ -476,9 +485,16 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
   return (
     <div className="bg-slate-800 rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">
-          {output?.designName || "Design Results"}
-        </h2>
+        <div>
+          <h2 className="text-lg font-semibold text-white">
+            {output?.designName || "Design Results"}
+          </h2>
+          {challengeName && (
+            <p className="text-sm text-slate-400">
+              Binder for <span className="text-blue-400">{challengeName}</span>
+            </p>
+          )}
+        </div>
         <button onClick={onClose} className="text-slate-400 hover:text-white">
           Close
         </button>
@@ -548,7 +564,7 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
                     }}
                   />
                   {(chainInfo?.target?.length || chainInfo?.binder?.length) && (
-                    <div className="absolute top-3 right-3 bg-slate-900/85 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 shadow-lg">
+                    <div className="absolute bottom-3 right-3 bg-slate-900/85 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 shadow-lg">
                       <p className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">
                         Chain Key
                       </p>
@@ -602,8 +618,19 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
                           className="bg-slate-700 rounded-lg p-3"
                           title={config.description}
                         >
-                          <div className="text-xs text-slate-400 mb-1">
-                            {config.label}
+                          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>{config.label}</span>
+                            <Link
+                              to={`/help/metrics#${config.key}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-slate-500 hover:text-blue-400 transition-colors"
+                              title={`Learn about ${config.label}`}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </Link>
                           </div>
                           <div className={`text-lg font-semibold ${colorClass}`}>
                             {config.format(value)}
@@ -612,9 +639,17 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
                       );
                     })}
                   </div>
-                  <p className="text-xs text-slate-500 mt-2">
-                    Green = good, yellow = moderate, red = needs improvement
-                  </p>
+                  <div className="flex items-center justify-between mt-2 text-xs">
+                    <span className="text-slate-500">Green = good, yellow = moderate, red = needs improvement</span>
+                    <Link
+                      to="/help/metrics"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      What do these mean?
+                    </Link>
+                  </div>
                 </div>
               );
             })()}

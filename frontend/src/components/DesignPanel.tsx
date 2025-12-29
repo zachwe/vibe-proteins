@@ -13,6 +13,7 @@ import ResultsPanel from "./ResultsPanel";
 
 interface DesignPanelProps {
   challengeId: string;
+  challengeName?: string;
   targetSequence: string | null;
   targetStructureUrl: string | null;
   onClose: () => void;
@@ -44,6 +45,7 @@ const toolInfo: Record<DesignTool, { name: string; description: string; estimate
 
 export default function DesignPanel({
   challengeId,
+  challengeName,
   targetSequence,
   targetStructureUrl,
   onClose,
@@ -91,6 +93,8 @@ export default function DesignPanel({
           setShowResults(false);
           setSubmittedJobId(null);
         }}
+        challengeName={challengeName}
+        targetSequence={targetSequence || undefined}
       />
     );
   }

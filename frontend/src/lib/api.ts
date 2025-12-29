@@ -51,6 +51,7 @@ export interface Job {
   executionSeconds: number | null;
   costUsdCents: number | null;
   createdAt: string;
+  completedAt: string | null;
 }
 
 export interface Submission {

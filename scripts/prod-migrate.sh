@@ -8,6 +8,6 @@ APP="vibe-proteins-api"
 
 echo "==> Running migrations on production..."
 
-flyctl ssh console --app "$APP" --command "cd /app && node dist/db/migrate.js"
+flyctl ssh console --app "$APP" --command "sh -c 'cd /app && node dist/db/migrate.js'"
 
 echo "==> Migrations complete!"

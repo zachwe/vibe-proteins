@@ -12,6 +12,7 @@ import ChallengeDetail from "./pages/ChallengeDetail";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
 import Billing from "./pages/Billing";
+import MetricsHelp from "./pages/MetricsHelp";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -37,6 +38,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/help/metrics" element={<MetricsHelp />} />
           </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

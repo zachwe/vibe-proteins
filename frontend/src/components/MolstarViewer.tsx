@@ -33,6 +33,8 @@ interface MolstarViewerProps {
     target?: string[];
     binder?: string[];
   };
+  /** Enable auto-spin animation */
+  autoSpin?: boolean;
 }
 
 export default function MolstarViewer({
@@ -42,13 +44,16 @@ export default function MolstarViewer({
   className = "",
   minHeight = 400,
   chainColors,
+  autoSpin = true,
 }: MolstarViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const loadCounterRef = useRef(0);
+  const spinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(autoSpin);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -107,6 +112,49 @@ export default function MolstarViewer({
     if (!chainColors?.target?.length && !chainColors?.binder?.length) return;
     applyChainColors(viewerRef.current, chainColors);
   }, [chainColors, initialized]);
+
+  // Handle auto-spin
+  useEffect(() => {
+    if (!viewerRef.current || !initialized) return;
+
+    if (isSpinning) {
+      // Start spinning - rotate the camera around Y axis
+      spinIntervalRef.current = setInterval(() => {
+        const viewer = viewerRef.current;
+        if (!viewer) return;
+        try {
+          const canvas = viewer.plugin.canvas3d;
+          if (canvas) {
+            const snapshot = canvas.camera.getSnapshot();
+            // Rotate around Y axis by 1 degree
+            const angle = Math.PI / 180;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            const x = snapshot.position[0];
+            const z = snapshot.position[2];
+            snapshot.position[0] = x * cos - z * sin;
+            snapshot.position[2] = x * sin + z * cos;
+            canvas.camera.setState({ ...snapshot }, 0);
+          }
+        } catch {
+          // Ignore errors during rotation
+        }
+      }, 50); // ~20fps rotation
+    } else {
+      // Stop spinning
+      if (spinIntervalRef.current) {
+        clearInterval(spinIntervalRef.current);
+        spinIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (spinIntervalRef.current) {
+        clearInterval(spinIntervalRef.current);
+        spinIntervalRef.current = null;
+      }
+    };
+  }, [isSpinning, initialized]);
 
   async function loadStructure(
     viewer: Viewer,
@@ -193,6 +241,28 @@ export default function MolstarViewer({
         <div className="absolute inset-0 bg-slate-700 flex items-center justify-center z-10">
           <p className="text-slate-400">No structure available</p>
         </div>
+      )}
+
+      {/* Spin toggle button */}
+      {hasStructure && initialized && (
+        <button
+          onClick={() => setIsSpinning(!isSpinning)}
+          className={`absolute top-3 left-3 p-2 rounded-lg transition-colors z-10 ${
+            isSpinning
+              ? "bg-blue-600 text-white"
+              : "bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700/80"
+          }`}
+          title={isSpinning ? "Stop spinning" : "Start spinning"}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+        </button>
       )}
     </div>
   );

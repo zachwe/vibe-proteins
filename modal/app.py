@@ -761,7 +761,9 @@ def run_rfdiffusion3(
           mpnn_sequences = mpnn_result.get("sequences", []) or []
 
       metrics = compute_interface_metrics(complex_path, target_chain_ids)
-      boltz = None
+      boltz_result = None
+      boltz_scores = {}
+      ipsae_scores = {}
       if boltz_samples and boltz_samples > 0:
         boltz_result = run_boltz2.remote(
           target_pdb=target_path.read_text(),
@@ -769,7 +771,9 @@ def run_rfdiffusion3(
           num_samples=boltz_samples,
           job_id=f"{job_id}-b{idx}",
         )
-        boltz = boltz_result.get("boltz2") if isinstance(boltz_result, dict) else None
+        if isinstance(boltz_result, dict):
+          boltz_scores = boltz_result.get("scores", {})
+          ipsae_scores = boltz_result.get("ipsae_scores", {})
 
       binder_key = f"{RESULTS_PREFIX}/{job_id}/binder_{idx}.pdb"
       complex_key = f"{RESULTS_PREFIX}/{job_id}/complex_{idx}.pdb"
@@ -779,6 +783,9 @@ def run_rfdiffusion3(
       target_chain_list = sorted(target_chain_ids)
       binder_chain_list = sorted(binder_chain_ids)
 
+      # Merge scores: RFD3 metrics + Boltz-2 scores (Boltz-2 takes precedence)
+      combined_scores = {**metrics, **boltz_scores}
+
       results.append(
         {
           "design_id": f"{job_id}-d{idx}",
@@ -786,7 +793,8 @@ def run_rfdiffusion3(
           "mpnn_sequences": mpnn_sequences,
           "backbone": {"key": binder_key, "url": object_url(binder_key)},
           "complex": {"key": complex_key, "url": object_url(complex_key)},
-          "scores": {**metrics, "boltz2": boltz} if boltz else metrics,
+          "scores": combined_scores,
+          "ipsae_scores": ipsae_scores,
           "target_chains": target_chain_list,
           "binder_chains": binder_chain_list,
           "binder_sequences": [

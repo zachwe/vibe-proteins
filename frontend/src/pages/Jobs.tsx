@@ -24,6 +24,27 @@ function formatDate(value: string) {
   return date.toLocaleString();
 }
 
+function formatDuration(startMs: number, endMs: number): string {
+  const durationMs = endMs - startMs;
+  if (durationMs < 1000) return "<1s";
+  const seconds = Math.floor(durationMs / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSec = seconds % 60;
+  if (minutes < 60) return `${minutes}m ${remainingSec}s`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMin = minutes % 60;
+  return `${hours}h ${remainingMin}m`;
+}
+
+function getJobDuration(job: Job): string | null {
+  if (!job.completedAt) return null;
+  const start = new Date(job.createdAt).getTime();
+  const end = new Date(job.completedAt).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end)) return null;
+  return formatDuration(start, end);
+}
+
 function renderJobRow(job: Job) {
   return (
     <div
@@ -47,13 +68,22 @@ function renderJobRow(job: Job) {
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">
-          {job.costUsdCents !== null
-            ? `Cost: $${(job.costUsdCents / 100).toFixed(2)}`
-            : job.executionSeconds !== null
-            ? `${job.executionSeconds.toFixed(1)}s on ${job.gpuType}`
-            : "Pending"}
-        </p>
+        <div className="text-xs text-slate-500 space-x-2">
+          {job.costUsdCents !== null && (
+            <span>Cost: ${(job.costUsdCents / 100).toFixed(2)}</span>
+          )}
+          {(() => {
+            const duration = getJobDuration(job);
+            if (duration) return <span>Duration: {duration}</span>;
+            if (job.executionSeconds !== null && job.gpuType) {
+              return <span>{job.executionSeconds.toFixed(1)}s on {job.gpuType}</span>;
+            }
+            if (job.status === "pending" || job.status === "running") {
+              return <span>In progress...</span>;
+            }
+            return null;
+          })()}
+        </div>
         <Link
           to={`/jobs/${job.id}`}
           className="text-sm text-blue-400 hover:text-blue-300"
