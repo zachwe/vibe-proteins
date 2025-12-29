@@ -39,18 +39,38 @@ def _write_boltz_yaml(
   binder_chain_id: str,
   output_path: Path,
   use_msa_server: bool,
+  msa_paths: dict[str, str] | None = None,
 ) -> Path:
+  """
+  Write a Boltz input YAML file.
+
+  Args:
+    target_sequences: List of (chain_id, sequence) tuples for target chains
+    binder_sequence: Binder sequence
+    binder_chain_id: Chain ID to assign to binder
+    output_path: Path to write YAML file
+    use_msa_server: If True, let Boltz use its MSA server
+    msa_paths: Optional dict mapping chain_id -> A3M file path for pre-computed MSAs
+  """
   import yaml
+
+  msa_paths = msa_paths or {}
 
   sequences_payload: List[dict] = []
   for chain_id, sequence in target_sequences:
     entry = {"protein": {"id": chain_id, "sequence": sequence}}
-    if not use_msa_server:
+    if chain_id in msa_paths:
+      # Use pre-computed MSA
+      entry["protein"]["msa"] = msa_paths[chain_id]
+    elif not use_msa_server:
       entry["protein"]["msa"] = "empty"
     sequences_payload.append(entry)
 
   binder_entry = {"protein": {"id": binder_chain_id, "sequence": binder_sequence}}
-  if not use_msa_server:
+  if binder_chain_id in msa_paths:
+    # Use pre-computed MSA for binder
+    binder_entry["protein"]["msa"] = msa_paths[binder_chain_id]
+  elif not use_msa_server:
     binder_entry["protein"]["msa"] = "empty"
   sequences_payload.append(binder_entry)
 

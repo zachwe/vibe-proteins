@@ -37,6 +37,23 @@ interface JobOutput {
     bindingAffinity?: number;
     shapeComplementarity?: number;
     buriedSurfaceArea?: number;
+    // PAE-based ipSAE scores
+    ipsae?: number;
+    ipsae_iptm?: number;
+    pdockq?: number;
+    pdockq2?: number;
+    lis?: number;
+    n_interface_contacts?: number;
+  };
+  // Separate ipSAE scores object
+  ipsae_scores?: {
+    ipsae?: number;
+    ipsae_d0dom?: number;
+    iptm?: number;
+    pdockq?: number;
+    pdockq2?: number;
+    lis?: number;
+    n_interface_contacts?: number;
   };
   sequence?: string;
   designName?: string;
@@ -73,6 +90,22 @@ interface JobOutput {
       bindingAffinity?: number;
       shapeComplementarity?: number;
       buriedSurfaceArea?: number;
+      // PAE-based ipSAE scores
+      ipsae?: number;
+      ipsae_iptm?: number;
+      pdockq?: number;
+      pdockq2?: number;
+      lis?: number;
+      n_interface_contacts?: number;
+    };
+    ipsae_scores?: {
+      ipsae?: number;
+      ipsae_d0dom?: number;
+      iptm?: number;
+      pdockq?: number;
+      pdockq2?: number;
+      lis?: number;
+      n_interface_contacts?: number;
     };
   }>;
 }
@@ -213,6 +246,98 @@ function buildSequenceEntries(
       isPrimary: entry.isPrimary,
     };
   });
+}
+
+// Score display configuration
+type ScoreConfig = {
+  key: string;
+  label: string;
+  description: string;
+  format: (value: number) => string;
+  colorScale?: (value: number) => string;
+  higherIsBetter?: boolean;
+};
+
+const SCORE_CONFIGS: ScoreConfig[] = [
+  {
+    key: "ipsae",
+    label: "ipSAE",
+    description: "Interface Predicted SAE (lower = stronger binding)",
+    format: (v) => v.toFixed(3),
+    colorScale: (v) => v <= -0.7 ? "text-green-400" : v <= -0.4 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: false,
+  },
+  {
+    key: "pdockq",
+    label: "pDockQ",
+    description: "Predicted dock quality (0-1, higher = better)",
+    format: (v) => v.toFixed(3),
+    colorScale: (v) => v >= 0.5 ? "text-green-400" : v >= 0.23 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: true,
+  },
+  {
+    key: "iptm",
+    label: "ipTM",
+    description: "Interface pTM score (0-1, higher = better)",
+    format: (v) => v.toFixed(3),
+    colorScale: (v) => v >= 0.7 ? "text-green-400" : v >= 0.5 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: true,
+  },
+  {
+    key: "plddt",
+    label: "pLDDT",
+    description: "Confidence score (0-100, higher = more confident)",
+    format: (v) => v.toFixed(1),
+    colorScale: (v) => v >= 90 ? "text-green-400" : v >= 70 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: true,
+  },
+  {
+    key: "lis",
+    label: "LIS",
+    description: "Local Interaction Score (0-1, higher = better)",
+    format: (v) => v.toFixed(3),
+    colorScale: (v) => v >= 0.7 ? "text-green-400" : v >= 0.4 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: true,
+  },
+  {
+    key: "n_interface_contacts",
+    label: "Contacts",
+    description: "Number of confident interface contacts",
+    format: (v) => v.toFixed(0),
+    colorScale: (v) => v >= 100 ? "text-green-400" : v >= 30 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: true,
+  },
+];
+
+function getScoreValue(output: JobOutput | null, key: string): number | undefined {
+  if (!output) return undefined;
+
+  // Check ipsae_scores first
+  const ipsaeScores = output.ipsae_scores;
+  if (ipsaeScores && key in ipsaeScores) {
+    const val = ipsaeScores[key as keyof typeof ipsaeScores];
+    if (typeof val === "number") return val;
+  }
+
+  // Check scores
+  const scores = output.scores;
+  if (scores && key in scores) {
+    const val = scores[key as keyof typeof scores];
+    if (typeof val === "number") return val;
+  }
+
+  // Check design scores
+  const design = output.designs?.[0];
+  if (design?.ipsae_scores && key in design.ipsae_scores) {
+    const val = design.ipsae_scores[key as keyof typeof design.ipsae_scores];
+    if (typeof val === "number") return val;
+  }
+  if (design?.scores && key in design.scores) {
+    const val = design.scores[key as keyof typeof design.scores];
+    if (typeof val === "number") return val;
+  }
+
+  return undefined;
 }
 
 function buildStructureOptions(output: JobOutput | null): StructureOption[] {
@@ -453,6 +578,47 @@ export default function ResultsPanel({ job, onClose, onNewDesign }: ResultsPanel
           </div>
 
           <div className="space-y-6">
+            {/* Scoring Metrics */}
+            {(() => {
+              const availableScores = SCORE_CONFIGS.filter(
+                (config) => getScoreValue(output, config.key) !== undefined
+              );
+              if (availableScores.length === 0) return null;
+
+              return (
+                <div>
+                  <h3 className="text-sm font-medium text-slate-300 mb-2">
+                    Binding Metrics
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableScores.map((config) => {
+                      const value = getScoreValue(output, config.key);
+                      if (value === undefined) return null;
+                      const colorClass = config.colorScale?.(value) || "text-slate-200";
+
+                      return (
+                        <div
+                          key={config.key}
+                          className="bg-slate-700 rounded-lg p-3"
+                          title={config.description}
+                        >
+                          <div className="text-xs text-slate-400 mb-1">
+                            {config.label}
+                          </div>
+                          <div className={`text-lg font-semibold ${colorClass}`}>
+                            {config.format(value)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Green = good, yellow = moderate, red = needs improvement
+                  </p>
+                </div>
+              );
+            })()}
+
             {/* Designed sequence */}
             {sequences.length > 0 && (
               <div>

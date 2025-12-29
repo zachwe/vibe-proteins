@@ -96,12 +96,21 @@
 
 ## Phase 6: Scoring & Feedback
 
-- [ ] Implement composite scoring
-- [ ] Score breakdown UI
-- [ ] Intuitive feedback generation
-  - [ ] "Strong binding but wrong epitope"
-  - [ ] "Good shape complementarity, low confidence"
-  - [ ] etc.
+- [x] Implement PAE-based ipSAE scoring
+  - [x] ipSAE (Interface Predicted SAE) from PAE matrices
+  - [x] ipTM, pDockQ, pDockQ2, LIS metrics
+  - [x] Adapted from DunbrackLab/IPSAE implementation
+- [x] Implement composite scoring
+  - [x] Weighted combination of ipSAE + interface + confidence
+  - [x] Letter grades (A-F)
+- [x] Score breakdown UI
+  - [x] Color-coded metrics display in ResultsPanel
+  - [x] pLDDT, ipSAE, pDockQ, ipTM, LIS, contact count
+- [x] Intuitive feedback generation
+  - [x] "Strong predicted binding affinity"
+  - [x] "Moderate confidence in complex formation"
+  - [x] "Low structural confidence - consider verifying experimentally"
+  - [x] etc.
 - [ ] Leaderboard per challenge
 
 ## Phase 7: Progress & Billing
@@ -189,12 +198,21 @@
 
 > Update this section with what we're actively working on
 
-**Phase 3 in progress - Modal inference reliability**
+**Phase 6 completed - Scoring & Feedback**
 
 In progress:
-- Modal inference + scoring validation
+- Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
+- Phase 9: Production configuration (R2/Modal credentials in Fly.io)
 
 Completed:
+- **PAE-based ipSAE scoring** (Phase 6):
+  - `modal/utils/ipsae.py` - ipSAE, ipTM, pDockQ, pDockQ2, LIS from PAE matrices
+  - `modal/utils/scoring.py` - Composite scoring + feedback generation
+  - Self-hosted MMseqs2 MSA server on Modal (`run_msa_search()`)
+  - ColabFold database setup script (`scripts/setup_colabfold_dbs.py`)
+  - Boltz-2 integration with PAE-based scoring
+  - Frontend ResultsPanel with color-coded metrics display
+  - Unit tests for ipSAE and scoring (33 tests passing)
 - Modal helper unit tests + CI coverage
 - All API endpoints implemented and tested (31 tests passing)
 - Modal authenticated and health check working
@@ -221,11 +239,8 @@ Completed:
   - USD balance display in header
   - Billing page (/billing) with deposits, GPU pricing, transaction history
 
-Currently working on:
-- Phase 3: Modal inference + scoring (RFDiffusion3 + ProteinMPNN real inference integration + validation)
-- Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
-
 Next up:
+- Set up ColabFold databases on Modal Volume (~500GB-1TB)
 - Phase 9: Production configuration (R2/Modal credentials in Fly.io)
 
 ---

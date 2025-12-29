@@ -39,6 +39,7 @@ from utils.boltz_helpers import (
   _select_chain_id,
   _write_boltz_yaml,
 )
+from utils.ipsae import compute_interface_scores_from_boltz, read_boltz_pae
 from utils.metrics import chain_ids_from_structure, compute_interface_metrics
 from utils.rfd3_shim import RMSNORM_SHIM, ensure_rmsnorm
 from utils.storage import download_to_path, object_url, upload_bytes, upload_file
@@ -123,7 +124,22 @@ RESULTS_PREFIX = os.environ.get("DESIGN_RESULTS_PREFIX", "designs").strip("/")
 BOLTZ_CACHE_DIR = "/boltz-cache"
 BOLTZ_VOLUME_NAME = os.environ.get("BOLTZ_VOLUME_NAME", "boltz-models")
 BOLTZ_MODEL_VOLUME = modal.Volume.from_name(BOLTZ_VOLUME_NAME, create_if_missing=True)
-BOLTZ_USE_MSA_SERVER = os.environ.get("BOLTZ_USE_MSA_SERVER", "0").lower() in {"1", "true", "yes", "on"}
+# MSA server configuration
+# By default, try the public MSA server with fallback to no MSA
+BOLTZ_USE_MSA_SERVER = os.environ.get("BOLTZ_USE_MSA_SERVER", "1").lower() in {"1", "true", "yes", "on"}
+BOLTZ_MSA_TIMEOUT_SECONDS = int(os.environ.get("BOLTZ_MSA_TIMEOUT_SECONDS", "600"))  # 10 min timeout for MSA
+
+# ColabFold MSA server configuration
+COLABFOLD_VOLUME_NAME = os.environ.get("COLABFOLD_VOLUME_NAME", "colabfold-dbs")
+COLABFOLD_DB_DIR = Path("/colabfold-dbs")
+colabfold_volume = modal.Volume.from_name(COLABFOLD_VOLUME_NAME, create_if_missing=True)
+
+msa_image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .apt_install("mmseqs2", "wget")
+    .pip_install(*COMMON_PY_PKGS)
+    .add_local_python_source("utils")
+)
 BOLTZ_EXTRA_ARGS = os.environ.get("BOLTZ_EXTRA_ARGS", "")
 PROTEINMPNN_DIR = Path("/proteinmpnn")
 RFD3_MODELS_DIR = Path("/rfd3-models")
@@ -464,6 +480,130 @@ def health_check() -> dict:
 
 
 @app.function(
+  image=msa_image,
+  volumes={str(COLABFOLD_DB_DIR): colabfold_volume},
+  memory=131072,  # 128GB RAM for MMseqs2 search
+  timeout=1800,  # 30 min max per search
+  cpu=8,
+)
+def run_msa_search(
+  sequences: list[tuple[str, str]],
+  job_id: str | None = None,
+) -> dict:
+  """
+  Run MMseqs2 MSA search against ColabFold databases.
+
+  Args:
+    sequences: List of (chain_id, sequence) tuples
+    job_id: Optional job ID for tracking
+
+  Returns:
+    dict with:
+      - a3m_files: dict mapping chain_id to A3M file path
+      - status: "completed" or "failed"
+      - usage: timing info
+  """
+  start_time = time.time()
+  job_id = job_id or str(uuid.uuid4())
+
+  # Check if databases are available
+  uniref_marker = COLABFOLD_DB_DIR / ".uniref30_complete"
+  if not uniref_marker.exists():
+    return {
+      "status": "failed",
+      "error": "ColabFold databases not set up. Run: modal run scripts/setup_colabfold_dbs.py",
+      "job_id": job_id,
+    }
+
+  uniref_db = COLABFOLD_DB_DIR / "uniref30_2302" / "uniref30_2302_db"
+  colabfold_db = COLABFOLD_DB_DIR / "colabfolddb_envdb_202108" / "colabfolddb_envdb_202108_db"
+
+  with tempfile.TemporaryDirectory() as tmpdir:
+    tmpdir_path = Path(tmpdir)
+    a3m_files: dict[str, str] = {}
+
+    for chain_id, sequence in sequences:
+      # Write query FASTA
+      query_fasta = tmpdir_path / f"{chain_id}_query.fasta"
+      query_fasta.write_text(f">{chain_id}\n{sequence}\n")
+
+      # Output paths
+      result_dir = tmpdir_path / f"{chain_id}_result"
+      result_dir.mkdir(exist_ok=True)
+      a3m_path = tmpdir_path / f"{chain_id}.a3m"
+
+      # Run MMseqs2 search against UniRef30
+      print(f"Searching UniRef30 for chain {chain_id} ({len(sequence)} residues)...")
+      search_cmd = [
+        "mmseqs", "easy-search",
+        str(query_fasta),
+        str(uniref_db),
+        str(result_dir / "uniref_hits.m8"),
+        str(result_dir / "tmp"),
+        "--format-output", "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,tseq",
+        "-e", "0.0001",
+        "--max-seqs", "500",
+        "-s", "7.5",
+      ]
+
+      try:
+        subprocess.run(search_cmd, check=True, capture_output=True, text=True)
+      except subprocess.CalledProcessError as e:
+        print(f"MMseqs2 search failed for {chain_id}: {e.stderr}")
+        continue
+
+      # Convert results to A3M format
+      hits_file = result_dir / "uniref_hits.m8"
+      if hits_file.exists():
+        a3m_content = _convert_mmseqs_to_a3m(query_fasta, hits_file)
+        a3m_path.write_text(a3m_content)
+        a3m_files[chain_id] = str(a3m_path)
+        print(f"Generated MSA for chain {chain_id}: {a3m_path}")
+      else:
+        # No hits - create single-sequence A3M
+        a3m_path.write_text(f">{chain_id}\n{sequence}\n")
+        a3m_files[chain_id] = str(a3m_path)
+        print(f"No MSA hits for chain {chain_id}, using single sequence")
+
+    execution_seconds = round(time.time() - start_time, 2)
+
+    return {
+      "status": "completed",
+      "job_id": job_id,
+      "a3m_files": a3m_files,
+      "usage": {
+        "execution_seconds": execution_seconds,
+      },
+    }
+
+
+def _convert_mmseqs_to_a3m(query_fasta: Path, hits_file: Path) -> str:
+  """Convert MMseqs2 hits to A3M format."""
+  # Read query sequence
+  query_lines = query_fasta.read_text().strip().split("\n")
+  query_id = query_lines[0][1:]  # Remove '>'
+  query_seq = "".join(query_lines[1:])
+
+  # Start with query as first sequence
+  a3m_lines = [f">{query_id}", query_seq]
+
+  # Parse hits and add aligned sequences
+  if hits_file.exists():
+    for line in hits_file.read_text().strip().split("\n"):
+      if not line:
+        continue
+      parts = line.split("\t")
+      if len(parts) >= 13:
+        target_id = parts[1]
+        target_seq = parts[12]  # tseq column
+        # Add to A3M (MMseqs2 already provides aligned sequence)
+        a3m_lines.append(f">{target_id}")
+        a3m_lines.append(target_seq)
+
+  return "\n".join(a3m_lines)
+
+
+@app.function(
   image=rfdiffusion3_image,
   gpu="A10G",
   timeout=7200,
@@ -726,6 +866,52 @@ def run_proteinmpnn(
   }
 
 
+def _run_boltz_prediction(
+  input_path: Path,
+  out_dir: Path,
+  num_samples: int,
+  use_msa_server: bool,
+  timeout_seconds: int | None = None,
+) -> subprocess.CompletedProcess:
+  """
+  Run Boltz-2 prediction with optional timeout.
+
+  Args:
+    input_path: Path to input YAML file
+    out_dir: Output directory
+    num_samples: Number of diffusion samples
+    use_msa_server: Whether to use public MSA server
+    timeout_seconds: Optional timeout in seconds
+
+  Returns:
+    CompletedProcess result
+
+  Raises:
+    subprocess.TimeoutExpired: If prediction times out
+    subprocess.CalledProcessError: If prediction fails
+  """
+  cmd = [
+    "boltz",
+    "predict",
+    str(input_path),
+    "--out_dir",
+    str(out_dir),
+    "--cache",
+    BOLTZ_CACHE_DIR,
+    "--output_format",
+    "pdb",
+    "--diffusion_samples",
+    str(num_samples),
+    "--override",
+  ]
+  if use_msa_server:
+    cmd.append("--use_msa_server")
+  if BOLTZ_EXTRA_ARGS:
+    cmd.extend(shlex.split(BOLTZ_EXTRA_ARGS))
+
+  return subprocess.run(cmd, check=True, timeout=timeout_seconds)
+
+
 @app.function(
   image=boltz_image,
   gpu="A10G",
@@ -740,8 +926,27 @@ def run_boltz2(
   boltz_mode: str = "complex",
   num_samples: int = 1,
   job_id: str | None = None,
+  use_self_hosted_msa: bool = False,
+  msa_paths: dict[str, str] | None = None,
+  skip_msa_server: bool = False,
 ) -> dict:
-  """Boltz-2 sanity check wrapper."""
+  """
+  Boltz-2 structure prediction with optional PAE-based scoring.
+
+  By default, attempts to use the public ColabFold MSA server for better predictions.
+  If the MSA server times out or fails, automatically falls back to no MSA.
+
+  Args:
+    target_pdb: Target structure PDB content or URL
+    binder_pdb: Binder structure PDB content or URL (optional)
+    binder_sequence: Binder sequence (optional, extracted from binder_pdb if not provided)
+    boltz_mode: Prediction mode (default "complex")
+    num_samples: Number of diffusion samples
+    job_id: Job ID for tracking
+    use_self_hosted_msa: If True, use pre-computed MSAs from run_msa_search()
+    msa_paths: Pre-computed MSA paths from run_msa_search() (dict of chain_id -> A3M path)
+    skip_msa_server: If True, skip MSA server entirely (use empty MSA)
+  """
   start_time = time.time()
   gpu_type = "A10G"
 
@@ -768,46 +973,96 @@ def run_boltz2(
       raise ValueError("A binder_sequence or binder_pdb with a protein chain is required.")
 
     binder_chain_id = _select_chain_id(target_chain_ids)
-
     input_name = "boltz_input"
     input_path = tmpdir_path / f"{input_name}.yaml"
-    _write_boltz_yaml(
-      target_sequences=target_sequences,
-      binder_sequence=binder_seq,
-      binder_chain_id=binder_chain_id,
-      output_path=input_path,
-      use_msa_server=BOLTZ_USE_MSA_SERVER,
-    )
+    out_dir = tmpdir_path / "boltz_out"
 
     _ensure_boltz2_cache(Path(BOLTZ_CACHE_DIR))
-    out_dir = tmpdir_path / "boltz_out"
-    cmd = [
-      "boltz",
-      "predict",
-      str(input_path),
-      "--out_dir",
-      str(out_dir),
-      "--cache",
-      BOLTZ_CACHE_DIR,
-      "--output_format",
-      "pdb",
-      "--diffusion_samples",
-      str(num_samples),
-      "--override",
-    ]
-    if BOLTZ_USE_MSA_SERVER:
-      cmd.append("--use_msa_server")
-    if BOLTZ_EXTRA_ARGS:
-      cmd.extend(shlex.split(BOLTZ_EXTRA_ARGS))
 
-    subprocess.run(cmd, check=True)
+    # Determine MSA strategy
+    use_msa_server = BOLTZ_USE_MSA_SERVER and not use_self_hosted_msa and not skip_msa_server
+    msa_mode_used = "none"  # Track which MSA mode was actually used
+
+    if use_msa_server:
+      # Try with public MSA server first (with timeout)
+      print(f"Attempting Boltz-2 prediction with public MSA server (timeout: {BOLTZ_MSA_TIMEOUT_SECONDS}s)...")
+
+      _write_boltz_yaml(
+        target_sequences=target_sequences,
+        binder_sequence=binder_seq,
+        binder_chain_id=binder_chain_id,
+        output_path=input_path,
+        use_msa_server=True,
+        msa_paths=msa_paths,
+      )
+
+      try:
+        _run_boltz_prediction(
+          input_path=input_path,
+          out_dir=out_dir,
+          num_samples=num_samples,
+          use_msa_server=True,
+          timeout_seconds=BOLTZ_MSA_TIMEOUT_SECONDS,
+        )
+        msa_mode_used = "public_server"
+        print("Boltz-2 prediction with MSA server completed successfully.")
+
+      except subprocess.TimeoutExpired:
+        print(f"MSA server timed out after {BOLTZ_MSA_TIMEOUT_SECONDS}s. Falling back to no MSA...")
+        use_msa_server = False
+
+      except subprocess.CalledProcessError as e:
+        # Check if it's likely an MSA server issue (rate limit, network, etc.)
+        print(f"Boltz-2 with MSA server failed: {e}. Falling back to no MSA...")
+        use_msa_server = False
+
+    if not use_msa_server or msa_mode_used == "none":
+      # Run without MSA server (either as fallback or by choice)
+      if msa_mode_used == "none":
+        print("Running Boltz-2 prediction without MSA server...")
+
+      # Rewrite YAML without MSA server
+      _write_boltz_yaml(
+        target_sequences=target_sequences,
+        binder_sequence=binder_seq,
+        binder_chain_id=binder_chain_id,
+        output_path=input_path,
+        use_msa_server=False,
+        msa_paths=msa_paths,
+      )
+
+      # Clean up any partial output from failed attempt
+      if out_dir.exists():
+        import shutil
+        shutil.rmtree(out_dir, ignore_errors=True)
+
+      _run_boltz_prediction(
+        input_path=input_path,
+        out_dir=out_dir,
+        num_samples=num_samples,
+        use_msa_server=False,
+        timeout_seconds=None,  # No timeout for fallback
+      )
+      msa_mode_used = "none"
+      print("Boltz-2 prediction without MSA completed.")
 
     results_dir = out_dir / f"boltz_results_{input_name}"
     boltz_out_dir = results_dir if results_dir.exists() else out_dir
 
     prediction_path = _select_boltz_prediction(boltz_out_dir, input_name)
     confidence = _read_boltz_confidence(boltz_out_dir, input_name)
-    metrics = compute_interface_metrics(prediction_path, target_chain_ids)
+
+    # Compute distance-based interface metrics (fallback)
+    distance_metrics = compute_interface_metrics(prediction_path, target_chain_ids)
+
+    # Compute PAE-based ipSAE scores
+    ipsae_scores = compute_interface_scores_from_boltz(
+      out_dir=boltz_out_dir,
+      structure_path=prediction_path,
+      input_name=input_name,
+      target_chains=list(target_chain_ids),
+      binder_chain=binder_chain_id,
+    )
 
     complex_ext = prediction_path.suffix.lower() or ".pdb"
     complex_key = f"{RESULTS_PREFIX}/{job_id}/boltz2_complex{complex_ext}"
@@ -827,22 +1082,33 @@ def run_boltz2(
 
   complex_plddt = confidence.get("complex_plddt") if confidence else None
   plddt = round(complex_plddt * 100, 2) if isinstance(complex_plddt, (float, int)) else None
-  iptm = confidence.get("iptm") if confidence else None
+  iptm_confidence = confidence.get("iptm") if confidence else None
   ptm = confidence.get("ptm") if confidence else None
 
   boltz_summary = {
     "samples": num_samples,
-    "iptm": iptm,
+    "iptm": iptm_confidence,
     "ptm": ptm,
     "plddt": plddt,
     "confidence_score": confidence.get("confidence_score") if confidence else None,
+    "msa_mode": msa_mode_used,
   }
+
+  # Primary scores now include PAE-based metrics
   scores = {
     "plddt": plddt,
     "ptm": ptm,
-    "iptm": iptm,
-    "shapeComplementarity": metrics.get("shape_complementarity"),
-    "buriedSurfaceArea": metrics.get("interface_area"),
+    "iptm": iptm_confidence,
+    # PAE-based ipSAE scores
+    "ipsae": ipsae_scores.get("ipsae"),
+    "ipsae_iptm": ipsae_scores.get("iptm"),  # ipTM from PAE (may differ from confidence.iptm)
+    "pdockq": ipsae_scores.get("pdockq"),
+    "pdockq2": ipsae_scores.get("pdockq2"),
+    "lis": ipsae_scores.get("lis"),
+    "n_interface_contacts": ipsae_scores.get("n_interface_contacts"),
+    # Distance-based metrics (legacy/comparison)
+    "shapeComplementarity": distance_metrics.get("shape_complementarity"),
+    "buriedSurfaceArea": distance_metrics.get("interface_area"),
   }
 
   execution_seconds = round(time.time() - start_time, 2)
@@ -852,12 +1118,14 @@ def run_boltz2(
     "job_id": job_id,
     "mode": boltz_mode,
     "scores": {key: value for key, value in scores.items() if value is not None},
-    "interface_metrics": metrics,
+    "ipsae_scores": ipsae_scores,
+    "interface_metrics": distance_metrics,
     "boltz2": {key: value for key, value in boltz_summary.items() if value is not None},
     "complex": {"key": complex_key, "url": object_url(complex_key)},
     "structureUrl": object_url(complex_key),
     "confidence": {"key": confidence_key, "url": object_url(confidence_key)} if confidence_key else None,
     "designName": "Boltz-2 prediction",
+    "msa_mode": msa_mode_used,
     "usage": {
       "gpu_type": gpu_type,
       "execution_seconds": execution_seconds,
