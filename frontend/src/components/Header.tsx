@@ -32,6 +32,12 @@ export default function Header() {
             >
               Challenges
             </Link>
+            <Link
+              to="/help"
+              className="text-slate-300 hover:text-white transition-colors"
+            >
+              Help
+            </Link>
 
             {isPending ? (
               <div className="w-20 h-8 bg-slate-700 rounded animate-pulse" />

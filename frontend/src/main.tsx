@@ -11,8 +11,14 @@ import Challenges from "./pages/Challenges";
 import ChallengeDetail from "./pages/ChallengeDetail";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
+import Submissions from "./pages/Submissions";
 import Billing from "./pages/Billing";
+import Help from "./pages/Help";
+import DesignHelp from "./pages/DesignHelp";
 import MetricsHelp from "./pages/MetricsHelp";
+import RFDiffusionHelp from "./pages/help/RFDiffusionHelp";
+import BindCraftHelp from "./pages/help/BindCraftHelp";
+import BoltzGenHelp from "./pages/help/BoltzGenHelp";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -37,7 +43,13 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/challenges/:id" element={<ChallengeDetail />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/submissions" element={<Submissions />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/help/design" element={<DesignHelp />} />
+            <Route path="/help/design/rfdiffusion" element={<RFDiffusionHelp />} />
+            <Route path="/help/design/bindcraft" element={<BindCraftHelp />} />
+            <Route path="/help/design/boltzgen" element={<BoltzGenHelp />} />
             <Route path="/help/metrics" element={<MetricsHelp />} />
           </Route>
           <Route path="/login" element={<Login />} />

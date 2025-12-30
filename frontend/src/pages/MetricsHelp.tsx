@@ -226,8 +226,8 @@ export default function MetricsHelp() {
       </Helmet>
 
       <div className="mb-6">
-        <Link to="/jobs" className="text-blue-400 hover:text-blue-300">
-          &larr; Back to Jobs
+        <Link to="/help" className="text-blue-400 hover:text-blue-300">
+          &larr; Back to Help
         </Link>
       </div>
 
