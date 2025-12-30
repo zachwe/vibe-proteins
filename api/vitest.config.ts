@@ -5,6 +5,7 @@ export default defineConfig({
     globalSetup: ["./src/__tests__/globalSetup.ts"],
     env: {
       DATABASE_URL: "vibeproteins.test.db",
+      OPENAI_API_KEY: "sk-test-dummy-key-for-tests",
     },
     exclude: [...configDefaults.exclude, "dist/**"],
   },
