@@ -25,6 +25,18 @@
         "description": "The human cell's 'lock' that the virus exploits. Your binder should block this interaction"
       }
     },
+    "suggestedHotspots": [
+      {
+        "residues": ["E:417", "E:453", "E:455", "E:486", "E:505"],
+        "label": "ACE2 binding site",
+        "description": "Key residues that contact the ACE2 receptor. Targeting these blocks viral entry."
+      },
+      {
+        "residues": ["E:484", "E:501"],
+        "label": "Variant hotspots",
+        "description": "Residues commonly mutated in variants (E484K, N501Y). Consider for broad neutralization."
+      }
+    ],
     "educationalContent": "## About SARS-CoV-2 Spike RBD\n\nThe [receptor-binding domain](gpt:RBD||What%20is%20the%20receptor-binding%20domain%20(RBD)%20of%20a%20virus%20and%20why%20is%20it%20important%20for%20infection?) (RBD) is like a \"key\" on the surface of the coronavirus. It fits into a \"lock\" on human cells called [ACE2](gpt:ACE2||What%20is%20ACE2%20and%20why%20does%20coronavirus%20target%20it?). When the key fits the lock, the virus can enter and infect the cell.\n\n### Why is this a good target?\n- It's essential for infection - block this, block the virus\n- Scientists have studied it extensively, so we know a lot about it\n- Many successful COVID treatments target this exact spot\n- Great first challenge because it's well-understood\n\n### What makes a good binder here?\nYour designed protein needs to stick to the RBD tightly enough to prevent ACE2 from binding. Think of it like putting gum in a lock - the key can't fit anymore!\n\n### Key residues\nThe virus uses specific amino acids (K417, Y453, L455, F486, Y505) to grab onto ACE2. These are good spots to target with your binder."
   },
   {
@@ -48,6 +60,18 @@
         "description": "The inflammatory messenger molecule - this is what you're designing a binder for"
       }
     },
+    "suggestedHotspots": [
+      {
+        "residues": ["A:42", "A:45", "A:46", "A:49"],
+        "label": "Receptor site 1",
+        "description": "Residues that contact the IL-6 receptor alpha chain. Key for blocking signaling."
+      },
+      {
+        "residues": ["A:168", "A:171", "A:175", "A:178"],
+        "label": "Receptor site 2",
+        "description": "Residues that contact gp130, the signaling partner. Alternative blocking site."
+      }
+    ],
     "educationalContent": "## About IL-6\n\n[IL-6](gpt:IL-6||What%20is%20Interleukin-6%20(IL-6)%20and%20what%20role%20does%20it%20play%20in%20inflammation?%20Explain%20simply.) is a small protein that acts like a messenger in your immune system. When you're sick or injured, IL-6 tells your body to start inflammation - which is normally helpful for fighting infections.\n\n### The problem\nSometimes IL-6 goes into overdrive:\n- In [rheumatoid arthritis](gpt:rheumatoid%20arthritis||What%20is%20rheumatoid%20arthritis%20and%20how%20does%20inflammation%20cause%20joint%20damage?), it attacks healthy joints\n- In severe COVID-19, it causes dangerous [cytokine storms](gpt:cytokine%20storm||What%20is%20a%20cytokine%20storm%20and%20why%20is%20it%20dangerous?)\n- In some cancers, it helps tumors grow\n\n### How your binder could help\nBy grabbing onto IL-6, your protein could prevent it from delivering its inflammatory message. It's like intercepting a letter before it reaches its destination.\n\n### Real-world success\nA drug called [tocilizumab](gpt:tocilizumab||What%20is%20tocilizumab%20and%20how%20does%20it%20work%20to%20reduce%20inflammation?) works exactly this way and has helped millions of patients!"
   },
   {
@@ -206,6 +230,18 @@
         "description": "The glowing jellyfish protein - design a binder for this important research tool"
       }
     },
+    "suggestedHotspots": [
+      {
+        "residues": ["A:145", "A:148", "A:165", "A:167", "A:203"],
+        "label": "Top of barrel",
+        "description": "Exposed loops at the top of the beta-barrel. Good surface for binder attachment."
+      },
+      {
+        "residues": ["A:39", "A:42", "A:52", "A:56"],
+        "label": "Side surface",
+        "description": "Accessible residues on the side of the barrel structure."
+      }
+    ],
     "educationalContent": "## About Green Fluorescent Protein\n\n[GFP](gpt:GFP||What%20is%20Green%20Fluorescent%20Protein%20and%20why%20did%20its%20discovery%20win%20a%20Nobel%20Prize?) is a protein from jellyfish that glows bright green under UV light. It might be the most important tool in modern biology!\n\n### Why scientists love GFP\nScientists attach GFP to other proteins to track them inside living cells. Want to know where a protein goes? Make it glow! The 2008 Nobel Prize in Chemistry was awarded for GFP's discovery and development.\n\n### The beautiful barrel structure\nGFP has a unique shape - an 11-stranded [beta-barrel](gpt:beta%20barrel||What%20is%20a%20beta%20barrel%20protein%20structure?%20Explain%20simply.) with the glowing part (chromophore) protected inside. This structure is so stable that GFP works even in harsh conditions.\n\n### Rainbow of colors\nScientists have engineered GFP variants in almost every color:\n- Blue (BFP)\n- Cyan (CFP)\n- Yellow (YFP)\n- Red (from corals, like [mCherry](gpt:mCherry||What%20is%20mCherry%20and%20how%20is%20it%20related%20to%20GFP?))\n\n### Design challenge\nGFP is well-folded and stable, making it a nice beginner target. A GFP-binding protein could be useful for capturing or detecting GFP-tagged proteins in experiments!"
   },
   {
@@ -229,6 +265,18 @@
         "description": "The bacteria-destroying enzyme - a classic protein for binding experiments"
       }
     },
+    "suggestedHotspots": [
+      {
+        "residues": ["A:18", "A:19", "A:21", "A:62", "A:63"],
+        "label": "Active site cleft",
+        "description": "The groove where lysozyme binds and breaks bacterial cell walls."
+      },
+      {
+        "residues": ["A:87", "A:89", "A:101", "A:102"],
+        "label": "Backside surface",
+        "description": "Exposed surface away from the active site - good for non-inhibitory binders."
+      }
+    ],
     "educationalContent": "## About Lysozyme\n\n[Lysozyme](gpt:lysozyme||What%20is%20lysozyme%20and%20how%20does%20it%20kill%20bacteria?%20Explain%20simply.) is one of your body's natural antibiotics. It's found in tears, saliva, mucus, and breast milk, where it helps destroy bacteria by breaking apart their cell walls.\n\n### A protein science classic\nLysozyme was:\n- The first enzyme to have its 3D structure solved (1965)\n- One of the first proteins used to study protein folding\n- A favorite model protein for generations of scientists\n\n### Why it's a great target\n- Small (129 amino acids) and well-behaved\n- Extremely stable\n- Structure is known in incredible detail\n- Lots of published data to compare your results against\n\n### Fun fact\nEgg whites are about 3.5% lysozyme - that's why eggs have some natural antibacterial properties! Alexander Fleming (who discovered penicillin) also discovered lysozyme.\n\n### Design challenge\nCan you design a protein that grabs onto lysozyme's surface? This is a classic test for protein design methods."
   },
   {

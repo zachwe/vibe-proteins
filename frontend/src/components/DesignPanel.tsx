@@ -8,15 +8,19 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCreateJob, useJob } from "../lib/hooks";
 import { useSession } from "../lib/auth";
-import { ApiError } from "../lib/api";
+import { ApiError, type SuggestedHotspot } from "../lib/api";
 import ResultsPanel from "./ResultsPanel";
 
 interface DesignPanelProps {
   challengeId: string;
   challengeName?: string;
+  challengeTaskType?: string;
   targetSequence: string | null;
   targetStructureUrl: string | null;
+  targetChainId?: string | null;
+  suggestedHotspots?: SuggestedHotspot[] | null;
   onClose: () => void;
+  onHotspotSelect?: (residues: string[] | null) => void;
 }
 
 type DesignTool = "rfdiffusion3" | "boltz2" | "proteinmpnn";
@@ -46,9 +50,13 @@ const toolInfo: Record<DesignTool, { name: string; description: string; estimate
 export default function DesignPanel({
   challengeId,
   challengeName,
+  challengeTaskType,
   targetSequence,
   targetStructureUrl,
+  targetChainId,
+  suggestedHotspots,
   onClose,
+  onHotspotSelect,
 }: DesignPanelProps) {
   const navigate = useNavigate();
   const { data: session } = useSession();
@@ -57,6 +65,19 @@ export default function DesignPanel({
   const [selectedTool, setSelectedTool] = useState<DesignTool>("rfdiffusion3");
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [selectedHotspotIndex, setSelectedHotspotIndex] = useState<number | null>(null);
+
+  // Handle hotspot selection - updates local state and notifies parent
+  const handleHotspotSelect = (index: number | null) => {
+    setSelectedHotspotIndex(index);
+    if (onHotspotSelect) {
+      if (index !== null && suggestedHotspots && suggestedHotspots[index]) {
+        onHotspotSelect(suggestedHotspots[index].residues);
+      } else {
+        onHotspotSelect(null);
+      }
+    }
+  };
 
   // Poll job status if we've submitted a job
   const { data: job } = useJob(submittedJobId || "");
@@ -67,6 +88,12 @@ export default function DesignPanel({
       return;
     }
 
+    // Build hotspot residues if a hotspot is selected
+    let hotspotResidues: string[] | undefined;
+    if (selectedTool === "rfdiffusion3" && selectedHotspotIndex !== null && suggestedHotspots) {
+      hotspotResidues = suggestedHotspots[selectedHotspotIndex].residues;
+    }
+
     try {
       const result = await createJob.mutateAsync({
         challengeId,
@@ -74,6 +101,8 @@ export default function DesignPanel({
         input: {
           targetSequence,
           targetStructureUrl,
+          targetChainId,
+          hotspotResidues,
         },
       });
 
@@ -94,6 +123,7 @@ export default function DesignPanel({
           setSubmittedJobId(null);
         }}
         challengeName={challengeName}
+        challengeTaskType={challengeTaskType}
         targetSequence={targetSequence || undefined}
       />
     );
@@ -237,6 +267,94 @@ export default function DesignPanel({
             )}
           </div>
         </div>
+
+        {/* Hotspot Selection - only for RFDiffusion3 */}
+        {selectedTool === "rfdiffusion3" && suggestedHotspots && suggestedHotspots.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-slate-300">
+                Target Hotspots
+              </label>
+              <Link
+                to="/help/design#hotspots"
+                className="text-xs text-blue-400 hover:text-blue-300"
+              >
+                What are hotspots?
+              </Link>
+            </div>
+
+            <div className="space-y-2">
+              {/* Option to use no specific hotspot */}
+              <button
+                onClick={() => handleHotspotSelect(null)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  selectedHotspotIndex === null
+                    ? "bg-slate-600/50 border-slate-500"
+                    : "bg-slate-700/50 border-slate-600 hover:border-slate-500"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    selectedHotspotIndex === null ? "border-blue-500" : "border-slate-500"
+                  }`}>
+                    {selectedHotspotIndex === null && (
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-white font-medium text-sm">Let AI choose</span>
+                    <span className="text-slate-400 text-xs ml-2">(automatic)</span>
+                  </div>
+                </div>
+                <p className="text-slate-400 text-xs mt-1 ml-6">
+                  RFDiffusion3 will find the best binding site automatically
+                </p>
+              </button>
+
+              {/* Suggested hotspots */}
+              {suggestedHotspots.map((hotspot, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleHotspotSelect(index)}
+                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                    selectedHotspotIndex === index
+                      ? "bg-purple-600/20 border-purple-500"
+                      : "bg-slate-700/50 border-slate-600 hover:border-slate-500"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      selectedHotspotIndex === index ? "border-purple-500" : "border-slate-500"
+                    }`}>
+                      {selectedHotspotIndex === index && (
+                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-white font-medium text-sm">{hotspot.label}</span>
+                      {index === 0 && (
+                        <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">
+                          Recommended
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1 ml-6">{hotspot.description}</p>
+                  <div className="flex flex-wrap gap-1 mt-2 ml-6">
+                    {hotspot.residues.map((residue, i) => (
+                      <span
+                        key={i}
+                        className="text-xs bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded font-mono"
+                      >
+                        {residue}
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {targetSequence && (
           <div>

@@ -6,7 +6,7 @@ import type { Components } from "react-markdown";
 import { useChallenge } from "../lib/hooks";
 import MolstarViewer from "../components/MolstarViewer";
 import DesignPanel from "../components/DesignPanel";
-import type { ChainAnnotation } from "../lib/api";
+import type { ChainAnnotation, SuggestedHotspot } from "../lib/api";
 
 const workflowSteps = [
   { id: 1, name: "Explore", description: "View target structure" },
@@ -179,18 +179,18 @@ function ChainLegend({
       {/* Context chains (e.g., binding partners, receptors) */}
       {contextChains.length > 0 && (
         <div className="pt-2 border-t border-slate-600/50">
-          <p className="text-[10px] uppercase tracking-wide text-slate-400 mb-1.5 font-medium">
+          <p className="text-[10px] uppercase tracking-wide text-emerald-400 mb-1.5 font-medium">
             Also in structure
           </p>
           <div className="space-y-1.5">
             {contextChains.map(([chainId, annotation]) => (
               <div key={chainId} className="flex items-start gap-2 text-xs">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-slate-500 text-white font-bold text-xs flex-shrink-0">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-emerald-400 text-slate-900 font-bold text-xs flex-shrink-0">
                   {chainId}
                 </span>
                 <div className="flex-1">
-                  <span className="font-medium text-slate-300">{annotation.name}</span>
-                  <p className="text-slate-500 mt-0.5 leading-tight">{annotation.description}</p>
+                  <span className="font-medium text-slate-200">{annotation.name}</span>
+                  <p className="text-slate-400 mt-0.5 leading-tight">{annotation.description}</p>
                 </div>
               </div>
             ))}
@@ -214,6 +214,7 @@ export default function ChallengeDetail() {
   const [showDesignPanel, setShowDesignPanel] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [activeTab, setActiveTab] = useState<InfoTab>("overview");
+  const [highlightedResidues, setHighlightedResidues] = useState<string[] | null>(null);
 
   // Parse chain annotations from JSON string
   const chainAnnotations = useMemo(() => {
@@ -224,6 +225,35 @@ export default function ChallengeDetail() {
       return null;
     }
   }, [challenge?.chainAnnotations]);
+
+  // Parse suggested hotspots from JSON string
+  const suggestedHotspots = useMemo(() => {
+    if (!challenge?.suggestedHotspots) return null;
+    try {
+      return JSON.parse(challenge.suggestedHotspots) as SuggestedHotspot[];
+    } catch {
+      return null;
+    }
+  }, [challenge?.suggestedHotspots]);
+
+  // Compute chain colors from chain annotations for Mol* viewer
+  const chainColors = useMemo(() => {
+    if (!chainAnnotations) return undefined;
+    const target: string[] = [];
+    const binder: string[] = [];
+    const context: string[] = [];
+    for (const [chainId, annotation] of Object.entries(chainAnnotations)) {
+      if (annotation.role === "target") {
+        target.push(chainId);
+      } else if (annotation.role === "binder") {
+        binder.push(chainId);
+      } else if (annotation.role === "context") {
+        context.push(chainId);
+      }
+    }
+    if (target.length === 0 && binder.length === 0 && context.length === 0) return undefined;
+    return { target, binder, context };
+  }, [chainAnnotations]);
 
   // Memoize markdown components
   const markdownComponents = useMemo(() => createMarkdownComponents(), []);
@@ -329,9 +359,9 @@ export default function ChallengeDetail() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Left side - Target viewer */}
-        <div className="bg-slate-800 rounded-xl p-4">
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Left side - Target viewer (2/3 width) */}
+        <div className="lg:col-span-2 bg-slate-800 rounded-xl p-4">
           {/* Chain legend above viewer */}
           {chainAnnotations && (
             <ChainLegend
@@ -343,6 +373,8 @@ export default function ChallengeDetail() {
             <MolstarViewer
               pdbUrl={challenge.targetStructureUrl || undefined}
               pdbId={challenge.targetPdbId || undefined}
+              highlightResidues={highlightedResidues || undefined}
+              chainColors={chainColors}
               className="w-full h-full"
             />
           </div>
@@ -494,6 +526,20 @@ export default function ChallengeDetail() {
                       No target sequence available for this challenge.
                     </p>
                   )}
+                  {challenge.targetUniprotId && (
+                    <a
+                      href={`https://www.uniprot.org/uniprotkb/${challenge.targetUniprotId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors mt-4"
+                    >
+                      <span className="font-medium">UniProt:</span>
+                      <span className="text-blue-400">{challenge.targetUniprotId}</span>
+                      <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
                 </div>
               )}
             </div>
@@ -503,20 +549,53 @@ export default function ChallengeDetail() {
             <DesignPanel
               challengeId={challenge.id}
               challengeName={challenge.name}
+              challengeTaskType={challenge.taskType}
               targetSequence={challenge.targetSequence}
               targetStructureUrl={challenge.targetStructureUrl}
-              onClose={() => setShowDesignPanel(false)}
+              targetChainId={challenge.targetChainId}
+              suggestedHotspots={suggestedHotspots}
+              onClose={() => {
+                setShowDesignPanel(false);
+                setHighlightedResidues(null); // Clear highlights when closing
+              }}
+              onHotspotSelect={setHighlightedResidues}
             />
           ) : (
-            <button
-              onClick={() => {
-                setShowDesignPanel(true);
-                setCurrentStep(2);
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              Start Designing
-            </button>
+            <>
+              {activeTab === "overview" && (
+                <button
+                  onClick={() => setActiveTab("learn")}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  Learn More
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+              {activeTab === "learn" && (
+                <button
+                  onClick={() => setActiveTab("sequence")}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  View Sequence
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+              {activeTab === "sequence" && (
+                <button
+                  onClick={() => {
+                    setShowDesignPanel(true);
+                    setCurrentStep(2);
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                >
+                  Start Designing
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

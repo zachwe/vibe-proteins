@@ -13,6 +13,12 @@ interface ChainAnnotation {
   description: string;
 }
 
+interface SuggestedHotspot {
+  residues: string[];
+  label: string;
+  description: string;
+}
+
 interface ChallengeInput {
   id: string;
   name: string;
@@ -28,6 +34,7 @@ interface ChallengeInput {
   targetChainId: string;
   pdbDescription: string;
   chainAnnotations: { [key: string]: ChainAnnotation };
+  suggestedHotspots?: SuggestedHotspot[];
   educationalContent: string;
 }
 
@@ -42,6 +49,7 @@ async function seed() {
       .values({
         ...challenge,
         chainAnnotations: JSON.stringify(challenge.chainAnnotations),
+        suggestedHotspots: challenge.suggestedHotspots ? JSON.stringify(challenge.suggestedHotspots) : null,
         createdAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -60,6 +68,7 @@ async function seed() {
           targetChainId: challenge.targetChainId,
           pdbDescription: challenge.pdbDescription,
           chainAnnotations: JSON.stringify(challenge.chainAnnotations),
+          suggestedHotspots: challenge.suggestedHotspots ? JSON.stringify(challenge.suggestedHotspots) : null,
           educationalContent: challenge.educationalContent,
         },
       });

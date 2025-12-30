@@ -3,7 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { challengesApi, usersApi, jobsApi, submissionsApi, billingApi } from "./api";
+import { challengesApi, usersApi, jobsApi, submissionsApi, billingApi, suggestionsApi, type SuggestionRequest } from "./api";
 
 // Query keys for cache management
 export const queryKeys = {
@@ -183,5 +183,20 @@ export function useCreateDeposit() {
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
     },
+  });
+}
+
+// Suggestions hook
+export function useSuggestions(request: SuggestionRequest | null) {
+  return useQuery({
+    queryKey: ["suggestions", request],
+    queryFn: async () => {
+      if (!request) return { suggestions: [] };
+      const data = await suggestionsApi.getSuggestions(request);
+      return data;
+    },
+    enabled: !!request,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: 1,
   });
 }

@@ -19,6 +19,7 @@ export const challenges = sqliteTable("challenges", {
   targetChainId: text("target_chain_id"), // Which chain in the PDB is the actual target
   pdbDescription: text("pdb_description"), // What this PDB structure shows
   chainAnnotations: text("chain_annotations"), // JSON: { "E": { "name": "Spike RBD", "role": "target" }, ... }
+  suggestedHotspots: text("suggested_hotspots"), // JSON: [{ "residues": ["E:417", "E:453"], "label": "ACE2 binding site", "description": "..." }]
   taskType: text("task_type").notNull(), // 'binder', 'blocker', 'decoy', 'stabilizer'
   educationalContent: text("educational_content"), // Markdown content
   hints: text("hints"), // JSON array of hints

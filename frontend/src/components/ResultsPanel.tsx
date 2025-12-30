@@ -5,8 +5,9 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import type { Job } from "../lib/api";
+import { Link, useNavigate } from "react-router-dom";
+import type { Job, Suggestion, SuggestionRequest } from "../lib/api";
+import { useCreateSubmission, useSuggestions } from "../lib/hooks";
 import MolstarViewer from "./MolstarViewer";
 
 interface ResultsPanelProps {
@@ -14,6 +15,7 @@ interface ResultsPanelProps {
   onClose: () => void;
   onNewDesign: () => void;
   challengeName?: string;
+  challengeTaskType?: string;
   targetSequence?: string;
 }
 
@@ -406,12 +408,55 @@ export default function ResultsPanel({
   onClose,
   onNewDesign,
   challengeName,
+  challengeTaskType,
   targetSequence,
 }: ResultsPanelProps) {
+  const navigate = useNavigate();
+  const createSubmission = useCreateSubmission();
   const output = job.output as JobOutput | null;
   const design = output?.designs?.[0];
   const structureOptions = useMemo(() => buildStructureOptions(output), [output]);
   const [activeStructureId, setActiveStructureId] = useState<string | null>(null);
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+
+  // Build suggestion request from job data
+  const suggestionRequest = useMemo((): SuggestionRequest | null => {
+    if (job.status !== "completed" || !output) return null;
+
+    // Collect all scores
+    const scores: Record<string, number | undefined> = {};
+    const ipsaeScores = output.ipsae_scores || design?.ipsae_scores;
+    const jobScores = output.scores || design?.scores;
+
+    if (ipsaeScores) {
+      scores.ipsae = ipsaeScores.ipsae;
+      scores.pdockq = ipsaeScores.pdockq;
+      scores.iptm = ipsaeScores.iptm;
+      scores.lis = ipsaeScores.lis;
+      scores.n_interface_contacts = ipsaeScores.n_interface_contacts;
+    }
+    if (jobScores) {
+      scores.plddt = jobScores.plddt;
+      scores.interface_area = jobScores.interface_area;
+      if (!scores.ipsae) scores.ipsae = jobScores.ipsae;
+      if (!scores.pdockq) scores.pdockq = jobScores.pdockq;
+      if (!scores.iptm) scores.iptm = jobScores.iptm;
+    }
+
+    // Check if hotspots were used
+    const input = job.input as Record<string, unknown> | null;
+    const hasHotspots = !!(input?.hotspotResidues && Array.isArray(input.hotspotResidues) && input.hotspotResidues.length > 0);
+
+    return {
+      jobType: job.type,
+      scores,
+      hasHotspots,
+      challengeName,
+      challengeTaskType,
+    };
+  }, [job, output, design, challengeName, challengeTaskType]);
+
+  const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions(suggestionRequest);
 
   useEffect(() => {
     if (structureOptions.length === 0) {
@@ -654,6 +699,44 @@ export default function ResultsPanel({
               );
             })()}
 
+            {/* AI Suggestions */}
+            {(suggestionsLoading || (suggestionsData?.suggestions && suggestionsData.suggestions.length > 0)) && (
+              <div>
+                <h3 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                  <span>Next Steps</span>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">AI</span>
+                </h3>
+                {suggestionsLoading ? (
+                  <div className="bg-slate-700/50 rounded-lg p-3 flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
+                    <span className="text-sm text-slate-400">Analyzing your results...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {suggestionsData?.suggestions.map((suggestion: Suggestion, index: number) => {
+                      const typeStyles: Record<string, { bg: string; border: string; icon: string }> = {
+                        success: { bg: "bg-green-500/10", border: "border-green-500/30", icon: "✓" },
+                        improve: { bg: "bg-amber-500/10", border: "border-amber-500/30", icon: "→" },
+                        verify: { bg: "bg-blue-500/10", border: "border-blue-500/30", icon: "?" },
+                        learn: { bg: "bg-purple-500/10", border: "border-purple-500/30", icon: "📚" },
+                      };
+                      const style = typeStyles[suggestion.type] || typeStyles.improve;
+
+                      return (
+                        <div
+                          key={index}
+                          className={`${style.bg} border ${style.border} rounded-lg p-3 text-sm text-slate-300`}
+                        >
+                          <span className="mr-2">{style.icon}</span>
+                          {suggestion.text}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Designed sequence */}
             {sequences.length > 0 && (
               <div>
@@ -706,22 +789,87 @@ export default function ResultsPanel({
         )}
 
         {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={onNewDesign}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-          >
-            New Design
-          </button>
-          <button
-            onClick={() => {
-              // TODO: Implement submission flow
-              console.log("Submit design", job.id);
-            }}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-          >
-            Submit for Scoring
-          </button>
+        <div className="flex flex-col gap-3">
+          {submissionSuccess && (
+            <div className="bg-green-500/10 border border-green-500 rounded-lg p-4">
+              <p className="text-green-400 font-medium mb-1">Submitted successfully!</p>
+              <p className="text-slate-300 text-sm">
+                Your design has been submitted for scoring. View your submissions to track progress.
+              </p>
+              <button
+                onClick={() => navigate("/submissions")}
+                className="mt-2 text-green-400 hover:text-green-300 text-sm underline"
+              >
+                View My Submissions
+              </button>
+            </div>
+          )}
+
+          {createSubmission.isError && (
+            <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 text-sm text-red-400">
+              Failed to submit design. Please try again.
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={onNewDesign}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              New Design
+            </button>
+            <button
+              onClick={async () => {
+                // Get the primary binder sequence from the design
+                const binderSequence = design?.sequence
+                  || design?.binder_sequences?.[0]?.sequence
+                  || design?.mpnn_sequences?.[0]?.sequence
+                  || output?.sequence
+                  || sequences[0]?.sequence;
+
+                if (!binderSequence) {
+                  console.error("No binder sequence found");
+                  return;
+                }
+
+                // Get the structure URL
+                const structureUrl = design?.complex?.signedUrl
+                  || design?.complex?.url
+                  || output?.complex?.signedUrl
+                  || output?.complex?.url
+                  || output?.structureUrl;
+
+                try {
+                  await createSubmission.mutateAsync({
+                    challengeId: job.challengeId,
+                    jobId: job.id,
+                    designSequence: binderSequence,
+                    designStructureUrl: structureUrl,
+                  });
+                  setSubmissionSuccess(true);
+                } catch (error) {
+                  console.error("Failed to submit:", error);
+                }
+              }}
+              disabled={createSubmission.isPending || submissionSuccess || sequences.length === 0}
+              className={`flex-1 font-semibold py-3 px-6 rounded-lg transition-colors ${
+                submissionSuccess
+                  ? "bg-slate-600 text-slate-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700 text-white disabled:bg-slate-600 disabled:cursor-not-allowed"
+              }`}
+            >
+              {createSubmission.isPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Submitting...
+                </span>
+              ) : submissionSuccess ? (
+                "Submitted ✓"
+              ) : (
+                "Submit for Scoring"
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

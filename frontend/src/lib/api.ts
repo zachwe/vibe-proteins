@@ -11,6 +11,12 @@ export interface ChainAnnotation {
   description: string;
 }
 
+export interface SuggestedHotspot {
+  residues: string[];
+  label: string;
+  description: string;
+}
+
 export interface Challenge {
   id: string;
   name: string;
@@ -26,6 +32,7 @@ export interface Challenge {
   targetChainId: string | null;
   pdbDescription: string | null;
   chainAnnotations: string | null; // JSON string of Record<string, ChainAnnotation>
+  suggestedHotspots: string | null; // JSON string of SuggestedHotspot[]
   educationalContent: string | null;
   hints: string | null;
   createdAt: string;
@@ -163,7 +170,7 @@ export const submissionsApi = {
 
   get: (id: string) => apiFetch<{ submission: Submission }>(`/api/submissions/${id}`),
 
-  create: (data: { challengeId: string; designSequence: string; designPdbUrl?: string }) =>
+  create: (data: { challengeId: string; jobId?: string; designSequence: string; designStructureUrl?: string }) =>
     apiFetch<{ submission: Submission }>("/api/submissions", {
       method: "POST",
       body: JSON.stringify(data),
@@ -186,4 +193,27 @@ export const billingApi = {
     apiFetch<{ transactions: Transaction[] }>("/api/billing/transactions"),
 
   getPortalUrl: () => apiFetch<{ url: string }>("/api/billing/portal"),
+};
+
+// Suggestion types
+export interface Suggestion {
+  text: string;
+  type: "improve" | "verify" | "success" | "learn";
+}
+
+export interface SuggestionRequest {
+  jobType: string;
+  scores: Record<string, number | undefined>;
+  hasHotspots: boolean;
+  challengeName?: string;
+  challengeTaskType?: string;
+}
+
+// Suggestions API
+export const suggestionsApi = {
+  getSuggestions: (data: SuggestionRequest) =>
+    apiFetch<{ suggestions: Suggestion[] }>("/api/suggestions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
