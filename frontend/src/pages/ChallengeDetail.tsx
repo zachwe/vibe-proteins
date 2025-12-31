@@ -6,6 +6,7 @@ import type { Components } from "react-markdown";
 import { useChallenge } from "../lib/hooks";
 import MolstarViewer from "../components/MolstarViewer";
 import DesignPanel from "../components/DesignPanel";
+import Leaderboard from "../components/Leaderboard";
 import type { ChainAnnotation, SuggestedHotspot } from "../lib/api";
 
 const workflowSteps = [
@@ -206,7 +207,7 @@ function ChainLegend({
   );
 }
 
-type InfoTab = "overview" | "learn" | "sequence";
+type InfoTab = "overview" | "learn" | "sequence" | "leaderboard";
 
 export default function ChallengeDetail() {
   const { id } = useParams<{ id: string }>();
@@ -415,6 +416,16 @@ export default function ChallengeDetail() {
               >
                 Sequence
               </button>
+              <button
+                onClick={() => setActiveTab("leaderboard")}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === "leaderboard"
+                    ? "text-blue-400 border-b-2 border-blue-400 bg-slate-700/50"
+                    : "text-slate-400 hover:text-slate-300 hover:bg-slate-700/30"
+                }`}
+              >
+                🏆
+              </button>
             </div>
 
             {/* Tab content */}
@@ -541,6 +552,11 @@ export default function ChallengeDetail() {
                     </a>
                   )}
                 </div>
+              )}
+
+              {/* Leaderboard Tab */}
+              {activeTab === "leaderboard" && (
+                <Leaderboard challengeId={challenge.id} challengeName={challenge.name} />
               )}
             </div>
           </div>

@@ -3,12 +3,14 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { challengesApi, usersApi, jobsApi, submissionsApi, billingApi, suggestionsApi, type SuggestionRequest } from "./api";
+import { challengesApi, usersApi, jobsApi, submissionsApi, billingApi, suggestionsApi, type SuggestionRequest, type LeaderboardSortBy } from "./api";
 
 // Query keys for cache management
 export const queryKeys = {
   challenges: ["challenges"] as const,
   challenge: (id: string) => ["challenges", id] as const,
+  leaderboard: (id: string, sortBy?: LeaderboardSortBy) =>
+    ["challenges", id, "leaderboard", sortBy] as const,
   user: ["user"] as const,
   jobs: ["jobs"] as const,
   job: (id: string) => ["jobs", id] as const,
@@ -38,6 +40,23 @@ export function useChallenge(id: string) {
       return data.challenge;
     },
     enabled: !!id,
+  });
+}
+
+export function useLeaderboard(
+  challengeId: string,
+  options?: { sortBy?: LeaderboardSortBy; limit?: number; enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: queryKeys.leaderboard(challengeId, options?.sortBy),
+    queryFn: async () => {
+      const data = await challengesApi.leaderboard(challengeId, {
+        sortBy: options?.sortBy,
+        limit: options?.limit,
+      });
+      return data;
+    },
+    enabled: options?.enabled !== false && !!challengeId,
   });
 }
 

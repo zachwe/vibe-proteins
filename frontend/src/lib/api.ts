@@ -142,6 +142,20 @@ export const challengesApi = {
   list: () => apiFetch<{ challenges: Challenge[] }>("/api/challenges"),
 
   get: (id: string) => apiFetch<{ challenge: Challenge }>(`/api/challenges/${id}`),
+
+  leaderboard: (
+    id: string,
+    options?: { sortBy?: LeaderboardSortBy; limit?: number; offset?: number }
+  ) => {
+    const params = new URLSearchParams();
+    if (options?.sortBy) params.set("sortBy", options.sortBy);
+    if (options?.limit) params.set("limit", options.limit.toString());
+    if (options?.offset) params.set("offset", options.offset.toString());
+    const queryString = params.toString();
+    return apiFetch<LeaderboardResponse>(
+      `/api/challenges/${id}/leaderboard${queryString ? `?${queryString}` : ""}`
+    );
+  },
 };
 
 // User API
@@ -194,6 +208,37 @@ export const billingApi = {
 
   getPortalUrl: () => apiFetch<{ url: string }>("/api/billing/portal"),
 };
+
+// Leaderboard types
+export interface LeaderboardEntry {
+  rank: number;
+  id: string;
+  compositeScore: number | null;
+  ipSaeScore: number | null;
+  plddt: number | null;
+  ptm: number | null;
+  interfaceArea: number | null;
+  shapeComplementarity: number | null;
+  createdAt: string;
+  userId: string;
+  userName: string;
+}
+
+export interface LeaderboardResponse {
+  leaderboard: LeaderboardEntry[];
+  totalCount: number;
+  sortBy: string;
+  limit: number;
+  offset: number;
+}
+
+export type LeaderboardSortBy =
+  | "compositeScore"
+  | "plddt"
+  | "ptm"
+  | "ipSaeScore"
+  | "interfaceArea"
+  | "shapeComplementarity";
 
 // Suggestion types
 export interface Suggestion {
