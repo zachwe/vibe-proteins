@@ -19,6 +19,7 @@ import MetricsHelp from "./pages/MetricsHelp";
 import RFDiffusionHelp from "./pages/help/RFDiffusionHelp";
 import BindCraftHelp from "./pages/help/BindCraftHelp";
 import BoltzGenHelp from "./pages/help/BoltzGenHelp";
+import BoltzGenPlayground from "./pages/BoltzGenPlayground";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -51,6 +52,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/help/design/bindcraft" element={<BindCraftHelp />} />
             <Route path="/help/design/boltzgen" element={<BoltzGenHelp />} />
             <Route path="/help/metrics" element={<MetricsHelp />} />
+            <Route path="/playground/boltzgen" element={<BoltzGenPlayground />} />
           </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

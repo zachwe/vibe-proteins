@@ -173,6 +173,34 @@ export class ModalProvider implements InferenceProvider {
           job_id: input.jobId,
         };
 
+      case "boltzgen":
+        return {
+          target_pdb: input.targetPdb || input.targetStructureUrl,
+          target_structure_url: input.targetStructureUrl,
+          target_chain_ids: input.targetChainIds,
+          binder_length: input.binderLengthRange || input.binderLength || "80..120",
+          binding_residues: input.bindingResidues || input.hotspotResidues,
+          protocol: input.boltzgenProtocol || "protein-anything",
+          num_designs: input.numDesigns ?? 100,
+          diffusion_batch_size: input.diffusionBatchSize,
+          step_scale: input.stepScale,
+          noise_scale: input.noiseScale,
+          inverse_fold_num_sequences: input.inverseFoldNumSequences ?? 1,
+          inverse_fold_avoid: input.inverseFoldAvoid,
+          skip_inverse_folding: input.skipInverseFolding ?? false,
+          budget: input.boltzgenBudget ?? 10,
+          alpha: input.boltzgenAlpha ?? 0.01,
+          filter_biased: input.filterBiased ?? true,
+          refolding_rmsd_threshold: input.refoldingRmsdThreshold,
+          additional_filters: input.additionalFilters,
+          metrics_override: input.metricsOverride,
+          devices: input.boltzgenDevices,
+          steps: input.boltzgenSteps,
+          reuse: input.boltzgenReuse ?? false,
+          job_id: input.jobId,
+          challenge_id: input.challengeId,
+        };
+
       default:
         return input as Record<string, unknown>;
     }

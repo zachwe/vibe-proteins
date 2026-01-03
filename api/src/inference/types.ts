@@ -2,7 +2,7 @@
  * Inference job types and interfaces
  */
 
-export type JobType = "rfdiffusion3" | "boltz2" | "proteinmpnn" | "predict" | "score";
+export type JobType = "rfdiffusion3" | "boltz2" | "boltzgen" | "proteinmpnn" | "predict" | "score";
 
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 
@@ -36,6 +36,27 @@ export interface JobInput {
   // Scoring
   designPdb?: string;
   targetStructureKey?: string;
+
+  // BoltzGen parameters
+  targetChainIds?: string[];
+  binderLengthRange?: string;
+  bindingResidues?: string[];
+  boltzgenProtocol?: string;
+  diffusionBatchSize?: number;
+  stepScale?: number;
+  noiseScale?: number;
+  inverseFoldNumSequences?: number;
+  inverseFoldAvoid?: string;
+  skipInverseFolding?: boolean;
+  boltzgenBudget?: number;
+  boltzgenAlpha?: number;
+  filterBiased?: boolean;
+  refoldingRmsdThreshold?: number;
+  additionalFilters?: string[];
+  metricsOverride?: string;
+  boltzgenDevices?: number;
+  boltzgenSteps?: string[];
+  boltzgenReuse?: boolean;
 
   // Meta
   jobId?: string;
