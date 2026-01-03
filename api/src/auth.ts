@@ -47,8 +47,10 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      // Append callbackURL to redirect to frontend after verification
-      const verifyUrl = `${url}&callbackURL=${encodeURIComponent(frontendUrl + "/verified")}`;
+      // Set callbackURL to redirect to frontend after verification
+      const urlObj = new URL(url);
+      urlObj.searchParams.set("callbackURL", frontendUrl + "/verified");
+      const verifyUrl = urlObj.toString();
 
       if (!resend) {
         console.log(
