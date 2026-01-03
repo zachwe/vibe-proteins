@@ -24,13 +24,13 @@ const upsert = db.prepare(`
   INSERT INTO challenges (
     id, name, description, mission, difficulty, level, task_type,
     target_pdb_id, target_uniprot_id, target_structure_url, target_sequence,
-    target_chain_id, pdb_description, chain_annotations, educational_content,
-    created_at
+    target_chain_id, pdb_start_residue, pdb_description, chain_annotations,
+    suggested_hotspots, educational_content, created_at
   ) VALUES (
     @id, @name, @description, @mission, @difficulty, @level, @taskType,
     @targetPdbId, @targetUniprotId, @targetStructureUrl, @targetSequence,
-    @targetChainId, @pdbDescription, @chainAnnotations, @educationalContent,
-    datetime('now')
+    @targetChainId, @pdbStartResidue, @pdbDescription, @chainAnnotations,
+    @suggestedHotspots, @educationalContent, datetime('now')
   )
   ON CONFLICT(id) DO UPDATE SET
     name = @name,
@@ -44,15 +44,18 @@ const upsert = db.prepare(`
     target_structure_url = @targetStructureUrl,
     target_sequence = @targetSequence,
     target_chain_id = @targetChainId,
+    pdb_start_residue = @pdbStartResidue,
     pdb_description = @pdbDescription,
     chain_annotations = @chainAnnotations,
+    suggested_hotspots = @suggestedHotspots,
     educational_content = @educationalContent
 `);
 
 for (const c of challenges) {
   upsert.run({
     ...c,
-    chainAnnotations: JSON.stringify(c.chainAnnotations)
+    chainAnnotations: JSON.stringify(c.chainAnnotations),
+    suggestedHotspots: c.suggestedHotspots ? JSON.stringify(c.suggestedHotspots) : null
   });
   console.log('  -', c.name);
 }
@@ -74,7 +77,7 @@ const gpuRates = [
   { id: 'B200', name: 'NVIDIA B200', modalRatePerSec: 0.001736 },
 ];
 
-const upsertGpu = db.prepare(\`
+const upsertGpu = db.prepare(`
   INSERT INTO gpu_pricing (
     id, name, modal_rate_per_sec, markup_percent, is_active, created_at
   ) VALUES (
@@ -85,7 +88,7 @@ const upsertGpu = db.prepare(\`
     modal_rate_per_sec = @modalRatePerSec,
     markup_percent = 30,
     is_active = 1
-\`);
+`);
 
 for (const gpu of gpuRates) {
   upsertGpu.run(gpu);
@@ -105,7 +108,7 @@ const presets = [
   { id: '50', amountCents: 5000, label: '$50', sortOrder: 4 },
 ];
 
-const upsertPreset = db.prepare(\`
+const upsertPreset = db.prepare(`
   INSERT INTO deposit_presets (
     id, amount_cents, label, is_active, sort_order, created_at
   ) VALUES (
@@ -116,7 +119,7 @@ const upsertPreset = db.prepare(\`
     label = @label,
     sort_order = @sortOrder,
     is_active = 1
-\`);
+`);
 
 for (const preset of presets) {
   upsertPreset.run(preset);
