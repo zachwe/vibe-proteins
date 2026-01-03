@@ -221,7 +221,7 @@ export default function MetricsHelp() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Helmet>
-        <title>Binding Metrics Guide | VibeProteins</title>
+        <title>Binding Metrics Guide | ProteinDojo</title>
         <meta name="description" content="Learn how to interpret protein binding metrics like ipSAE, pDockQ, ipTM, pLDDT, and more." />
       </Helmet>
 

@@ -67,8 +67,8 @@ export default function Billing() {
   return (
     <div className="min-h-screen bg-slate-900">
       <Helmet>
-        <title>Billing | VibeProteins</title>
-        <meta name="description" content="Manage your account balance and view GPU pricing on VibeProteins." />
+        <title>Billing | ProteinDojo</title>
+        <meta name="description" content="Manage your account balance and view GPU pricing on ProteinDojo." />
         <meta name="robots" content="noindex" />
       </Helmet>
 

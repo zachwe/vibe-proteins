@@ -344,7 +344,7 @@ export default function DesignHelp() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Helmet>
-        <title>Design Tools Guide | VibeProteins</title>
+        <title>Design Tools Guide | ProteinDojo</title>
         <meta name="description" content="Learn how to use RFDiffusion3, ProteinMPNN, and Boltz-2 for protein binder design." />
       </Helmet>
 
@@ -357,7 +357,7 @@ export default function DesignHelp() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-4">Design Tools Guide</h1>
         <p className="text-slate-400">
-          VibeProteins uses state-of-the-art AI models to design protein binders.
+          ProteinDojo uses state-of-the-art AI models to design protein binders.
           Here's how each tool works and when to use them.
         </p>
       </div>

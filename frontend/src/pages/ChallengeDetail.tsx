@@ -303,7 +303,7 @@ export default function ChallengeDetail() {
     return null;
   }
 
-  const pageTitle = `${challenge.name} | VibeProteins`;
+  const pageTitle = `${challenge.name} | ProteinDojo`;
   const pageDescription = challenge.mission || challenge.description || `Design a protein binder for ${challenge.name}`;
 
   return (
@@ -314,7 +314,7 @@ export default function ChallengeDetail() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:type" content="article" />
-        <link rel="canonical" href={`https://vibeproteins.com/challenges/${challenge.id}`} />
+        <link rel="canonical" href={`https://proteindojo.com/challenges/${challenge.id}`} />
         {challenge.targetPdbId && (
           <meta name="keywords" content={`${challenge.name}, ${challenge.targetPdbId}, protein design, drug discovery, ${challenge.taskType}`} />
         )}

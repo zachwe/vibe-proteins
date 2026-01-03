@@ -11,7 +11,7 @@ export default function RFDiffusionHelp() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Helmet>
-        <title>RFDiffusion3 Guide | VibeProteins</title>
+        <title>RFDiffusion3 Guide | ProteinDojo</title>
         <meta name="description" content="Learn how to use RFDiffusion3 for de novo protein binder design." />
       </Helmet>
 
@@ -69,12 +69,12 @@ export default function RFDiffusionHelp() {
         </div>
       </section>
 
-      {/* On VibeProteins */}
+      {/* On ProteinDojo */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold text-white mb-4">On VibeProteins</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">On ProteinDojo</h2>
         <div className="bg-slate-800 rounded-xl p-6">
           <p className="text-slate-300 mb-4">
-            When you run RFDiffusion3 on VibeProteins, it automatically chains together a complete
+            When you run RFDiffusion3 on ProteinDojo, it automatically chains together a complete
             design pipeline:
           </p>
           <div className="flex flex-wrap items-center gap-2 text-sm mb-4">
@@ -119,7 +119,7 @@ export default function RFDiffusionHelp() {
             <div>
               <h3 className="font-medium text-white mb-2">Target Structure (Required)</h3>
               <p className="text-slate-400 text-sm">
-                The protein you want to design a binder for. On VibeProteins, this is provided
+                The protein you want to design a binder for. On ProteinDojo, this is provided
                 automatically by the challenge.
               </p>
             </div>
@@ -136,7 +136,7 @@ export default function RFDiffusionHelp() {
             <div>
               <h3 className="font-medium text-white mb-2">Binder Length (Advanced)</h3>
               <p className="text-slate-400 text-sm">
-                The number of amino acids in your designed binder. VibeProteins uses sensible
+                The number of amino acids in your designed binder. ProteinDojo uses sensible
                 defaults (typically 60-100 residues) but this can be customized for advanced users.
               </p>
             </div>

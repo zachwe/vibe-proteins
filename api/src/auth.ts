@@ -14,7 +14,14 @@ const isProduction = process.env.NODE_ENV === "production";
 
 // Trusted origins based on environment
 const trustedOrigins = isProduction
-  ? ["https://vibe-proteins.zachocean.com"]
+  ? [
+      "https://proteindojo.com",
+      "https://www.proteindojo.com",
+      "https://proteindojo.zachocean.com",
+      // Legacy domains
+      "https://vibe-proteins.zachocean.com",
+      "https://vibeproteins.vercel.app",
+    ]
   : ["http://localhost:5173"];
 
 export const auth = betterAuth({

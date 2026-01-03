@@ -181,7 +181,7 @@ export default function BoltzGenPlayground() {
   return (
     <div className="min-h-screen bg-slate-900">
       <Helmet>
-        <title>BoltzGen Playground | VibeProteins</title>
+        <title>BoltzGen Playground | ProteinDojo</title>
         <meta name="description" content="Design protein binders using BoltzGen - diffusion-based backbone design with Boltz-2 validation." />
       </Helmet>
 

@@ -15,17 +15,17 @@ export default function Challenges() {
   return (
     <div className="min-h-screen bg-slate-900">
       <Helmet>
-        <title>Protein Design Challenges | VibeProteins</title>
+        <title>Protein Design Challenges | ProteinDojo</title>
         <meta
           name="description"
           content="Browse protein design challenges. Design binders for real therapeutic targets including COVID-19 spike protein, cancer targets, and inflammatory disease targets."
         />
-        <meta property="og:title" content="Protein Design Challenges | VibeProteins" />
+        <meta property="og:title" content="Protein Design Challenges | ProteinDojo" />
         <meta
           property="og:description"
           content="Browse protein design challenges. Design binders for real therapeutic targets including COVID-19 spike protein, cancer targets, and inflammatory disease targets."
         />
-        <link rel="canonical" href="https://vibeproteins.com/challenges" />
+        <link rel="canonical" href="https://proteindojo.com/challenges" />
       </Helmet>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

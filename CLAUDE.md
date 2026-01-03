@@ -1,5 +1,12 @@
 # Instructions
 
+## Naming Convention
+
+- **User-facing site name**: ProteinDojo
+- **Codebase/infrastructure name**: vibeproteins (legacy, kept for compatibility)
+
+When adding user-visible text (UI, SEO, documentation), use "ProteinDojo". Internal code and infrastructure references can continue using "vibeproteins".
+
 ## Project Documentation Files
 
 ### PLAN.md

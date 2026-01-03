@@ -11,7 +11,7 @@ export default function BoltzGenHelp() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Helmet>
-        <title>BoltzGen Guide | VibeProteins</title>
+        <title>BoltzGen Guide | ProteinDojo</title>
         <meta name="description" content="Learn how to use BoltzGen for diffusion-based protein binder design with Boltz-2." />
       </Helmet>
 

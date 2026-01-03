@@ -1,6 +1,8 @@
-# VibeProteins
+# ProteinDojo
 
 A platform for learning protein design by practicing against real druggable targets.
+
+> **Note:** The user-facing site is called **ProteinDojo**. The codebase and infrastructure still use the legacy name "vibeproteins" for now.
 
 ## Prerequisites
 

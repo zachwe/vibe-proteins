@@ -11,7 +11,7 @@ export default function BindCraftHelp() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Helmet>
-        <title>BindCraft Guide | VibeProteins</title>
+        <title>BindCraft Guide | ProteinDojo</title>
         <meta name="description" content="Learn how to use BindCraft for automated protein binder design with AlphaFold2." />
       </Helmet>
 

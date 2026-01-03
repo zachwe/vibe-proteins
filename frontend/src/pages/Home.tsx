@@ -9,17 +9,17 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 overflow-hidden relative">
       <Helmet>
-        <title>VibeProteins - Learn Protein Design</title>
+        <title>ProteinDojo - Learn Protein Design</title>
         <meta
           name="description"
           content="Learn to design proteins using AI. Practice on real druggable targets like Spike RBD, IL-6, and PD-L1 using cutting-edge tools like RFdiffusion."
         />
-        <meta property="og:title" content="VibeProteins - Learn Protein Design" />
+        <meta property="og:title" content="ProteinDojo - Learn Protein Design" />
         <meta
           property="og:description"
           content="Learn to design proteins. Practice on real druggable targets like Spike RBD, IL-6, and PD-L1 using cutting-edge tools like RFdiffusion."
         />
-        <link rel="canonical" href="https://vibeproteins.com" />
+        <link rel="canonical" href="https://proteindojo.com" />
       </Helmet>
 
       {/* Animated background */}
@@ -268,7 +268,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="relative py-8 px-4 border-t border-slate-800">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-slate-500 text-sm">
-          <span>VibeProteins</span>
+          <span>ProteinDojo</span>
           <div className="flex gap-6">
             <Link to="/help" className="hover:text-slate-300 transition-colors">Help</Link>
             <Link to="/challenges" className="hover:text-slate-300 transition-colors">Challenges</Link>

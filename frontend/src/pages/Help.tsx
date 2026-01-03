@@ -18,7 +18,7 @@ interface HelpSection {
 const HELP_SECTIONS: HelpSection[] = [
   {
     title: "Design Tools",
-    description: "Learn how to use the protein design tools available on VibeProteins.",
+    description: "Learn how to use the protein design tools available on ProteinDojo.",
     link: "/help/design",
     icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
     topics: ["RFDiffusion3", "ProteinMPNN", "Boltz-2", "Hotspots", "Target selection"],
@@ -36,14 +36,14 @@ export default function Help() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Helmet>
-        <title>Help Center | VibeProteins</title>
-        <meta name="description" content="Learn how to use VibeProteins for protein design, understand metrics, and get the most out of the platform." />
+        <title>Help Center | ProteinDojo</title>
+        <meta name="description" content="Learn how to use ProteinDojo for protein design, understand metrics, and get the most out of the platform." />
       </Helmet>
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-4">Help Center</h1>
         <p className="text-slate-400">
-          Everything you need to know about designing proteins with VibeProteins.
+          Everything you need to know about designing proteins with ProteinDojo.
           New to protein design? Start with the Design Tools guide.
         </p>
       </div>

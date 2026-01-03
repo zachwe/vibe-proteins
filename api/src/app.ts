@@ -13,7 +13,14 @@ import suggestionsRoutes from "./routes/suggestions";
 // CORS origins based on environment
 const corsOrigins =
   process.env.NODE_ENV === "production"
-    ? ["https://vibe-proteins.zachocean.com"]
+    ? [
+        "https://proteindojo.com",
+        "https://www.proteindojo.com",
+        "https://proteindojo.zachocean.com",
+        // Legacy domains
+        "https://vibe-proteins.zachocean.com",
+        "https://vibeproteins.vercel.app",
+      ]
     : ["http://localhost:5173"];
 
 export function createApp() {
@@ -31,7 +38,7 @@ export function createApp() {
 
   // Health check
   app.get("/", (c) => {
-    return c.json({ status: "ok", message: "VibeProteins API" });
+    return c.json({ status: "ok", message: "ProteinDojo API" });
   });
 
   // BetterAuth routes - note: single asterisk for wildcard

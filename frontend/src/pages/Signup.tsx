@@ -38,8 +38,8 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center">
       <Helmet>
-        <title>Sign Up | VibeProteins</title>
-        <meta name="description" content="Create a free VibeProteins account to start designing proteins." />
+        <title>Sign Up | ProteinDojo</title>
+        <meta name="description" content="Create a free ProteinDojo account to start designing proteins." />
         <meta name="robots" content="noindex" />
       </Helmet>
       <div className="bg-slate-800 rounded-xl p-8 w-full max-w-md">
