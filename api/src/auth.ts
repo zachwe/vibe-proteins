@@ -2,15 +2,26 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import { Resend } from "resend";
 import * as authSchema from "./db/auth-schema";
 
 const DATABASE_PATH = process.env.DATABASE_URL || "vibeproteins.db";
+
+// Email sending via Resend
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 // Create a separate connection for BetterAuth
 const sqlite = new Database(DATABASE_PATH);
 const db = drizzle(sqlite, { schema: authSchema });
 
 const isProduction = process.env.NODE_ENV === "production";
+
+// Frontend URL for redirects
+const frontendUrl = isProduction
+  ? "https://proteindojo.com"
+  : "http://localhost:5173";
 
 // Trusted origins based on environment
 const trustedOrigins = isProduction
@@ -32,6 +43,44 @@ export const auth = betterAuth({
   basePath: "/api/auth",
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: isProduction, // Only require in production
+  },
+  emailVerification: {
+    sendVerificationEmail: async ({ user, url }) => {
+      // Append callbackURL to redirect to frontend after verification
+      const verifyUrl = `${url}&callbackURL=${encodeURIComponent(frontendUrl + "/verified")}`;
+
+      if (!resend) {
+        console.log(
+          `[DEV] Email verification link for ${user.email}: ${verifyUrl}`
+        );
+        return;
+      }
+      // Don't await to prevent timing attacks
+      void resend.emails.send({
+        from: "ProteinDojo <noreply@proteindojo.com>",
+        to: user.email,
+        subject: "Verify your email - ProteinDojo",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #1e293b;">Welcome to ProteinDojo!</h1>
+            <p>Click the button below to verify your email address:</p>
+            <a href="${verifyUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+              Verify Email
+            </a>
+            <p style="color: #64748b; font-size: 14px;">
+              If you didn't create an account, you can ignore this email.
+            </p>
+            <p style="color: #64748b; font-size: 14px;">
+              Or copy this link: ${verifyUrl}
+            </p>
+          </div>
+        `,
+      });
+    },
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60 * 24, // 24 hours
   },
   // Session configuration
   session: {

@@ -22,6 +22,7 @@ import BoltzGenHelp from "./pages/help/BoltzGenHelp";
 import BoltzGenPlayground from "./pages/BoltzGenPlayground";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Verified from "./pages/Verified";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +57,7 @@ createRoot(document.getElementById("root")!).render(
           </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/verified" element={<Verified />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>

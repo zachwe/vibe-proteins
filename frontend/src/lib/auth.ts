@@ -5,3 +5,7 @@ export const authClient = createAuthClient({
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
+
+// Email verification
+export const sendVerificationEmail = authClient.sendVerificationEmail;
+export const verifyEmail = authClient.verifyEmail;

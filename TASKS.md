@@ -1,4 +1,4 @@
-# VibeProteins - Task Tracker
+# ProteinDojo - Task Tracker
 
 ## Phase 1: Project Setup
 
@@ -111,7 +111,7 @@
   - [x] "Moderate confidence in complex formation"
   - [x] "Low structural confidence - consider verifying experimentally"
   - [x] etc.
-- [ ] Leaderboard per challenge
+- [x] Leaderboard per challenge
 
 ## Phase 7: Progress & Billing
 
@@ -158,7 +158,7 @@
   - [x] Configure health check endpoint
   - [x] Set up database migrations on deploy
   - [x] Auto-deploy on push to main (GitHub Actions)
-  - [ ] Set up R2 credentials in Fly.io secrets
+  - [x] Set up R2 credentials in Fly.io secrets
   - [ ] Set up Modal token in Fly.io secrets
   - [x] Configure CORS for production frontend URL
 - [ ] Modal Deployment
@@ -178,11 +178,11 @@
   - [ ] Define named regions in challenge data (e.g., "ACE2 binding face")
   - [ ] Custom markdown syntax for interactive elements `[[region:id|display text]]`
   - [ ] MolstarViewer ref/context API for `highlightResidues(chainId, residues[])`
-- [ ] Hotspot selection for RFDiffusion3
-  - [ ] Add `suggestedHotspots` field to challenge schema
-  - [ ] "Advanced options" accordion in DesignPanel
-  - [ ] Click-to-select residues in Mol* viewer
-  - [ ] Pass hotspots to RFDiffusion3 inference
+- [x] Hotspot selection for RFDiffusion3
+  - [x] Add `suggestedHotspots` field to challenge schema
+  - [x] "Advanced options" accordion in DesignPanel
+  - [x] Click-to-select residues in Mol* viewer (via SequenceSelector)
+  - [x] Pass hotspots to RFDiffusion3 inference
 - [ ] Mol* viewer enhancements
   - [ ] Color chains by role (target vs context) matching legend colors
   - [ ] Sync legend hover with viewer highlighting
@@ -198,46 +198,21 @@
 
 > Update this section with what we're actively working on
 
-**Phase 6 completed - Scoring & Feedback**
+**Production deployment complete!**
+
+Site live at: https://proteindojo.com
 
 In progress:
 - Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
-- Phase 9: Production configuration (R2/Modal credentials in Fly.io)
 
-Completed:
-- **PAE-based ipSAE scoring** (Phase 6):
-  - `modal/utils/ipsae.py` - ipSAE, ipTM, pDockQ, pDockQ2, LIS from PAE matrices
-  - `modal/utils/scoring.py` - Composite scoring + feedback generation
-  - Self-hosted MMseqs2 MSA server on Modal (`run_msa_search()`)
-  - ColabFold database setup script (`scripts/setup_colabfold_dbs.py`)
-  - Boltz-2 integration with PAE-based scoring
-  - Frontend ResultsPanel with color-coded metrics display
-  - Unit tests for ipSAE and scoring (33 tests passing)
-- Modal helper unit tests + CI coverage
-- All API endpoints implemented and tested (31 tests passing)
-- Modal authenticated and health check working
-- R2 bucket created (`vibeproteins`) with credentials configured
-- RFDiffusion3 Modal pipeline added (binder design)
-- Inference provider abstraction (`ModalProvider`)
-- React Query integration with typed API client
-- Challenge list and detail pages
-- Mol* 3D protein viewer component
-- Seed data with 3 real protein targets (Spike RBD, IL-6, VEGF-A)
-- Landing page with hero and feature cards
-- Auth pages (login, signup)
-- DesignPanel component with tool selection, job submission, and status tracking
-- Job status UI with pending/running/completed/failed states
-- ResultsPanel component with Mol* viewer and score breakdown display
-- **Usage-based billing with Stripe integration**:
-  - Per-second GPU billing (Modal rates + 30% markup)
-  - Self-timing in Modal functions (gpu_type + execution_seconds)
-  - Post-completion billing (not upfront deduction)
-  - GPU pricing table in database (9 GPU types seeded)
-  - Deposit presets ($5, $10, $25, $50)
-  - Stripe Checkout with dynamic `price_data`
-  - Webhook for payment confirmation
-  - USD balance display in header
-  - Billing page (/billing) with deposits, GPU pricing, transaction history
+Recently completed:
+- **Leaderboard per challenge** (Phase 6): API endpoint + frontend component with sorting by multiple metrics
+- **Hotspot selection for RFDiffusion3** (Phase 10): SequenceSelector with residue picking, HotspotIndicator with range support, shared state between panels
+- **ProteinDojo rename**: Updated all user-facing branding, documented naming convention
+- **Domain setup**: proteindojo.com + proteindojo.zachocean.com on Vercel
+- **Drizzle migrations**: Fixed tracking, synced with production
+- PAE-based ipSAE scoring, composite scores, feedback generation
+- Usage-based billing with Stripe integration
 
 Next up:
 - Set up ColabFold databases on Modal Volume (~500GB-1TB)

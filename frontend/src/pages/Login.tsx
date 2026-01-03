@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { signIn } from "../lib/auth";
+import { signIn, sendVerificationEmail } from "../lib/auth";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -9,10 +9,14 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setEmailNotVerified(false);
     setLoading(true);
 
     try {
@@ -22,7 +26,13 @@ export default function Login() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Failed to sign in");
+        const errorMsg = result.error.message || "Failed to sign in";
+        // Check if it's an email verification error
+        if (errorMsg.toLowerCase().includes("email") && errorMsg.toLowerCase().includes("verif")) {
+          setEmailNotVerified(true);
+        } else {
+          setError(errorMsg);
+        }
       } else {
         navigate("/challenges");
       }
@@ -30,6 +40,22 @@ export default function Login() {
       setError("An unexpected error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendSuccess(false);
+    try {
+      await sendVerificationEmail({
+        email,
+        callbackURL: "/verified",
+      });
+      setResendSuccess(true);
+    } catch {
+      setError("Failed to resend verification email");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -48,6 +74,26 @@ export default function Login() {
         {error && (
           <div className="bg-red-500/10 border border-red-500 text-red-500 rounded-lg p-3 mb-4">
             {error}
+          </div>
+        )}
+
+        {emailNotVerified && (
+          <div className="bg-yellow-500/10 border border-yellow-500 text-yellow-400 rounded-lg p-4 mb-4">
+            <p className="font-medium mb-2">Email not verified</p>
+            <p className="text-sm text-yellow-300 mb-3">
+              Please check your email and click the verification link to continue.
+            </p>
+            {resendSuccess ? (
+              <p className="text-sm text-green-400">Verification email sent! Check your inbox.</p>
+            ) : (
+              <button
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                className="text-sm text-yellow-200 underline hover:text-yellow-100 disabled:opacity-50"
+              >
+                {resendLoading ? "Sending..." : "Resend verification email"}
+              </button>
+            )}
           </div>
         )}
 

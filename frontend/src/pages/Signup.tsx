@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { signUp } from "../lib/auth";
 
+const isProduction = import.meta.env.PROD;
+
 export default function Signup() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -10,6 +12,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +28,11 @@ export default function Signup() {
 
       if (result.error) {
         setError(result.error.message || "Failed to sign up");
+      } else if (isProduction) {
+        // In production, show email verification message
+        setEmailSent(true);
       } else {
+        // In development, no email verification required
         navigate("/challenges");
       }
     } catch {
@@ -34,6 +41,37 @@ export default function Signup() {
       setLoading(false);
     }
   };
+
+  // Show email verification sent message
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <Helmet>
+          <title>Check Your Email | ProteinDojo</title>
+          <meta name="robots" content="noindex" />
+        </Helmet>
+        <div className="bg-slate-800 rounded-xl p-8 w-full max-w-md text-center">
+          <div className="text-5xl mb-4">📧</div>
+          <h1 className="text-2xl font-bold text-white mb-4">
+            Check Your Email
+          </h1>
+          <p className="text-slate-300 mb-6">
+            We sent a verification link to <span className="text-white font-semibold">{email}</span>.
+            Click the link to verify your email and complete your registration.
+          </p>
+          <p className="text-slate-400 text-sm mb-6">
+            Didn't receive the email? Check your spam folder or try signing up again.
+          </p>
+          <Link
+            to="/login"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          >
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center">
