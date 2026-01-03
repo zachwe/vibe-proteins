@@ -12,7 +12,7 @@
     "targetStructureUrl": "https://files.rcsb.org/download/6M0J.pdb",
     "targetSequence": "NITNLCPFGEVFNATRFASVYAWNRKRISNCVADYSVLYNSASFSTFKCYGVSPTKLNDLCFTNVYADSFVIRGDEVRQIAPGQTGKIADYNYKLPDDFTGCVIAWNSNNLDSKVGGNYNYLYRLFRKSNLKPFERDISTEIYQAGSTPCNGVEGFNCYFPLQSYGFQPTNGVGYQPYRVVVLSFELLHAPATVCGPKKSTNLVKNKCVNF",
     "targetChainId": "E",
-    "pdbStartResidue": 319,
+    "pdbStartResidue": 331,
     "pdbDescription": "Crystal structure of SARS-CoV-2 Spike RBD bound to human ACE2 receptor",
     "chainAnnotations": {
       "E": {

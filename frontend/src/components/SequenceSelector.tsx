@@ -38,6 +38,51 @@ async function fetchUniprotSequence(uniprotId: string): Promise<string | null> {
 // Number of residues per row
 const RESIDUES_PER_ROW = 30;
 
+// Amino acid code to full name mapping
+const AMINO_ACID_NAMES: Record<string, { name: string; threeCode: string }> = {
+  A: { name: "Alanine", threeCode: "ALA" },
+  R: { name: "Arginine", threeCode: "ARG" },
+  N: { name: "Asparagine", threeCode: "ASN" },
+  D: { name: "Aspartic acid", threeCode: "ASP" },
+  C: { name: "Cysteine", threeCode: "CYS" },
+  E: { name: "Glutamic acid", threeCode: "GLU" },
+  Q: { name: "Glutamine", threeCode: "GLN" },
+  G: { name: "Glycine", threeCode: "GLY" },
+  H: { name: "Histidine", threeCode: "HIS" },
+  I: { name: "Isoleucine", threeCode: "ILE" },
+  L: { name: "Leucine", threeCode: "LEU" },
+  K: { name: "Lysine", threeCode: "LYS" },
+  M: { name: "Methionine", threeCode: "MET" },
+  F: { name: "Phenylalanine", threeCode: "PHE" },
+  P: { name: "Proline", threeCode: "PRO" },
+  S: { name: "Serine", threeCode: "SER" },
+  T: { name: "Threonine", threeCode: "THR" },
+  W: { name: "Tryptophan", threeCode: "TRP" },
+  Y: { name: "Tyrosine", threeCode: "TYR" },
+  V: { name: "Valine", threeCode: "VAL" },
+};
+
+// Get amino acid tooltip text
+function getAminoAcidTooltip(
+  aa: string,
+  residueNumber: number,
+  isSuggested: boolean,
+  isOutsidePdb: boolean
+): string {
+  const aaInfo = AMINO_ACID_NAMES[aa.toUpperCase()];
+  const aaName = aaInfo ? `${aaInfo.name} (${aaInfo.threeCode})` : aa;
+
+  if (isOutsidePdb) {
+    return `${aaName} ${residueNumber} - outside PDB structure`;
+  }
+
+  let tooltip = `${aaName} ${residueNumber}`;
+  if (isSuggested) {
+    tooltip += " - suggested hotspot";
+  }
+  return tooltip;
+}
+
 // Parse residue string like "E:417" into components
 function parseResidue(residue: string): { chain: string; number: number } | null {
   const match = residue.match(/^([A-Za-z]):(\d+)$/);
@@ -276,20 +321,20 @@ export default function SequenceSelector({
       {expanded && (
         <div
           ref={containerRef}
-          className="p-3 select-none overflow-x-auto"
+          className="p-3 select-none"
           onMouseLeave={handleMouseLeave}
           onMouseUp={handleMouseUp}
         >
-          <div className="font-mono text-xs space-y-1">
+          <div className="font-mono text-[10px] space-y-0.5">
             {rows.map((row, rowIdx) => (
-              <div key={rowIdx} className="flex items-center gap-1">
+              <div key={rowIdx} className="flex items-center gap-0.5">
                 {/* Row number label */}
-                <span className="text-slate-500 w-10 text-right shrink-0">
+                <span className="text-slate-500 w-8 text-right shrink-0 text-[9px]">
                   {effectiveStartResidue + row.startIdx}
                 </span>
 
                 {/* Residues */}
-                <div className="flex gap-px">
+                <div className="flex flex-wrap gap-px">
                   {row.residues.map((aa, colIdx) => {
                     const displayPosition = effectiveStartResidue + row.startIdx + colIdx;
                     // In UniProt mode, we need to map to PDB residue numbers
@@ -316,7 +361,7 @@ export default function SequenceSelector({
                     return (
                       <button
                         key={colIdx}
-                        className={`w-5 h-6 flex items-center justify-center rounded-sm transition-colors ${
+                        className={`w-4 h-5 flex items-center justify-center rounded-sm transition-colors ${
                           inPdbRange ? "cursor-pointer" : "cursor-not-allowed"
                         } ${bgColor} ${
                           isSelected ? "text-white font-medium" : inPdbRange ? "text-slate-300" : "text-slate-500"
@@ -330,11 +375,12 @@ export default function SequenceSelector({
                           if (!inPdbRange || pdbResidueNumber === null) return;
                           handleMouseEnter(pdbResidueNumber);
                         }}
-                        title={
-                          inPdbRange
-                            ? `${aa}${pdbResidueNumber}${isSuggested ? " (suggested)" : ""}`
-                            : `${aa}${displayPosition} (outside PDB range)`
-                        }
+                        title={getAminoAcidTooltip(
+                          aa,
+                          inPdbRange && pdbResidueNumber !== null ? pdbResidueNumber : displayPosition,
+                          isSuggested,
+                          !inPdbRange
+                        )}
                         disabled={!inPdbRange}
                       >
                         {aa}
@@ -347,22 +393,22 @@ export default function SequenceSelector({
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-600/50 text-xs text-slate-400 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-purple-600/70" />
+          <div className="flex items-center gap-3 mt-2 pt-2 border-t border-slate-600/50 text-[10px] text-slate-400 flex-wrap">
+            <div className="flex items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-sm bg-purple-600/70" />
               <span>Selected</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-blue-600/30" />
+            <div className="flex items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-sm bg-blue-600/30" />
               <span>Suggested</span>
             </div>
             {showFullSequence && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm bg-slate-700/30" />
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 rounded-sm bg-slate-700/30" />
                 <span>Outside PDB</span>
               </div>
             )}
-            <span className="text-slate-500 ml-auto">Click or drag to select residues</span>
+            <span className="text-slate-500 ml-auto">Click or drag to select</span>
           </div>
         </div>
       )}

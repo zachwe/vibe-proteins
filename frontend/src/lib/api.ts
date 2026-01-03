@@ -55,6 +55,7 @@ export interface Job {
   status: "pending" | "running" | "completed" | "failed";
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
+  error: string | null;
   gpuType: string | null;
   executionSeconds: number | null;
   costUsdCents: number | null;

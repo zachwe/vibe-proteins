@@ -48,6 +48,9 @@ const toolInfo: Record<DesignTool, { name: string; description: string; estimate
   },
 };
 
+// Hotspot selection mode: "manual" for user-selected, or index into suggestedHotspots
+type HotspotMode = "manual" | number;
+
 export default function DesignPanel({
   challengeId,
   challengeName,
@@ -68,19 +71,44 @@ export default function DesignPanel({
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
 
-  // Find which suggested hotspot index matches the current selection (if any)
-  const selectedHotspotIndex = suggestedHotspots?.findIndex(
-    (hotspot) =>
-      hotspot.residues.length === selectedHotspots.length &&
-      hotspot.residues.every((r) => selectedHotspots.includes(r))
-  ) ?? -1;
+  // Track the hotspot selection mode separately from the actual selection
+  // This allows us to remember manual selections when switching modes
+  const [hotspotMode, setHotspotMode] = useState<HotspotMode>("manual");
+  const [savedManualHotspots, setSavedManualHotspots] = useState<string[]>([]);
 
-  // Handle hotspot selection - updates parent state
-  const handleHotspotSelect = (index: number | null) => {
-    if (index !== null && suggestedHotspots && suggestedHotspots[index]) {
-      onHotspotsChange(suggestedHotspots[index].residues);
-    } else {
-      onHotspotsChange([]);
+  // Determine the current mode based on what's selected
+  const getCurrentMode = (): HotspotMode => {
+    if (selectedHotspots.length === 0) {
+      return "manual";
+    }
+    // Check if selection matches any suggested hotspot
+    const matchIndex = suggestedHotspots?.findIndex(
+      (hotspot) =>
+        hotspot.residues.length === selectedHotspots.length &&
+        hotspot.residues.every((r) => selectedHotspots.includes(r))
+    ) ?? -1;
+    if (matchIndex !== -1) {
+      return matchIndex;
+    }
+    return "manual";
+  };
+
+  const currentMode = getCurrentMode();
+
+  // Handle hotspot mode selection
+  const handleHotspotModeSelect = (mode: HotspotMode) => {
+    // If leaving manual mode, save current selection
+    if (currentMode === "manual" && mode !== "manual") {
+      setSavedManualHotspots(selectedHotspots);
+    }
+
+    setHotspotMode(mode);
+
+    if (mode === "manual") {
+      // Restore saved manual selection
+      onHotspotsChange(savedManualHotspots);
+    } else if (typeof mode === "number" && suggestedHotspots?.[mode]) {
+      onHotspotsChange(suggestedHotspots[mode].residues);
     }
   };
 
@@ -273,7 +301,7 @@ export default function DesignPanel({
         </div>
 
         {/* Hotspot Selection - only for RFDiffusion3 */}
-        {selectedTool === "rfdiffusion3" && suggestedHotspots && suggestedHotspots.length > 0 && (
+        {selectedTool === "rfdiffusion3" && (
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-slate-300">
@@ -288,50 +316,74 @@ export default function DesignPanel({
             </div>
 
             <div className="space-y-2">
-              {/* Option to use no specific hotspot */}
+              {/* Manual selection option - default */}
               <button
-                onClick={() => handleHotspotSelect(null)}
+                onClick={() => handleHotspotModeSelect("manual")}
                 className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                  selectedHotspots.length === 0
-                    ? "bg-slate-600/50 border-slate-500"
+                  currentMode === "manual"
+                    ? "bg-purple-600/20 border-purple-500"
                     : "bg-slate-700/50 border-slate-600 hover:border-slate-500"
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    selectedHotspots.length === 0 ? "border-blue-500" : "border-slate-500"
+                    currentMode === "manual" ? "border-purple-500" : "border-slate-500"
                   }`}>
-                    {selectedHotspots.length === 0 && (
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    {currentMode === "manual" && (
+                      <div className="w-2 h-2 rounded-full bg-purple-500" />
                     )}
                   </div>
-                  <div>
-                    <span className="text-white font-medium text-sm">Let AI choose</span>
-                    <span className="text-slate-400 text-xs ml-2">(automatic)</span>
+                  <div className="flex-1">
+                    <span className="text-white font-medium text-sm">Manually selected</span>
+                    {selectedHotspots.length > 0 && currentMode === "manual" && (
+                      <span className="ml-2 text-xs text-purple-400">
+                        ({selectedHotspots.length} residue{selectedHotspots.length !== 1 ? "s" : ""})
+                      </span>
+                    )}
                   </div>
                 </div>
                 <p className="text-slate-400 text-xs mt-1 ml-6">
-                  RFDiffusion3 will find the best binding site automatically
+                  {currentMode === "manual" && selectedHotspots.length > 0
+                    ? "Using your selection from the Sequence tab"
+                    : "Select residues in the Sequence tab to use as hotspots"
+                  }
                 </p>
+                {currentMode === "manual" && selectedHotspots.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2 ml-6">
+                    {selectedHotspots.slice(0, 10).map((residue, i) => (
+                      <span
+                        key={i}
+                        className="text-xs bg-purple-600/30 text-purple-300 px-1.5 py-0.5 rounded font-mono"
+                      >
+                        {residue}
+                      </span>
+                    ))}
+                    {selectedHotspots.length > 10 && (
+                      <span className="text-xs text-slate-400">
+                        +{selectedHotspots.length - 10} more
+                      </span>
+                    )}
+                  </div>
+                )}
               </button>
 
               {/* Suggested hotspots */}
-              {suggestedHotspots.map((hotspot, index) => (
+              {suggestedHotspots?.map((hotspot, index) => (
                 <button
                   key={index}
-                  onClick={() => handleHotspotSelect(index)}
+                  onClick={() => handleHotspotModeSelect(index)}
                   className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                    selectedHotspotIndex === index
-                      ? "bg-purple-600/20 border-purple-500"
+                    currentMode === index
+                      ? "bg-blue-600/20 border-blue-500"
                       : "bg-slate-700/50 border-slate-600 hover:border-slate-500"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      selectedHotspotIndex === index ? "border-purple-500" : "border-slate-500"
+                      currentMode === index ? "border-blue-500" : "border-slate-500"
                     }`}>
-                      {selectedHotspotIndex === index && (
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                      {currentMode === index && (
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
                       )}
                     </div>
                     <div className="flex-1">

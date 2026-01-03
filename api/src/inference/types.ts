@@ -37,7 +37,8 @@ export interface JobInput {
   designPdb?: string;
   targetStructureKey?: string;
 
-  // BoltzGen parameters
+  // Chain extraction (for multi-chain PDBs)
+  targetChainId?: string;
   targetChainIds?: string[];
   binderLengthRange?: string;
   bindingResidues?: string[];

@@ -128,10 +128,14 @@ export class ModalProvider implements InferenceProvider {
   ): Record<string, unknown> {
     switch (type) {
       case "rfdiffusion3":
+        // Convert targetChainId (singular) to targetChainIds (array) if needed
+        const rfd3ChainIds = input.targetChainIds
+          || (input.targetChainId ? [input.targetChainId] : undefined);
         return {
           target_pdb: input.targetPdb || input.targetStructureUrl,
           target_structure_url: input.targetStructureUrl,
           target_sequence: input.targetSequence,
+          target_chain_ids: rfd3ChainIds,
           hotspot_residues: input.hotspotResidues || [],
           num_designs: input.numDesigns ?? 2,
           binder_length: input.binderLength ?? 85,

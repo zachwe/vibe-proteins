@@ -306,7 +306,7 @@ def _format_hotspot_residues(hotspots: list[str] | None, default_chain: str) -> 
   for residue in hotspots:
     if not residue:
       continue
-    match = re.search(r"([A-Za-z])\\s*[:\\-_/]?\\s*(\\d+)", residue)
+    match = re.search(r"([A-Za-z])\s*[:\-_/]?\s*(\d+)", residue)
     if match:
       chain_id, res_id = match.groups()
     elif residue.isdigit():
@@ -331,7 +331,7 @@ def _rfd3_hotspot_selection(
   for residue in hotspots:
     if not residue:
       continue
-    match = re.search(r"([A-Za-z])\\s*[:\\-_/]?\\s*(\\d+)", residue)
+    match = re.search(r"([A-Za-z])\s*[:\-_/]?\s*(\d+)", residue)
     if match:
       chain_id, res_id = match.groups()
     elif residue.isdigit():
@@ -429,6 +429,9 @@ def _extract_rfd3_error(log_path: Path) -> str:
     return ""
   text = log_path.read_text(errors="replace")
   for token in (
+    "OutOfMemoryError",
+    "CUDA out of memory",
+    "RuntimeError",
     "ModuleNotFoundError",
     "ImportError",
     "AttributeError",
@@ -636,6 +639,7 @@ def run_rfdiffusion3(
   target_pdb: str | None = None,
   target_structure_url: str | None = None,
   target_sequence: str | None = None,
+  target_chain_ids: list[str] | None = None,
   hotspot_residues: list[str] | None = None,
   num_designs: int = 2,
   binder_length: int = 85,
@@ -648,6 +652,10 @@ def run_rfdiffusion3(
 ) -> dict:
   """
   RFdiffusion3 (RFD3) + ProteinMPNN + Boltz-2 pipeline for binder design.
+
+  Args:
+    target_chain_ids: If provided, extract only these chains from the input PDB.
+      This is essential for multi-chain PDBs where only some chains are targets.
   """
   start_time = time.time()
   gpu_type = "A10G"
@@ -659,14 +667,22 @@ def run_rfdiffusion3(
 
   with tempfile.TemporaryDirectory() as tmpdir:
     tmpdir_path = Path(tmpdir)
-    target_path = download_to_path(target_source, tmpdir_path / "target.pdb")
+    raw_target_path = download_to_path(target_source, tmpdir_path / "target_raw.pdb")
+
+    # If specific chains are requested, extract only those
+    if target_chain_ids:
+      target_path = tmpdir_path / "target.pdb"
+      _write_pdb_chains(raw_target_path, set(target_chain_ids), target_path)
+    else:
+      target_path = raw_target_path
+
     chain_segments = _chain_residue_segments_from_pdb(target_path)
     if not chain_segments:
       raise ValueError("Target PDB does not contain any protein chains.")
     ordered_chain_ids = _ordered_chain_ids_from_pdb(target_path)
-    target_chain_ids = set(chain_segments.keys())
+    pdb_chain_ids = set(chain_segments.keys())
     default_chain_id = next(
-      (chain_id for chain_id in ordered_chain_ids if chain_id in target_chain_ids),
+      (chain_id for chain_id in ordered_chain_ids if chain_id in pdb_chain_ids),
       None,
     )
     if not default_chain_id:
@@ -758,7 +774,7 @@ def run_rfdiffusion3(
       _rfd3_cif_to_pdb(cif_path, complex_path)
 
       output_chain_ids = set(chain_ids_from_structure(complex_path))
-      binder_chain_ids = output_chain_ids - target_chain_ids
+      binder_chain_ids = output_chain_ids - pdb_chain_ids
       if not binder_chain_ids:
         output_ordered = _ordered_chain_ids_from_pdb(complex_path)
         if output_ordered:
@@ -782,7 +798,7 @@ def run_rfdiffusion3(
         if isinstance(mpnn_result, dict):
           mpnn_sequences = mpnn_result.get("sequences", []) or []
 
-      metrics = compute_interface_metrics(complex_path, target_chain_ids)
+      metrics = compute_interface_metrics(complex_path, pdb_chain_ids)
       boltz_result = None
       boltz_scores = {}
       ipsae_scores = {}
@@ -802,7 +818,7 @@ def run_rfdiffusion3(
       upload_file(binder_path, binder_key, content_type="chemical/x-pdb")
       upload_file(complex_path, complex_key, content_type="chemical/x-pdb")
 
-      target_chain_list = sorted(target_chain_ids)
+      target_chain_list = sorted(pdb_chain_ids)
       binder_chain_list = sorted(binder_chain_ids)
 
       # Merge scores: RFD3 metrics + Boltz-2 scores (Boltz-2 takes precedence)
@@ -834,7 +850,7 @@ def run_rfdiffusion3(
       "pipeline": "rfdiffusion3",
       "target_sequence": target_sequence,
       "hotspots": hotspot_residues or [],
-      "target_chains": sorted(target_chain_ids),
+      "target_chains": sorted(pdb_chain_ids),
       "designs": results,
     }
     manifest_key = f"{RESULTS_PREFIX}/{job_id}/manifest.json"

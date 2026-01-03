@@ -473,6 +473,11 @@ export default function ResultsPanel({
 
   // If job failed, show error state
   if (job.status === "failed") {
+    // job.error contains the error message from the API, output?.message is a fallback
+    const errorMessage = job.error || output?.message || "The job failed to complete. Please try again.";
+    // Check if the error message contains log output (multi-line or long)
+    const hasLogOutput = errorMessage.includes("\n") || errorMessage.length > 200;
+
     return (
       <div className="bg-slate-800 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
@@ -484,9 +489,16 @@ export default function ResultsPanel({
 
         <div className="bg-red-500/10 border border-red-500 rounded-lg p-4 mb-4">
           <p className="text-red-400 font-medium mb-2">Something went wrong</p>
-          <p className="text-slate-300 text-sm">
-            {output?.message || "The job failed to complete. Please try again."}
-          </p>
+          {hasLogOutput ? (
+            <div className="mt-3">
+              <p className="text-slate-400 text-xs mb-2">Error details:</p>
+              <pre className="text-slate-300 text-xs font-mono bg-slate-900/50 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap break-words">
+                {errorMessage}
+              </pre>
+            </div>
+          ) : (
+            <p className="text-slate-300 text-sm">{errorMessage}</p>
+          )}
         </div>
 
         <button
