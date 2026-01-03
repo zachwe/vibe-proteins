@@ -12,6 +12,7 @@
     "targetStructureUrl": "https://files.rcsb.org/download/6M0J.pdb",
     "targetSequence": "NITNLCPFGEVFNATRFASVYAWNRKRISNCVADYSVLYNSASFSTFKCYGVSPTKLNDLCFTNVYADSFVIRGDEVRQIAPGQTGKIADYNYKLPDDFTGCVIAWNSNNLDSKVGGNYNYLYRLFRKSNLKPFERDISTEIYQAGSTPCNGVEGFNCYFPLQSYGFQPTNGVGYQPYRVVVLSFELLHAPATVCGPKKSTNLVKNKCVNF",
     "targetChainId": "E",
+    "pdbStartResidue": 319,
     "pdbDescription": "Crystal structure of SARS-CoV-2 Spike RBD bound to human ACE2 receptor",
     "chainAnnotations": {
       "E": {
@@ -27,12 +28,21 @@
     },
     "suggestedHotspots": [
       {
-        "residues": ["E:417", "E:453", "E:455", "E:486", "E:505"],
+        "residues": [
+          "E:417",
+          "E:453",
+          "E:455",
+          "E:486",
+          "E:505"
+        ],
         "label": "ACE2 binding site",
         "description": "Key residues that contact the ACE2 receptor. Targeting these blocks viral entry."
       },
       {
-        "residues": ["E:484", "E:501"],
+        "residues": [
+          "E:484",
+          "E:501"
+        ],
         "label": "Variant hotspots",
         "description": "Residues commonly mutated in variants (E484K, N501Y). Consider for broad neutralization."
       }
@@ -52,6 +62,7 @@
     "targetStructureUrl": "https://files.rcsb.org/download/1ALU.pdb",
     "targetSequence": "VPPGEDSKDVAAPHRQPLTSSERIDKQIRYILDGISALRKETCNKSNMCESSKEALAENNLNLPKMAEKDGCFQSGFNEETCLVKIITGLLEFEVYLEYLQNRFESSEEQARAVQMSTKVLIQFLQKKAKNLDAITTPDPTTNASLLTKLQAQNQWLQDMTTHLILRSFKEFLQSSLRALRQM",
     "targetChainId": "A",
+    "pdbStartResidue": 1,
     "pdbDescription": "Crystal structure of human Interleukin-6",
     "chainAnnotations": {
       "A": {
@@ -62,12 +73,22 @@
     },
     "suggestedHotspots": [
       {
-        "residues": ["A:42", "A:45", "A:46", "A:49"],
+        "residues": [
+          "A:42",
+          "A:45",
+          "A:46",
+          "A:49"
+        ],
         "label": "Receptor site 1",
         "description": "Residues that contact the IL-6 receptor alpha chain. Key for blocking signaling."
       },
       {
-        "residues": ["A:168", "A:171", "A:175", "A:178"],
+        "residues": [
+          "A:168",
+          "A:171",
+          "A:175",
+          "A:178"
+        ],
         "label": "Receptor site 2",
         "description": "Residues that contact gp130, the signaling partner. Alternative blocking site."
       }
@@ -87,6 +108,7 @@
     "targetStructureUrl": "https://files.rcsb.org/download/1VPF.pdb",
     "targetSequence": "APMAEGGGQNHHEVVKFMDVYQRSYCHPIETLVDIFQEYPDEIEYIFKPSCVPLMRCGGCCNDEGLECVPTEESNITMQIMRIKPHQGQHIGEMSFLQHNKCECRPKKDRARQENPCGPCSERRKHLFVQDPQTCKCSCKNTDSRCKARQLELNERTCRCDKPRR",
     "targetChainId": "A",
+    "pdbStartResidue": 1,
     "pdbDescription": "Crystal structure of Vascular Endothelial Growth Factor (VEGF) homodimer",
     "chainAnnotations": {
       "A": {
@@ -115,6 +137,7 @@
     "targetStructureUrl": "https://files.rcsb.org/download/1TNF.pdb",
     "targetSequence": "VRSSSRTPSDKPVAHVVANPQAEGQLQWLNRRANALLANGVELRDNQLVVPSEGLYLIYSQVLFKGQGCPSTHVLLTHTISRIAVSYQTKVNLLSAIKSPCQRETPEGAEAKPWYEPIYLGGVFQLEKGDRLSAEINRPDYLDFAESGQVYFGIIAL",
     "targetChainId": "A",
+    "pdbStartResidue": 1,
     "pdbDescription": "Crystal structure of human Tumor Necrosis Factor alpha (TNF-alpha) trimer",
     "chainAnnotations": {
       "A": {
@@ -156,7 +179,8 @@
         "description": "The 'invisibility cloak' protein that cancer cells use to hide - your target"
       }
     },
-    "educationalContent": "## About PD-L1\n\n[PD-L1](gpt:PD-L1||What%20is%20PD-L1%20and%20how%20do%20cancer%20cells%20use%20it%20to%20avoid%20the%20immune%20system?%20Explain%20simply.) (Programmed Death-Ligand 1) is like an \"invisibility cloak\" for cells. When a cell displays PD-L1 on its surface, immune cells see it and think \"this cell is friendly, don't attack.\"\n\n### How cancer cheats\nCancer cells are sneaky - they cover themselves with PD-L1 even though they shouldn't. This tricks the immune system into leaving them alone, allowing the cancer to grow unchecked.\n\n### Checkpoint inhibitors\nDrugs that block PD-L1 are called [checkpoint inhibitors](gpt:checkpoint%20inhibitors||What%20are%20immune%20checkpoint%20inhibitors%20and%20how%20do%20they%20help%20fight%20cancer?). They \"unmask\" the cancer so immune cells can find and destroy it:\n- [Keytruda](gpt:Keytruda||What%20is%20Keytruda%20(pembrolizumab)%20and%20what%20cancers%20does%20it%20treat?) (pembrolizumab)\n- [Opdivo](gpt:Opdivo||What%20is%20Opdivo%20(nivolumab)%20and%20how%20does%20it%20work?)\n- [Tecentriq](gpt:Tecentriq||What%20is%20Tecentriq%20(atezolizumab)%20and%20how%20is%20it%20used%20in%20cancer%20treatment?) (atezolizumab)\n\nThese have revolutionized cancer treatment and even cured some patients with advanced cancer!\n\n### Your challenge\nDesign a protein that grabs PD-L1 and blocks it from sending its \"don't attack me\" signal."
+    "educationalContent": "## About PD-L1\n\n[PD-L1](gpt:PD-L1||What%20is%20PD-L1%20and%20how%20do%20cancer%20cells%20use%20it%20to%20avoid%20the%20immune%20system?%20Explain%20simply.) (Programmed Death-Ligand 1) is like an \"invisibility cloak\" for cells. When a cell displays PD-L1 on its surface, immune cells see it and think \"this cell is friendly, don't attack.\"\n\n### How cancer cheats\nCancer cells are sneaky - they cover themselves with PD-L1 even though they shouldn't. This tricks the immune system into leaving them alone, allowing the cancer to grow unchecked.\n\n### Checkpoint inhibitors\nDrugs that block PD-L1 are called [checkpoint inhibitors](gpt:checkpoint%20inhibitors||What%20are%20immune%20checkpoint%20inhibitors%20and%20how%20do%20they%20help%20fight%20cancer?). They \"unmask\" the cancer so immune cells can find and destroy it:\n- [Keytruda](gpt:Keytruda||What%20is%20Keytruda%20(pembrolizumab)%20and%20what%20cancers%20does%20it%20treat?) (pembrolizumab)\n- [Opdivo](gpt:Opdivo||What%20is%20Opdivo%20(nivolumab)%20and%20how%20does%20it%20work?)\n- [Tecentriq](gpt:Tecentriq||What%20is%20Tecentriq%20(atezolizumab)%20and%20how%20is%20it%20used%20in%20cancer%20treatment?) (atezolizumab)\n\nThese have revolutionized cancer treatment and even cured some patients with advanced cancer!\n\n### Your challenge\nDesign a protein that grabs PD-L1 and blocks it from sending its \"don't attack me\" signal.",
+    "pdbStartResidue": 1
   },
   {
     "id": "her2",
@@ -179,7 +203,8 @@
         "description": "The growth signal receptor that drives aggressive breast cancer"
       }
     },
-    "educationalContent": "## About HER2\n\n[HER2](gpt:HER2||What%20is%20HER2%20and%20why%20is%20it%20important%20in%20breast%20cancer?%20Explain%20simply.) (Human Epidermal Growth Factor Receptor 2) is a protein on the surface of cells that tells them to grow and divide. It's like a gas pedal for cell growth.\n\n### The problem in cancer\nAbout 20% of breast cancers have too many copies of HER2 - the gas pedal is stuck on full throttle. These \"HER2-positive\" cancers grow faster and are more aggressive.\n\n### A success story\n[Herceptin](gpt:Herceptin||What%20is%20Herceptin%20(trastuzumab)%20and%20how%20did%20it%20change%20breast%20cancer%20treatment?) (trastuzumab) was one of the first targeted cancer therapies. Before it existed, HER2-positive breast cancer was the most deadly type. Now, with Herceptin, patients have excellent outcomes.\n\n### How HER2 drugs work\nBy binding to HER2, drugs can:\n1. Block the growth signal\n2. Mark cancer cells for immune destruction\n3. Deliver toxic payloads directly to cancer cells (like [Kadcyla](gpt:Kadcyla||What%20is%20Kadcyla%20and%20how%20does%20it%20combine%20an%20antibody%20with%20chemotherapy?))\n\n### Your challenge\nThis is a larger, more complex protein than the others. Can you design something that grabs onto its extracellular domain?"
+    "educationalContent": "## About HER2\n\n[HER2](gpt:HER2||What%20is%20HER2%20and%20why%20is%20it%20important%20in%20breast%20cancer?%20Explain%20simply.) (Human Epidermal Growth Factor Receptor 2) is a protein on the surface of cells that tells them to grow and divide. It's like a gas pedal for cell growth.\n\n### The problem in cancer\nAbout 20% of breast cancers have too many copies of HER2 - the gas pedal is stuck on full throttle. These \"HER2-positive\" cancers grow faster and are more aggressive.\n\n### A success story\n[Herceptin](gpt:Herceptin||What%20is%20Herceptin%20(trastuzumab)%20and%20how%20did%20it%20change%20breast%20cancer%20treatment?) (trastuzumab) was one of the first targeted cancer therapies. Before it existed, HER2-positive breast cancer was the most deadly type. Now, with Herceptin, patients have excellent outcomes.\n\n### How HER2 drugs work\nBy binding to HER2, drugs can:\n1. Block the growth signal\n2. Mark cancer cells for immune destruction\n3. Deliver toxic payloads directly to cancer cells (like [Kadcyla](gpt:Kadcyla||What%20is%20Kadcyla%20and%20how%20does%20it%20combine%20an%20antibody%20with%20chemotherapy?))\n\n### Your challenge\nThis is a larger, more complex protein than the others. Can you design something that grabs onto its extracellular domain?",
+    "pdbStartResidue": 1
   },
   {
     "id": "insulin",
@@ -207,7 +232,8 @@
         "description": "The other insulin chain - they work together as a pair"
       }
     },
-    "educationalContent": "## About Insulin\n\n[Insulin](gpt:insulin||What%20is%20insulin%20and%20how%20does%20it%20control%20blood%20sugar?%20Explain%20simply%20for%20someone%20new%20to%20biology.) is the hormone that tells your cells to absorb sugar from your blood. When you eat, your blood sugar rises, and your pancreas releases insulin to bring it back down.\n\n### Why this matters\nIn [Type 1 diabetes](gpt:Type%201%20diabetes||What%20is%20Type%201%20diabetes%20and%20why%20can't%20these%20patients%20make%20insulin?), the immune system destroys insulin-producing cells. In [Type 2 diabetes](gpt:Type%202%20diabetes||What%20is%20Type%202%20diabetes%20and%20how%20is%20it%20different%20from%20Type%201?), cells stop responding to insulin properly.\n\n### A tiny but mighty protein\nInsulin is one of the smallest proteins that still folds into a complex 3D shape. It has two chains (A and B) held together by [disulfide bonds](gpt:disulfide%20bonds||What%20are%20disulfide%20bonds%20and%20why%20are%20they%20important%20for%20protein%20structure?).\n\n### Historical significance\nInsulin was the first protein to have its sequence determined (by Frederick Sanger in 1951) and one of the first to be made using genetic engineering. The discovery of insulin transformed diabetes from a death sentence to a manageable condition.\n\n### Design challenge\nBecause insulin is so small, designing a binder that's specific to it (and doesn't accidentally bind similar proteins) is an interesting challenge!"
+    "educationalContent": "## About Insulin\n\n[Insulin](gpt:insulin||What%20is%20insulin%20and%20how%20does%20it%20control%20blood%20sugar?%20Explain%20simply%20for%20someone%20new%20to%20biology.) is the hormone that tells your cells to absorb sugar from your blood. When you eat, your blood sugar rises, and your pancreas releases insulin to bring it back down.\n\n### Why this matters\nIn [Type 1 diabetes](gpt:Type%201%20diabetes||What%20is%20Type%201%20diabetes%20and%20why%20can't%20these%20patients%20make%20insulin?), the immune system destroys insulin-producing cells. In [Type 2 diabetes](gpt:Type%202%20diabetes||What%20is%20Type%202%20diabetes%20and%20how%20is%20it%20different%20from%20Type%201?), cells stop responding to insulin properly.\n\n### A tiny but mighty protein\nInsulin is one of the smallest proteins that still folds into a complex 3D shape. It has two chains (A and B) held together by [disulfide bonds](gpt:disulfide%20bonds||What%20are%20disulfide%20bonds%20and%20why%20are%20they%20important%20for%20protein%20structure?).\n\n### Historical significance\nInsulin was the first protein to have its sequence determined (by Frederick Sanger in 1951) and one of the first to be made using genetic engineering. The discovery of insulin transformed diabetes from a death sentence to a manageable condition.\n\n### Design challenge\nBecause insulin is so small, designing a binder that's specific to it (and doesn't accidentally bind similar proteins) is an interesting challenge!",
+    "pdbStartResidue": 1
   },
   {
     "id": "gfp",
@@ -232,17 +258,29 @@
     },
     "suggestedHotspots": [
       {
-        "residues": ["A:145", "A:148", "A:165", "A:167", "A:203"],
+        "residues": [
+          "A:145",
+          "A:148",
+          "A:165",
+          "A:167",
+          "A:203"
+        ],
         "label": "Top of barrel",
         "description": "Exposed loops at the top of the beta-barrel. Good surface for binder attachment."
       },
       {
-        "residues": ["A:39", "A:42", "A:52", "A:56"],
+        "residues": [
+          "A:39",
+          "A:42",
+          "A:52",
+          "A:56"
+        ],
         "label": "Side surface",
         "description": "Accessible residues on the side of the barrel structure."
       }
     ],
-    "educationalContent": "## About Green Fluorescent Protein\n\n[GFP](gpt:GFP||What%20is%20Green%20Fluorescent%20Protein%20and%20why%20did%20its%20discovery%20win%20a%20Nobel%20Prize?) is a protein from jellyfish that glows bright green under UV light. It might be the most important tool in modern biology!\n\n### Why scientists love GFP\nScientists attach GFP to other proteins to track them inside living cells. Want to know where a protein goes? Make it glow! The 2008 Nobel Prize in Chemistry was awarded for GFP's discovery and development.\n\n### The beautiful barrel structure\nGFP has a unique shape - an 11-stranded [beta-barrel](gpt:beta%20barrel||What%20is%20a%20beta%20barrel%20protein%20structure?%20Explain%20simply.) with the glowing part (chromophore) protected inside. This structure is so stable that GFP works even in harsh conditions.\n\n### Rainbow of colors\nScientists have engineered GFP variants in almost every color:\n- Blue (BFP)\n- Cyan (CFP)\n- Yellow (YFP)\n- Red (from corals, like [mCherry](gpt:mCherry||What%20is%20mCherry%20and%20how%20is%20it%20related%20to%20GFP?))\n\n### Design challenge\nGFP is well-folded and stable, making it a nice beginner target. A GFP-binding protein could be useful for capturing or detecting GFP-tagged proteins in experiments!"
+    "educationalContent": "## About Green Fluorescent Protein\n\n[GFP](gpt:GFP||What%20is%20Green%20Fluorescent%20Protein%20and%20why%20did%20its%20discovery%20win%20a%20Nobel%20Prize?) is a protein from jellyfish that glows bright green under UV light. It might be the most important tool in modern biology!\n\n### Why scientists love GFP\nScientists attach GFP to other proteins to track them inside living cells. Want to know where a protein goes? Make it glow! The 2008 Nobel Prize in Chemistry was awarded for GFP's discovery and development.\n\n### The beautiful barrel structure\nGFP has a unique shape - an 11-stranded [beta-barrel](gpt:beta%20barrel||What%20is%20a%20beta%20barrel%20protein%20structure?%20Explain%20simply.) with the glowing part (chromophore) protected inside. This structure is so stable that GFP works even in harsh conditions.\n\n### Rainbow of colors\nScientists have engineered GFP variants in almost every color:\n- Blue (BFP)\n- Cyan (CFP)\n- Yellow (YFP)\n- Red (from corals, like [mCherry](gpt:mCherry||What%20is%20mCherry%20and%20how%20is%20it%20related%20to%20GFP?))\n\n### Design challenge\nGFP is well-folded and stable, making it a nice beginner target. A GFP-binding protein could be useful for capturing or detecting GFP-tagged proteins in experiments!",
+    "pdbStartResidue": 1
   },
   {
     "id": "lysozyme",
@@ -267,17 +305,29 @@
     },
     "suggestedHotspots": [
       {
-        "residues": ["A:18", "A:19", "A:21", "A:62", "A:63"],
+        "residues": [
+          "A:18",
+          "A:19",
+          "A:21",
+          "A:62",
+          "A:63"
+        ],
         "label": "Active site cleft",
         "description": "The groove where lysozyme binds and breaks bacterial cell walls."
       },
       {
-        "residues": ["A:87", "A:89", "A:101", "A:102"],
+        "residues": [
+          "A:87",
+          "A:89",
+          "A:101",
+          "A:102"
+        ],
         "label": "Backside surface",
         "description": "Exposed surface away from the active site - good for non-inhibitory binders."
       }
     ],
-    "educationalContent": "## About Lysozyme\n\n[Lysozyme](gpt:lysozyme||What%20is%20lysozyme%20and%20how%20does%20it%20kill%20bacteria?%20Explain%20simply.) is one of your body's natural antibiotics. It's found in tears, saliva, mucus, and breast milk, where it helps destroy bacteria by breaking apart their cell walls.\n\n### A protein science classic\nLysozyme was:\n- The first enzyme to have its 3D structure solved (1965)\n- One of the first proteins used to study protein folding\n- A favorite model protein for generations of scientists\n\n### Why it's a great target\n- Small (129 amino acids) and well-behaved\n- Extremely stable\n- Structure is known in incredible detail\n- Lots of published data to compare your results against\n\n### Fun fact\nEgg whites are about 3.5% lysozyme - that's why eggs have some natural antibacterial properties! Alexander Fleming (who discovered penicillin) also discovered lysozyme.\n\n### Design challenge\nCan you design a protein that grabs onto lysozyme's surface? This is a classic test for protein design methods."
+    "educationalContent": "## About Lysozyme\n\n[Lysozyme](gpt:lysozyme||What%20is%20lysozyme%20and%20how%20does%20it%20kill%20bacteria?%20Explain%20simply.) is one of your body's natural antibiotics. It's found in tears, saliva, mucus, and breast milk, where it helps destroy bacteria by breaking apart their cell walls.\n\n### A protein science classic\nLysozyme was:\n- The first enzyme to have its 3D structure solved (1965)\n- One of the first proteins used to study protein folding\n- A favorite model protein for generations of scientists\n\n### Why it's a great target\n- Small (129 amino acids) and well-behaved\n- Extremely stable\n- Structure is known in incredible detail\n- Lots of published data to compare your results against\n\n### Fun fact\nEgg whites are about 3.5% lysozyme - that's why eggs have some natural antibacterial properties! Alexander Fleming (who discovered penicillin) also discovered lysozyme.\n\n### Design challenge\nCan you design a protein that grabs onto lysozyme's surface? This is a classic test for protein design methods.",
+    "pdbStartResidue": 1
   },
   {
     "id": "egfr",
@@ -300,7 +350,8 @@
         "description": "The growth signal receptor - a major cancer drug target"
       }
     },
-    "educationalContent": "## About EGFR\n\n[EGFR](gpt:EGFR||What%20is%20EGFR%20and%20why%20is%20it%20important%20in%20cancer?%20Explain%20simply.) (Epidermal Growth Factor Receptor) is a protein on the surface of cells that receives growth signals. When growth factors bind to EGFR, it tells the cell to divide.\n\n### The cancer connection\nMany cancers have EGFR problems:\n- Too many EGFR receptors on the surface\n- EGFR that's always \"on\" even without signals\n- Mutations that make EGFR hyperactive\n\nThis is especially common in [non-small cell lung cancer](gpt:non-small%20cell%20lung%20cancer||What%20is%20non-small%20cell%20lung%20cancer%20and%20how%20is%20EGFR%20involved?).\n\n### EGFR-targeting drugs\nTwo types of drugs target EGFR:\n1. **Antibodies** that block the outside (like [Erbitux](gpt:Erbitux||What%20is%20Erbitux%20(cetuximab)%20and%20how%20does%20it%20block%20EGFR?))\n2. **Small molecules** that block the inside (like [Tarceva](gpt:Tarceva||What%20is%20Tarceva%20(erlotinib)%20and%20how%20does%20it%20treat%20lung%20cancer?))\n\n### Design challenge\nEGFR is a larger, more complex target. The extracellular domain (outside the cell) has multiple regions - can you find a good spot for your binder to grab?"
+    "educationalContent": "## About EGFR\n\n[EGFR](gpt:EGFR||What%20is%20EGFR%20and%20why%20is%20it%20important%20in%20cancer?%20Explain%20simply.) (Epidermal Growth Factor Receptor) is a protein on the surface of cells that receives growth signals. When growth factors bind to EGFR, it tells the cell to divide.\n\n### The cancer connection\nMany cancers have EGFR problems:\n- Too many EGFR receptors on the surface\n- EGFR that's always \"on\" even without signals\n- Mutations that make EGFR hyperactive\n\nThis is especially common in [non-small cell lung cancer](gpt:non-small%20cell%20lung%20cancer||What%20is%20non-small%20cell%20lung%20cancer%20and%20how%20is%20EGFR%20involved?).\n\n### EGFR-targeting drugs\nTwo types of drugs target EGFR:\n1. **Antibodies** that block the outside (like [Erbitux](gpt:Erbitux||What%20is%20Erbitux%20(cetuximab)%20and%20how%20does%20it%20block%20EGFR?))\n2. **Small molecules** that block the inside (like [Tarceva](gpt:Tarceva||What%20is%20Tarceva%20(erlotinib)%20and%20how%20does%20it%20treat%20lung%20cancer?))\n\n### Design challenge\nEGFR is a larger, more complex target. The extracellular domain (outside the cell) has multiple regions - can you find a good spot for your binder to grab?",
+    "pdbStartResidue": 1
   },
   {
     "id": "cd20",
@@ -323,7 +374,8 @@
         "description": "The B cell marker - targeted in lymphoma treatment"
       }
     },
-    "educationalContent": "## About CD20\n\n[CD20](gpt:CD20||What%20is%20CD20%20and%20why%20is%20it%20a%20good%20target%20for%20treating%20blood%20cancers?%20Explain%20simply.) is a protein found on the surface of [B cells](gpt:B%20cells||What%20are%20B%20cells%20and%20what%20do%20they%20do%20in%20the%20immune%20system?), a type of white blood cell that makes antibodies.\n\n### Why target CD20?\n- It's found on almost all B cells (normal and cancerous)\n- It's NOT on stem cells, so new healthy B cells can regrow\n- It doesn't fall off the cell surface when antibodies bind\n- It doesn't get internalized (stays targetable)\n\n### Diseases treated by CD20-targeting drugs\n- **[Lymphoma](gpt:lymphoma||What%20is%20lymphoma%20and%20how%20do%20CD20%20drugs%20treat%20it?)**: B cell cancers\n- **[Leukemia](gpt:leukemia||What%20is%20leukemia%20and%20how%20is%20it%20different%20from%20lymphoma?)**: Blood cancers\n- **Multiple sclerosis**: Autoimmune disease\n- **Rheumatoid arthritis**: When B cells attack joints\n\n### The first blockbuster antibody\n[Rituximab](gpt:rituximab||What%20is%20rituximab%20(Rituxan)%20and%20how%20did%20it%20change%20cancer%20treatment?) (Rituxan) was approved in 1997 and showed that antibody therapies could successfully treat cancer. It's still widely used today!\n\n### Design challenge\nDesign a protein that grabs CD20 on the cell surface. This could potentially mark B cells for destruction by the immune system."
+    "educationalContent": "## About CD20\n\n[CD20](gpt:CD20||What%20is%20CD20%20and%20why%20is%20it%20a%20good%20target%20for%20treating%20blood%20cancers?%20Explain%20simply.) is a protein found on the surface of [B cells](gpt:B%20cells||What%20are%20B%20cells%20and%20what%20do%20they%20do%20in%20the%20immune%20system?), a type of white blood cell that makes antibodies.\n\n### Why target CD20?\n- It's found on almost all B cells (normal and cancerous)\n- It's NOT on stem cells, so new healthy B cells can regrow\n- It doesn't fall off the cell surface when antibodies bind\n- It doesn't get internalized (stays targetable)\n\n### Diseases treated by CD20-targeting drugs\n- **[Lymphoma](gpt:lymphoma||What%20is%20lymphoma%20and%20how%20do%20CD20%20drugs%20treat%20it?)**: B cell cancers\n- **[Leukemia](gpt:leukemia||What%20is%20leukemia%20and%20how%20is%20it%20different%20from%20lymphoma?)**: Blood cancers\n- **Multiple sclerosis**: Autoimmune disease\n- **Rheumatoid arthritis**: When B cells attack joints\n\n### The first blockbuster antibody\n[Rituximab](gpt:rituximab||What%20is%20rituximab%20(Rituxan)%20and%20how%20did%20it%20change%20cancer%20treatment?) (Rituxan) was approved in 1997 and showed that antibody therapies could successfully treat cancer. It's still widely used today!\n\n### Design challenge\nDesign a protein that grabs CD20 on the cell surface. This could potentially mark B cells for destruction by the immune system.",
+    "pdbStartResidue": 1
   },
   {
     "id": "pcsk9",
@@ -346,7 +398,8 @@
         "description": "The cholesterol-raising enzyme - blocking it dramatically lowers LDL"
       }
     },
-    "educationalContent": "## About PCSK9\n\n[PCSK9](gpt:PCSK9||What%20is%20PCSK9%20and%20how%20does%20it%20affect%20cholesterol%20levels?%20Explain%20simply.) is an enzyme that controls how much \"bad\" [LDL cholesterol](gpt:LDL%20cholesterol||What%20is%20LDL%20cholesterol%20and%20why%20is%20it%20called%20bad%20cholesterol?) is in your blood.\n\n### How PCSK9 works\nYour liver has receptors that grab LDL cholesterol from the blood and destroy it. PCSK9 destroys these receptors, which means:\n- More PCSK9 = fewer receptors = more cholesterol in blood\n- Less PCSK9 = more receptors = less cholesterol in blood\n\n### A genetic discovery\nScientists found that people born with PCSK9 mutations have:\n- Those with low PCSK9: Very low cholesterol, 88% fewer heart attacks!\n- Those with high PCSK9: Very high cholesterol, early heart disease\n\n### PCSK9 inhibitor drugs\n- [Repatha](gpt:Repatha||What%20is%20Repatha%20(evolocumab)%20and%20how%20does%20it%20lower%20cholesterol?) (evolocumab)\n- [Praluent](gpt:Praluent||What%20is%20Praluent%20(alirocumab)%20and%20who%20should%20take%20it?) (alirocumab)\n\nThese can lower LDL cholesterol by 60% - even more than statins!\n\n### Design challenge\nDesign a protein that grabs PCSK9 and prevents it from destroying LDL receptors. This could be a new approach to cholesterol-lowering therapy."
+    "educationalContent": "## About PCSK9\n\n[PCSK9](gpt:PCSK9||What%20is%20PCSK9%20and%20how%20does%20it%20affect%20cholesterol%20levels?%20Explain%20simply.) is an enzyme that controls how much \"bad\" [LDL cholesterol](gpt:LDL%20cholesterol||What%20is%20LDL%20cholesterol%20and%20why%20is%20it%20called%20bad%20cholesterol?) is in your blood.\n\n### How PCSK9 works\nYour liver has receptors that grab LDL cholesterol from the blood and destroy it. PCSK9 destroys these receptors, which means:\n- More PCSK9 = fewer receptors = more cholesterol in blood\n- Less PCSK9 = more receptors = less cholesterol in blood\n\n### A genetic discovery\nScientists found that people born with PCSK9 mutations have:\n- Those with low PCSK9: Very low cholesterol, 88% fewer heart attacks!\n- Those with high PCSK9: Very high cholesterol, early heart disease\n\n### PCSK9 inhibitor drugs\n- [Repatha](gpt:Repatha||What%20is%20Repatha%20(evolocumab)%20and%20how%20does%20it%20lower%20cholesterol?) (evolocumab)\n- [Praluent](gpt:Praluent||What%20is%20Praluent%20(alirocumab)%20and%20who%20should%20take%20it?) (alirocumab)\n\nThese can lower LDL cholesterol by 60% - even more than statins!\n\n### Design challenge\nDesign a protein that grabs PCSK9 and prevents it from destroying LDL receptors. This could be a new approach to cholesterol-lowering therapy.",
+    "pdbStartResidue": 1
   },
   {
     "id": "bdnf",
@@ -369,6 +422,7 @@
         "description": "The brain growth factor - essential for neurons to survive and grow"
       }
     },
-    "educationalContent": "## About BDNF\n\n[BDNF](gpt:BDNF||What%20is%20BDNF%20(Brain-Derived%20Neurotrophic%20Factor)%20and%20why%20is%20it%20important%20for%20brain%20health?%20Explain%20simply.) (Brain-Derived Neurotrophic Factor) is like fertilizer for your brain. It helps neurons survive, grow, and form new connections.\n\n### Why BDNF matters\nBDNF is involved in:\n- **Memory formation**: Learning creates new neural connections\n- **Mood regulation**: Low BDNF is linked to depression\n- **Brain plasticity**: The ability to adapt and change\n- **Neuroprotection**: Keeping neurons alive under stress\n\n### BDNF and disease\nLow BDNF levels are found in:\n- [Depression](gpt:depression%20BDNF||How%20is%20BDNF%20related%20to%20depression?)\n- [Alzheimer's disease](gpt:Alzheimer's%20BDNF||What%20role%20does%20BDNF%20play%20in%20Alzheimer's%20disease?)\n- [Huntington's disease](gpt:Huntington's%20disease||What%20is%20Huntington's%20disease%20and%20why%20might%20BDNF%20help?)\n- Age-related cognitive decline\n\n### The challenge with BDNF as a drug\nBDNF itself is hard to use as a medicine because it doesn't cross the [blood-brain barrier](gpt:blood-brain%20barrier||What%20is%20the%20blood-brain%20barrier%20and%20why%20does%20it%20matter%20for%20brain%20drugs?). New approaches are needed!\n\n### Design challenge\nDesign a protein that interacts with BDNF. This could help us understand BDNF biology or lead to new research tools for studying brain function."
+    "educationalContent": "## About BDNF\n\n[BDNF](gpt:BDNF||What%20is%20BDNF%20(Brain-Derived%20Neurotrophic%20Factor)%20and%20why%20is%20it%20important%20for%20brain%20health?%20Explain%20simply.) (Brain-Derived Neurotrophic Factor) is like fertilizer for your brain. It helps neurons survive, grow, and form new connections.\n\n### Why BDNF matters\nBDNF is involved in:\n- **Memory formation**: Learning creates new neural connections\n- **Mood regulation**: Low BDNF is linked to depression\n- **Brain plasticity**: The ability to adapt and change\n- **Neuroprotection**: Keeping neurons alive under stress\n\n### BDNF and disease\nLow BDNF levels are found in:\n- [Depression](gpt:depression%20BDNF||How%20is%20BDNF%20related%20to%20depression?)\n- [Alzheimer's disease](gpt:Alzheimer's%20BDNF||What%20role%20does%20BDNF%20play%20in%20Alzheimer's%20disease?)\n- [Huntington's disease](gpt:Huntington's%20disease||What%20is%20Huntington's%20disease%20and%20why%20might%20BDNF%20help?)\n- Age-related cognitive decline\n\n### The challenge with BDNF as a drug\nBDNF itself is hard to use as a medicine because it doesn't cross the [blood-brain barrier](gpt:blood-brain%20barrier||What%20is%20the%20blood-brain%20barrier%20and%20why%20does%20it%20matter%20for%20brain%20drugs?). New approaches are needed!\n\n### Design challenge\nDesign a protein that interacts with BDNF. This could help us understand BDNF biology or lead to new research tools for studying brain function.",
+    "pdbStartResidue": 1
   }
 ]

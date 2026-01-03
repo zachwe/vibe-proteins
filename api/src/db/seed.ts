@@ -32,6 +32,7 @@ interface ChallengeInput {
   targetStructureUrl: string;
   targetSequence: string;
   targetChainId: string;
+  pdbStartResidue?: number;
   pdbDescription: string;
   chainAnnotations: { [key: string]: ChainAnnotation };
   suggestedHotspots?: SuggestedHotspot[];
@@ -66,6 +67,7 @@ async function seed() {
           targetStructureUrl: challenge.targetStructureUrl,
           targetSequence: challenge.targetSequence,
           targetChainId: challenge.targetChainId,
+          pdbStartResidue: challenge.pdbStartResidue,
           pdbDescription: challenge.pdbDescription,
           chainAnnotations: JSON.stringify(challenge.chainAnnotations),
           suggestedHotspots: challenge.suggestedHotspots ? JSON.stringify(challenge.suggestedHotspots) : null,

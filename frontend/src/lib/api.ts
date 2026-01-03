@@ -30,6 +30,7 @@ export interface Challenge {
   targetStructureUrl: string | null;
   targetSequence: string | null;
   targetChainId: string | null;
+  pdbStartResidue: number | null;
   pdbDescription: string | null;
   chainAnnotations: string | null; // JSON string of Record<string, ChainAnnotation>
   suggestedHotspots: string | null; // JSON string of SuggestedHotspot[]

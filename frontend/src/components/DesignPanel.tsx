@@ -20,7 +20,8 @@ interface DesignPanelProps {
   targetChainId?: string | null;
   suggestedHotspots?: SuggestedHotspot[] | null;
   onClose: () => void;
-  onHotspotSelect?: (residues: string[] | null) => void;
+  selectedHotspots: string[];
+  onHotspotsChange: (residues: string[]) => void;
 }
 
 type DesignTool = "rfdiffusion3" | "boltz2" | "proteinmpnn";
@@ -56,7 +57,8 @@ export default function DesignPanel({
   targetChainId,
   suggestedHotspots,
   onClose,
-  onHotspotSelect,
+  selectedHotspots,
+  onHotspotsChange,
 }: DesignPanelProps) {
   const navigate = useNavigate();
   const { data: session } = useSession();
@@ -65,17 +67,20 @@ export default function DesignPanel({
   const [selectedTool, setSelectedTool] = useState<DesignTool>("rfdiffusion3");
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
-  const [selectedHotspotIndex, setSelectedHotspotIndex] = useState<number | null>(null);
 
-  // Handle hotspot selection - updates local state and notifies parent
+  // Find which suggested hotspot index matches the current selection (if any)
+  const selectedHotspotIndex = suggestedHotspots?.findIndex(
+    (hotspot) =>
+      hotspot.residues.length === selectedHotspots.length &&
+      hotspot.residues.every((r) => selectedHotspots.includes(r))
+  ) ?? -1;
+
+  // Handle hotspot selection - updates parent state
   const handleHotspotSelect = (index: number | null) => {
-    setSelectedHotspotIndex(index);
-    if (onHotspotSelect) {
-      if (index !== null && suggestedHotspots && suggestedHotspots[index]) {
-        onHotspotSelect(suggestedHotspots[index].residues);
-      } else {
-        onHotspotSelect(null);
-      }
+    if (index !== null && suggestedHotspots && suggestedHotspots[index]) {
+      onHotspotsChange(suggestedHotspots[index].residues);
+    } else {
+      onHotspotsChange([]);
     }
   };
 
@@ -88,11 +93,10 @@ export default function DesignPanel({
       return;
     }
 
-    // Build hotspot residues if a hotspot is selected
-    let hotspotResidues: string[] | undefined;
-    if (selectedTool === "rfdiffusion3" && selectedHotspotIndex !== null && suggestedHotspots) {
-      hotspotResidues = suggestedHotspots[selectedHotspotIndex].residues;
-    }
+    // Use selected hotspot residues if any are selected
+    const hotspotResidues = selectedTool === "rfdiffusion3" && selectedHotspots.length > 0
+      ? selectedHotspots
+      : undefined;
 
     try {
       const result = await createJob.mutateAsync({
@@ -288,16 +292,16 @@ export default function DesignPanel({
               <button
                 onClick={() => handleHotspotSelect(null)}
                 className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                  selectedHotspotIndex === null
+                  selectedHotspots.length === 0
                     ? "bg-slate-600/50 border-slate-500"
                     : "bg-slate-700/50 border-slate-600 hover:border-slate-500"
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    selectedHotspotIndex === null ? "border-blue-500" : "border-slate-500"
+                    selectedHotspots.length === 0 ? "border-blue-500" : "border-slate-500"
                   }`}>
-                    {selectedHotspotIndex === null && (
+                    {selectedHotspots.length === 0 && (
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>

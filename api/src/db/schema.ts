@@ -17,6 +17,7 @@ export const challenges = sqliteTable("challenges", {
   targetStructureUrl: text("target_structure_url"), // S3 URL to structure file
   targetSequence: text("target_sequence"),
   targetChainId: text("target_chain_id"), // Which chain in the PDB is the actual target
+  pdbStartResidue: integer("pdb_start_residue"), // First residue number in PDB (e.g., 319 for spike)
   pdbDescription: text("pdb_description"), // What this PDB structure shows
   chainAnnotations: text("chain_annotations"), // JSON: { "E": { "name": "Spike RBD", "role": "target" }, ... }
   suggestedHotspots: text("suggested_hotspots"), // JSON: [{ "residues": ["E:417", "E:453"], "label": "ACE2 binding site", "description": "..." }]

@@ -14,8 +14,6 @@ import {
   StructureSelectionQuery,
 } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
 import { Color } from "molstar/lib/mol-util/color";
-import { StructureElement, StructureSelection, QueryContext } from "molstar/lib/mol-model/structure";
-import { compile } from "molstar/lib/mol-script/runtime/query/compiler";
 
 // Import Mol* styles
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
@@ -336,7 +334,7 @@ export default function MolstarViewer({
 const TARGET_COLOR = Color(0x60a5fa);  // Blue (tailwind blue-400)
 const BINDER_COLOR = Color(0xfcd34d);  // Yellow (tailwind yellow-300)
 const CONTEXT_COLOR = Color(0x34d399); // Green/teal (tailwind emerald-400)
-const HOTSPOT_COLOR = Color(0xf472b6); // Pink/magenta for hotspot highlighting
+const HOTSPOT_COLOR = Color(0xff1493); // Bright magenta/deep pink for hotspot highlighting
 
 function inferStructureFormat(url: string): { format: "pdb" | "mmcif" | "bcif"; isBinary: boolean } {
   let pathname = url;
@@ -563,6 +561,7 @@ async function applyResidueHighlight(
   if (!residues || residues.length === 0) return;
 
   const plugin = viewer.plugin;
+  const manager = plugin.managers.structure.component;
   const structures = plugin.managers.structure.hierarchy.current.structures;
   if (!structures.length) return;
 
@@ -580,7 +579,7 @@ async function applyResidueHighlight(
     byChain.get(chain)!.push(resNum);
   }
 
-  // Build MolScript expression for selection
+  // Build MolScript expression for residue selection
   const chainQueries = Array.from(byChain.entries()).map(([chain, resNums]) => {
     const chainTest = MS.core.logic.or([
       MS.core.rel.eq([MS.ammp("auth_asym_id"), chain]),
@@ -602,45 +601,34 @@ async function applyResidueHighlight(
     "residue-test": combinedTest,
   });
 
+  // Create a StructureSelectionQuery for the theme system
+  const hotspotQuery = StructureSelectionQuery("Hotspot Residues", expression);
+
   try {
-    // Compile the query and run it against each structure
-    const query = compile<StructureSelection>(expression);
-
-    for (const structure of structures) {
-      const structureData = structure.cell.obj?.data;
-      if (!structureData) continue;
-
-      // Run the query to get selection
-      const selection = query(new QueryContext(structureData));
-      const loci = StructureSelection.toLociWithSourceUnits(selection);
-
-      if (!StructureElement.Loci.isEmpty(loci)) {
-        // Use the interactivity manager to highlight
-        plugin.managers.interactivity.lociHighlights.highlight({ loci }, false);
-
-        // Also add to selection for persistent highlight
-        plugin.managers.structure.selection.fromLoci("add", loci);
-      }
-    }
+    // Apply hotspot color using the theme system (same as chain colors)
+    await manager.applyTheme(
+      {
+        selection: hotspotQuery,
+        action: { name: "color", params: { color: HOTSPOT_COLOR } },
+        representations: [],
+      },
+      structures
+    );
   } catch (error) {
     console.warn("Unable to apply residue highlight:", error);
   }
 }
 
 /**
- * Clear all residue highlights
+ * Clear all residue highlights and reset colors
  */
 async function clearResidueHighlight(
   viewer: Viewer,
-  _chainColors?: MolstarViewerProps["chainColors"]
+  chainColors?: MolstarViewerProps["chainColors"]
 ) {
-  const plugin = viewer.plugin;
-
   try {
-    // Clear highlights
-    plugin.managers.interactivity.lociHighlights.clearHighlights();
-    // Clear selection
-    plugin.managers.structure.selection.clear();
+    // Re-apply chain colors to reset visual appearance (clears hotspot colors)
+    await applyChainColors(viewer, chainColors);
   } catch (error) {
     console.warn("Unable to clear highlights:", error);
   }

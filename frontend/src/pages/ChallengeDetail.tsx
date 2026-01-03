@@ -7,6 +7,8 @@ import { useChallenge } from "../lib/hooks";
 import MolstarViewer from "../components/MolstarViewer";
 import DesignPanel from "../components/DesignPanel";
 import Leaderboard from "../components/Leaderboard";
+import HotspotIndicator from "../components/HotspotIndicator";
+import SequenceSelector from "../components/SequenceSelector";
 import type { ChainAnnotation, SuggestedHotspot } from "../lib/api";
 
 const workflowSteps = [
@@ -215,7 +217,8 @@ export default function ChallengeDetail() {
   const [showDesignPanel, setShowDesignPanel] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [activeTab, setActiveTab] = useState<InfoTab>("overview");
-  const [highlightedResidues, setHighlightedResidues] = useState<string[] | null>(null);
+  // Selected hotspot residues - lifted up for shared state between viewer and design panel
+  const [selectedHotspots, setSelectedHotspots] = useState<string[]>([]);
 
   // Parse chain annotations from JSON string
   const chainAnnotations = useMemo(() => {
@@ -236,6 +239,17 @@ export default function ChallengeDetail() {
       return null;
     }
   }, [challenge?.suggestedHotspots]);
+
+  // Find the label for the current hotspot selection if it matches a suggested preset
+  const selectedHotspotLabel = useMemo(() => {
+    if (!suggestedHotspots || selectedHotspots.length === 0) return undefined;
+    const matchingHotspot = suggestedHotspots.find(
+      (hotspot) =>
+        hotspot.residues.length === selectedHotspots.length &&
+        hotspot.residues.every((r) => selectedHotspots.includes(r))
+    );
+    return matchingHotspot?.label;
+  }, [suggestedHotspots, selectedHotspots]);
 
   // Compute chain colors from chain annotations for Mol* viewer
   const chainColors = useMemo(() => {
@@ -374,11 +388,18 @@ export default function ChallengeDetail() {
             <MolstarViewer
               pdbUrl={challenge.targetStructureUrl || undefined}
               pdbId={challenge.targetPdbId || undefined}
-              highlightResidues={highlightedResidues || undefined}
+              highlightResidues={selectedHotspots.length > 0 ? selectedHotspots : undefined}
               chainColors={chainColors}
               className="w-full h-full"
             />
           </div>
+
+          {/* Hotspot indicator below viewer */}
+          <HotspotIndicator
+            selectedHotspots={selectedHotspots}
+            onHotspotsChange={setSelectedHotspots}
+            hotspotLabel={selectedHotspotLabel}
+          />
         </div>
 
         {/* Right side - Challenge info with tabs */}
@@ -529,8 +550,18 @@ export default function ChallengeDetail() {
 
               {/* Sequence Tab */}
               {activeTab === "sequence" && (
-                <div>
-                  {challenge.targetSequence ? (
+                <div className="space-y-4">
+                  {challenge.targetSequence && challenge.targetChainId ? (
+                    <SequenceSelector
+                      sequence={challenge.targetSequence}
+                      chainId={challenge.targetChainId}
+                      startResidueNumber={challenge.pdbStartResidue || 1}
+                      selectedResidues={selectedHotspots}
+                      onSelectionChange={setSelectedHotspots}
+                      suggestedHotspots={suggestedHotspots}
+                      uniprotId={challenge.targetUniprotId}
+                    />
+                  ) : challenge.targetSequence ? (
                     <SequenceDisplay sequence={challenge.targetSequence} />
                   ) : (
                     <p className="text-slate-500 italic">
@@ -542,7 +573,7 @@ export default function ChallengeDetail() {
                       href={`https://www.uniprot.org/uniprotkb/${challenge.targetUniprotId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors mt-4"
+                      className="inline-flex items-center gap-2 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition-colors"
                     >
                       <span className="font-medium">UniProt:</span>
                       <span className="text-blue-400">{challenge.targetUniprotId}</span>
@@ -572,9 +603,10 @@ export default function ChallengeDetail() {
               suggestedHotspots={suggestedHotspots}
               onClose={() => {
                 setShowDesignPanel(false);
-                setHighlightedResidues(null); // Clear highlights when closing
+                setSelectedHotspots([]); // Clear highlights when closing
               }}
-              onHotspotSelect={setHighlightedResidues}
+              selectedHotspots={selectedHotspots}
+              onHotspotsChange={setSelectedHotspots}
             />
           ) : (
             <>
