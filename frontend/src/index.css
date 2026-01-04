@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap");
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -47,6 +48,17 @@
   }
 }
 
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Animation utilities */
 .animate-float {
   animation: float 4s ease-in-out infinite;
@@ -68,6 +80,18 @@
 
 .animate-pulse-slower {
   animation: pulse-slower 6s ease-in-out infinite;
+}
+
+.animate-rise {
+  animation: rise 0.6s ease-out both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.7s ease-out 0.12s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.8s ease-out 0.24s both;
 }
 
 /* Radial gradient utility */

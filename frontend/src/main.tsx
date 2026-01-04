@@ -23,6 +23,7 @@ import BoltzGenPlayground from "./pages/BoltzGenPlayground";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Verified from "./pages/Verified";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,9 +53,10 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/help/design/rfdiffusion" element={<RFDiffusionHelp />} />
             <Route path="/help/design/bindcraft" element={<BindCraftHelp />} />
             <Route path="/help/design/boltzgen" element={<BoltzGenHelp />} />
-            <Route path="/help/metrics" element={<MetricsHelp />} />
-            <Route path="/playground/boltzgen" element={<BoltzGenPlayground />} />
-          </Route>
+          <Route path="/help/metrics" element={<MetricsHelp />} />
+          <Route path="/playground/boltzgen" element={<BoltzGenPlayground />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/verified" element={<Verified />} />

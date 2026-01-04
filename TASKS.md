@@ -67,6 +67,7 @@
 ## Phase 4: Frontend - Browse & Explore
 
 - [x] Landing page (Home component with hero and feature cards)
+- [x] Custom 404 page for unknown routes
 - [x] Auth pages (login, signup)
 - [x] Challenge browser
   - [x] Challenge list with difficulty levels
@@ -196,7 +197,7 @@
 
 ## Current Focus
 
-> Update this section with what we're actively working on
+- Frontend polish: custom 404 page for unknown routes
 
 **Production deployment complete!**
 
