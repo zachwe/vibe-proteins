@@ -27,7 +27,7 @@ describe("API Endpoints", () => {
       const data = await res.json();
       expect(data).toEqual({
         status: "ok",
-        message: "VibeProteins API",
+        message: "ProteinDojo API",
       });
     });
   });

@@ -69,8 +69,7 @@ describe("ModalProvider", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            status: "completed",
-            message: "Job completed",
+            call_id: "test-call-id-123",
           }),
       });
 
@@ -80,11 +79,10 @@ describe("ModalProvider", () => {
         numDesigns: 5,
       });
 
-      expect(result.status).toBe("completed");
+      // Async mode returns pending status with callId
+      expect(result.status).toBe("pending");
       expect(result.jobId).toBeDefined();
-      expect(result.result?.output).toEqual(
-        expect.objectContaining({ message: "Job completed" })
-      );
+      expect(result.callId).toBe("test-call-id-123");
 
       // Verify the params were transformed correctly
       const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
@@ -200,10 +198,29 @@ describe("ModalProvider", () => {
   });
 
   describe("getJobStatus", () => {
-    it("should return completed status (placeholder implementation)", async () => {
+    it("should return completed status when job is done", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status: "completed",
+            output: { pdb_url: "https://example.com/result.pdb" },
+          }),
+      });
+
       const result = await provider.getJobStatus("some-call-id");
 
       expect(result.status).toBe("completed");
+      expect(result.jobId).toBe("some-call-id");
+      expect(result.result?.output).toEqual({ pdb_url: "https://example.com/result.pdb" });
+    });
+
+    it("should return running status when fetch fails", async () => {
+      fetchMock.mockRejectedValueOnce(new Error("Network error"));
+
+      const result = await provider.getJobStatus("some-call-id");
+
+      expect(result.status).toBe("running");
       expect(result.jobId).toBe("some-call-id");
     });
   });
