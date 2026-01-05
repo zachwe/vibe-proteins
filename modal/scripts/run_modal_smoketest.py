@@ -34,7 +34,8 @@ if str(MODAL_DIR) not in sys.path:
 
 import modal  # noqa: E402
 
-from app import app, run_boltz2, run_proteinmpnn, run_rfdiffusion3, compute_scores  # noqa: E402
+from core.config import app  # noqa: E402
+from pipelines import run_boltz2, run_proteinmpnn, run_rfdiffusion3, compute_scores  # noqa: E402
 
 SAMPLE_DIR = REPO_ROOT / "sample_data"
 SAMPLE_DIR = REPO_ROOT / "sample_data"

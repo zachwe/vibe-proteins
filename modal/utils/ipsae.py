@@ -149,7 +149,11 @@ def compute_ipsae_from_pae(
     chain_residues = _get_chain_residue_mapping(structure_path)
     plddts = _get_plddt_per_residue(structure_path)
 
+    print(f"[ipSAE] Structure chains found: {list(chain_residues.keys())}")
+    print(f"[ipSAE] Residues per chain: {[(k, len(v)) for k, v in chain_residues.items()]}")
+
     if not chain_residues:
+        print("[ipSAE] ERROR: No chains found in structure!")
         return _empty_scores()
 
     # Get all chain IDs
@@ -163,7 +167,10 @@ def compute_ipsae_from_pae(
         ]
 
     if not chain_pairs:
+        print("[ipSAE] ERROR: No chain pairs to analyze!")
         return _empty_scores()
+
+    print(f"[ipSAE] Analyzing chain pairs: {chain_pairs}")
 
     # Compute scores for each chain pair
     all_ipsae_chn = []
@@ -175,6 +182,7 @@ def compute_ipsae_from_pae(
 
     for chain1, chain2 in chain_pairs:
         if chain1 not in chain_residues or chain2 not in chain_residues:
+            print(f"[ipSAE] Skipping pair ({chain1}, {chain2}): chain not in structure (have: {list(chain_residues.keys())})")
             continue
 
         residues1 = chain_residues[chain1]
@@ -255,7 +263,10 @@ def compute_ipsae_from_pae(
                 all_interface_plddts.extend(plddts[valid_residues].tolist())
 
     if not all_contacts:
+        print("[ipSAE] ERROR: No interface contacts found in any chain pair!")
         return _empty_scores()
+
+    print(f"[ipSAE] Found {sum(all_contacts)} total interface contacts")
 
     # Aggregate scores
     total_contacts = sum(all_contacts)
@@ -395,11 +406,25 @@ def compute_interface_scores_from_boltz(
     Returns:
         Dict with ipSAE, ipTM, pDockQ, pDockQ2, LIS scores
     """
+    print(f"[ipSAE] Looking for PAE in {out_dir} with input_name={input_name}")
+    print(f"[ipSAE] Target chains: {target_chains}, Binder chain: {binder_chain}")
+
+    # Debug: list prediction directories and files
+    predictions_dir = out_dir / "predictions"
+    if predictions_dir.exists():
+        for pred_dir in predictions_dir.iterdir():
+            if pred_dir.is_dir():
+                files = list(pred_dir.glob("*"))
+                print(f"[ipSAE] {pred_dir.name}/ contains: {[f.name for f in files]}")
+
     pae_matrix = read_boltz_pae(out_dir, input_name)
 
     if pae_matrix is None:
+        print("[ipSAE] ERROR: PAE matrix not found!")
         # Fallback to empty scores if PAE not available
         return _empty_scores()
+
+    print(f"[ipSAE] PAE matrix shape: {pae_matrix.shape}")
 
     # Create chain pairs: binder vs each target chain
     chain_pairs = [(binder_chain, target) for target in target_chains]

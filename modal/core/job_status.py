@@ -1,0 +1,74 @@
+"""
+Job status tracking using Modal Dict.
+
+Provides functions to track job progress and completion without
+requiring a public callback URL.
+"""
+
+import time
+
+from core.config import job_status_dict
+
+
+def get_job_status(job_id: str) -> dict | None:
+    """Get job status from the Modal Dict."""
+    try:
+        return job_status_dict.get(job_id)
+    except KeyError:
+        return None
+
+
+def update_job_status(
+    job_id: str,
+    status: str,
+    stage: str | None = None,
+    message: str | None = None,
+    output: dict | None = None,
+    error: str | None = None,
+    usage: dict | None = None,
+) -> None:
+    """Update job status in the Modal Dict."""
+    existing = get_job_status(job_id) or {
+        "job_id": job_id,
+        "status": "pending",
+        "progress": [],
+        "created_at": time.time(),
+    }
+
+    existing["status"] = status
+    existing["updated_at"] = time.time()
+
+    if stage and message:
+        existing["progress"].append({
+            "stage": stage,
+            "message": message,
+            "timestamp": time.time(),
+        })
+
+    if output is not None:
+        existing["output"] = output
+    if error is not None:
+        existing["error"] = error
+    if usage is not None:
+        existing["usage"] = usage
+
+    job_status_dict[job_id] = existing
+
+
+def send_progress(job_id: str | None, stage: str, message: str) -> None:
+    """Record a progress update for a job."""
+    print(f"[{stage}] {message}")
+    if job_id:
+        update_job_status(job_id, status="running", stage=stage, message=message)
+
+
+def send_completion(
+    job_id: str | None,
+    status: str,
+    output: dict | None = None,
+    error: str | None = None,
+    usage: dict | None = None,
+) -> None:
+    """Record job completion."""
+    if job_id:
+        update_job_status(job_id, status=status, output=output, error=error, usage=usage)
