@@ -132,12 +132,13 @@
 
 ## Phase 8: Content
 
-- [ ] Create first 3 target packs (Level 1)
-  - [ ] SARS-CoV-2 Spike RBD
-  - [ ] IL-6
-  - [ ] VEGF-A
-- [ ] Educational content for each target
-- [ ] Hints system
+- [x] Create first 3 target packs (Level 1)
+  - [x] SARS-CoV-2 Spike RBD
+  - [x] IL-6
+  - [x] VEGF-A
+- [x] Educational content for each target
+- [x] Create 10 additional targets (Levels 1-3)
+- [ ] Hints system (schema exists, UI not implemented)
 
 ## Phase 9: CI/CD & Deployment
 
@@ -162,14 +163,14 @@
   - [x] Set up R2 credentials in Fly.io secrets
   - [ ] Set up Modal token in Fly.io secrets
   - [x] Configure CORS for production frontend URL
-- [ ] Modal Deployment
-  - [ ] Modal functions auto-deploy on `modal deploy` (no CI needed)
-  - [ ] Set up Modal secrets in production environment
-  - [ ] Verify R2 bucket access from Modal
-- [ ] Production Configuration
-  - [ ] Update BetterAuth `trustedOrigins` for production domain
-  - [ ] Configure production API URL in frontend
-  - [ ] Set up monitoring/logging (optional)
+- [x] Modal Deployment
+  - [x] Modal functions deployed (`modal deploy`)
+  - [x] Modal secrets configured (Modal dashboard)
+  - [x] R2 bucket access from Modal verified
+- [x] Production Configuration
+  - [x] Update BetterAuth `trustedOrigins` for production domain
+  - [x] Configure production API URL in frontend
+  - [x] Set up monitoring/logging (Datasette dashboard + Litestream backup)
   - [ ] Configure rate limiting (optional)
 
 ## Phase 10: Product Improvements
@@ -197,8 +198,6 @@
 
 ## Current Focus
 
-- Frontend polish: custom 404 page for unknown routes
-
 **Production deployment complete!**
 
 Site live at: https://proteindojo.com
@@ -207,17 +206,22 @@ In progress:
 - Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
 
 Recently completed:
-- **Leaderboard per challenge** (Phase 6): API endpoint + frontend component with sorting by multiple metrics
-- **Hotspot selection for RFDiffusion3** (Phase 10): SequenceSelector with residue picking, HotspotIndicator with range support, shared state between panels
-- **ProteinDojo rename**: Updated all user-facing branding, documented naming convention
-- **Domain setup**: proteindojo.com + proteindojo.zachocean.com on Vercel
-- **Drizzle migrations**: Fixed tracking, synced with production
+- **Leaderboards page** with nav link, per-challenge rankings with metric sorting
+- **New user credits**: $1 starting balance for free trial
+- **Challenge levels fixed**: Correct Level 1/2/3 assignments per PLAN.md
+- **Insulin difficulty**: Updated from 1→2 (small + disulfide-constrained)
+- **Molstar hero zoom disabled**: Prevents scroll/pinch zoom on landing page
+- **Phase 8 content**: 13 targets with educational content across Levels 1-3
+- **Datasette dashboard**: Production observability with Litestream backup
+- **Leaderboard API** (Phase 6): API endpoint + frontend component with sorting by multiple metrics
+- **Hotspot selection** (Phase 10): SequenceSelector with residue picking, HotspotIndicator with range support
 - PAE-based ipSAE scoring, composite scores, feedback generation
 - Usage-based billing with Stripe integration
 
 Next up:
 - Set up ColabFold databases on Modal Volume (~500GB-1TB)
-- Phase 9: Production configuration (R2/Modal credentials in Fly.io)
+- Hints system UI
+- Phase 5: Complete evaluate/submit workflow
 
 ---
 
