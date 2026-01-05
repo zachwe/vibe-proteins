@@ -54,3 +54,6 @@ coverage/
 /drizzle/
 !/api/drizzle/
 .vercel
+
+# Local Fly configs (contain app names/URLs)
+*.toml.local

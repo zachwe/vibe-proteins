@@ -41,6 +41,7 @@ vibeproteins/
 ├── frontend/          # Vite + React + TypeScript (port 5173)
 ├── api/               # Hono + TypeScript + SQLite (port 3000)
 ├── modal/             # Python Modal functions for GPU inference
+├── datasette/         # Datasette dashboard for prod observability
 ├── PLAN.md            # Project specification
 ├── TASKS.md           # Task tracker
 └── CLAUDE.md          # This file
@@ -77,6 +78,80 @@ uv run python <script>
 - Submissions: `/api/submissions`, `/api/submissions/:id`
 - Users: `/api/users/me`
 - Billing: `/api/billing/deposit`, `/api/billing/presets`, `/api/billing/gpu-pricing`, `/api/billing/transactions`
+
+## Production Database & Observability
+
+### Database Backup (Litestream)
+
+The production SQLite database is continuously replicated to Cloudflare R2 using Litestream. This runs as a wrapper around the API process.
+
+- **Config**: `api/litestream.yml`
+- **Backup location**: R2 bucket under `litestream/vibeproteins/`
+- Backups happen automatically on every write
+
+### Datasette Dashboard
+
+A private Datasette instance provides ad-hoc SQL query access to production data. It restores from the Litestream backup on startup.
+
+**Architecture:**
+```
+Production API (SQLite) → Litestream → R2 → Datasette Dashboard
+                         (continuous)      (restore on startup)
+```
+
+**Files:**
+- `datasette/Dockerfile` - Python + Litestream + Datasette
+- `datasette/metadata.json` - Auth config (uses `$env` for secrets)
+- `datasette/start.sh` - Restore DB then start Datasette
+- `fly.datasette.toml` - Fly.io deployment config
+
+**Authentication:**
+
+Uses `datasette-auth-passwords` plugin. Credentials are set via Fly secrets:
+- `DATASETTE_PASSWORD_HASH` - Generated with `datasette hash-password`
+
+To generate a new password hash:
+```bash
+pip install datasette-auth-passwords
+echo 'your-password' | datasette hash-password --no-confirm
+```
+
+**Setup:**
+```bash
+# 1. Copy template and set your app name
+cp fly.datasette.toml fly.datasette.toml.local
+# Edit fly.datasette.toml.local and replace "REPLACE_ME" with your app name
+
+# 2. Create the Fly app and set secrets
+flyctl apps create <your-app-name>
+flyctl secrets set -a <your-app-name> \
+  R2_ACCOUNT_ID=xxx \
+  R2_ACCESS_KEY_ID=xxx \
+  R2_SECRET_ACCESS_KEY=xxx \
+  R2_BUCKET_NAME=vibeproteins \
+  DATASETTE_PASSWORD_HASH='pbkdf2_sha256$...'
+```
+
+**Deployment:**
+```bash
+# Deploy/redeploy the dashboard
+pnpm prod:deploy-dashboard
+# Or: flyctl deploy --config fly.datasette.toml.local
+
+# Refresh data (restores latest backup)
+flyctl apps restart <your-app-name>
+```
+
+Note: `fly.datasette.toml.local` is gitignored to avoid leaking the dashboard URL.
+
+**Cost:** ~$2-3/mo (scales to zero when idle)
+
+### Direct Database Access
+
+For quick CLI queries without the dashboard:
+```bash
+pnpm prod:db  # Opens sqlite3 shell on production
+```
 
 ## Current State
 

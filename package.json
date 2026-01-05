@@ -17,7 +17,8 @@
     "prod:db": "./scripts/prod-db.sh",
     "prod:seed": "./scripts/prod-seed.sh",
     "prod:migrate": "./scripts/prod-migrate.sh",
-    "prod:reset-db": "./scripts/prod-reset-db.sh"
+    "prod:reset-db": "./scripts/prod-reset-db.sh",
+    "prod:deploy-dashboard": "./scripts/deploy-datasette.sh"
   },
   "engines": {
     "node": ">=20"

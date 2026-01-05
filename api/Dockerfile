@@ -25,8 +25,10 @@ RUN pnpm --filter api deploy --prod /prod/api
 # Production stage
 FROM node:20-slim AS runner
 
-# Install sqlite3 for database debugging
-RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
+# Install sqlite3 and download Litestream
+RUN apt-get update && apt-get install -y sqlite3 ca-certificates wget && \
+    wget -qO- https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz | tar xz -C /usr/local/bin && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -37,6 +39,9 @@ COPY --from=builder /prod/api ./
 COPY --from=builder /app/api/dist ./dist
 COPY --from=builder /app/api/drizzle ./drizzle
 
+# Copy Litestream config
+COPY api/litestream.yml /etc/litestream.yml
+
 # Create data directory for SQLite
 RUN mkdir -p /data
 
@@ -45,5 +50,6 @@ ENV DATABASE_URL=/data/vibeproteins.db
 
 EXPOSE 3000
 
-# Run migrations and start server
-CMD ["sh", "-c", "node dist/db/migrate.js && node dist/index.js"]
+# Run migrations then start server with Litestream replication
+# Litestream will replicate WAL changes to R2 continuously
+CMD ["sh", "-c", "node dist/db/migrate.js && litestream replicate -exec 'node dist/index.js'"]

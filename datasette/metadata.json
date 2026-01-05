@@ -1,0 +1,14 @@
+{
+  "title": "ProteinDojo Dashboard",
+  "description": "Production database dashboard",
+  "allow": {
+    "id": "admin"
+  },
+  "plugins": {
+    "datasette-auth-passwords": {
+      "admin_password_hash": {
+        "$env": "DATASETTE_PASSWORD_HASH"
+      }
+    }
+  }
+}
