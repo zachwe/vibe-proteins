@@ -33,6 +33,12 @@ export default function Header() {
               Challenges
             </Link>
             <Link
+              to="/leaderboards"
+              className="text-slate-300 hover:text-white transition-colors"
+            >
+              Leaderboards
+            </Link>
+            <Link
               to="/help"
               className="text-slate-300 hover:text-white transition-colors"
             >

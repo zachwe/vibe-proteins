@@ -47,6 +47,12 @@ export interface User {
   balanceFormatted: string;
 }
 
+export interface JobProgressEvent {
+  stage: string;
+  message: string;
+  timestamp: number;
+}
+
 export interface Job {
   id: string;
   userId: string;
@@ -55,6 +61,8 @@ export interface Job {
   status: "pending" | "running" | "completed" | "failed";
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
+  modalCallId: string | null;
+  progress: JobProgressEvent[] | null;
   error: string | null;
   gpuType: string | null;
   executionSeconds: number | null;
@@ -69,9 +77,16 @@ export interface Submission {
   challengeId: string;
   designSequence: string;
   designPdbUrl: string | null;
-  score: number | null;
-  scoreBreakdown: Record<string, unknown> | null;
-  feedback: string | null;
+  designStructureUrl: string | null;
+  status: "pending" | "running" | "completed" | "failed";
+  error: string | null;
+  // Score fields
+  compositeScore: number | null;
+  ipSaeScore: number | null;
+  plddt: number | null;
+  ptm: number | null;
+  interfaceArea: number | null;
+  shapeComplementarity: number | null;
   createdAt: string;
 }
 
@@ -190,6 +205,11 @@ export const submissionsApi = {
     apiFetch<{ submission: Submission }>("/api/submissions", {
       method: "POST",
       body: JSON.stringify(data),
+    }),
+
+  retry: (id: string) =>
+    apiFetch<{ success: boolean; status: string }>(`/api/submissions/${id}/retry`, {
+      method: "POST",
     }),
 };
 

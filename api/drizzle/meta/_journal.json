@@ -64,6 +64,20 @@
       "when": 1735689600000,
       "tag": "0008_add_pdb_start_residue",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1735862400000,
+      "tag": "0009_add_submission_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1735948800000,
+      "tag": "0010_add_job_async_tracking",
+      "breakpoints": true
     }
   ]
 }

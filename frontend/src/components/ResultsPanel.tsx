@@ -513,18 +513,111 @@ export default function ResultsPanel({
 
   // If job is still running or pending
   if (job.status !== "completed") {
+    const progressEvents = job.progress;
+
+    // Stage icons and colors
+    const stageStyles: Record<string, { icon: string; color: string }> = {
+      init: { icon: "🔧", color: "text-slate-400" },
+      rfdiffusion: { icon: "🧬", color: "text-purple-400" },
+      proteinmpnn: { icon: "🔤", color: "text-blue-400" },
+      boltz: { icon: "⚛️", color: "text-green-400" },
+      processing: { icon: "⚙️", color: "text-amber-400" },
+      scoring: { icon: "📊", color: "text-cyan-400" },
+      upload: { icon: "☁️", color: "text-indigo-400" },
+      complete: { icon: "✓", color: "text-green-400" },
+    };
+
+    const getStageStyle = (stage: string) => {
+      return stageStyles[stage] || { icon: "•", color: "text-slate-400" };
+    };
+
+    const formatTimestamp = (timestamp: number) => {
+      // Modal sends Unix timestamps in seconds
+      const date = new Date(timestamp * 1000);
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    };
+
     return (
       <div className="bg-slate-800 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Processing</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Processing</h2>
+            <p className="text-sm text-slate-400">
+              {job.type === "rfdiffusion3" ? "Generating protein binder designs" :
+               job.type === "boltz2" ? "Predicting protein structure" :
+               job.type === "proteinmpnn" ? "Designing protein sequences" :
+               job.type === "boltzgen" ? "Generating protein structures" :
+               "Running inference job"}
+            </p>
+          </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white">
             Close
           </button>
         </div>
 
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
-          <span className="text-slate-300">Your design is being processed...</span>
+        {/* Progress timeline */}
+        <div className="space-y-4">
+          {/* Current status indicator */}
+          <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+            <div>
+              <p className="text-blue-400 font-medium">
+                {progressEvents && progressEvents.length > 0
+                  ? progressEvents[progressEvents.length - 1].message
+                  : "Starting job..."}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Status: {job.status}
+              </p>
+            </div>
+          </div>
+
+          {/* Progress events timeline */}
+          {progressEvents && progressEvents.length > 0 && (
+            <div className="border border-slate-700 rounded-lg overflow-hidden">
+              <div className="bg-slate-700/50 px-4 py-2 border-b border-slate-700">
+                <h3 className="text-sm font-medium text-slate-300">Progress</h3>
+              </div>
+              <div className="divide-y divide-slate-700/50 max-h-64 overflow-y-auto">
+                {progressEvents.map((event, index) => {
+                  const style = getStageStyle(event.stage);
+                  const isLatest = index === progressEvents.length - 1;
+
+                  return (
+                    <div
+                      key={index}
+                      className={`px-4 py-3 flex items-start gap-3 ${
+                        isLatest ? "bg-slate-700/30" : ""
+                      }`}
+                    >
+                      <span className={`text-lg ${style.color}`}>{style.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${isLatest ? "text-white" : "text-slate-300"}`}>
+                          {event.message}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {formatTimestamp(event.timestamp)}
+                        </p>
+                      </div>
+                      {isLatest && (
+                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* No progress yet */}
+          {(!progressEvents || progressEvents.length === 0) && (
+            <div className="text-center py-6 text-slate-500">
+              <p className="text-sm">Waiting for progress updates...</p>
+              <p className="text-xs mt-1">This may take a few moments to start.</p>
+            </div>
+          )}
         </div>
       </div>
     );

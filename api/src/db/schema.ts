@@ -42,6 +42,9 @@ export const jobs = sqliteTable("jobs", {
   status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
   input: text("input"), // JSON input parameters
   output: text("output"), // JSON output or S3 URL
+  // Modal async tracking
+  modalCallId: text("modal_call_id"), // Modal FunctionCall ID for async polling
+  progress: text("progress"), // JSON array of progress events: [{stage, message, timestamp}]
   // Usage tracking (populated on completion)
   gpuType: text("gpu_type"), // e.g., 'A10G', 'A100_40GB', etc.
   executionSeconds: real("execution_seconds"), // Actual GPU time used
@@ -65,6 +68,9 @@ export const submissions = sqliteTable("submissions", {
   jobId: text("job_id").references(() => jobs.id),
   designSequence: text("design_sequence").notNull(),
   designStructureUrl: text("design_structure_url"), // S3 URL
+  // Status tracking
+  status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
+  error: text("error"),
   // Scores
   compositeScore: real("composite_score"),
   ipSaeScore: real("ip_sae_score"),

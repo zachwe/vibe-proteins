@@ -130,6 +130,15 @@ export function useSubmissions() {
       const data = await submissionsApi.list();
       return data.submissions;
     },
+    // Poll for status updates if any submission is pending/running
+    refetchInterval: (query) => {
+      const submissions = query.state.data;
+      if (!submissions) return false;
+      const hasActive = submissions.some(
+        (s) => s.status === "pending" || s.status === "running"
+      );
+      return hasActive ? 3000 : false; // Poll every 3 seconds
+    },
   });
 }
 
@@ -141,6 +150,14 @@ export function useSubmission(id: string) {
       return data.submission;
     },
     enabled: !!id,
+    // Poll for status updates if submission is pending/running
+    refetchInterval: (query) => {
+      const submission = query.state.data;
+      if (submission?.status === "pending" || submission?.status === "running") {
+        return 2000; // Poll every 2 seconds
+      }
+      return false;
+    },
   });
 }
 
@@ -149,6 +166,17 @@ export function useCreateSubmission() {
 
   return useMutation({
     mutationFn: submissionsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.submissions });
+    },
+  });
+}
+
+export function useRetrySubmission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: submissionsApi.retry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.submissions });
     },

@@ -85,8 +85,21 @@ export interface SubmitJobResponse {
   result?: JobResult; // For synchronous jobs that complete immediately
 }
 
+export interface ProgressEvent {
+  stage: string;
+  message: string;
+  timestamp: number;
+}
+
+export interface JobUsage {
+  gpu_type?: string;
+  execution_seconds?: number;
+}
+
 export interface JobStatusResponse {
   jobId: string;
   status: JobStatus;
   result?: JobResult;
+  progress?: ProgressEvent[];
+  usage?: JobUsage;
 }

@@ -143,37 +143,252 @@ app.post("/", async (c) => {
     createdAt: now,
   });
 
-  // Submit to inference provider (async, don't await for long-running jobs)
+  // Submit to inference provider (async - returns immediately)
   const provider = getInferenceProvider();
 
-  void (async () => {
-    try {
-      await db.update(jobs).set({ status: "running" }).where(eq(jobs.id, jobId));
+  try {
+    const result = await provider.submitJob(type as JobType, {
+      ...normalizedInput,
+      jobId,
+      challengeId,
+    });
 
-      const result = await provider.submitJob(type as JobType, {
-        ...normalizedInput,
-        jobId,
-        challengeId,
+    if (result.status === "failed") {
+      await db
+        .update(jobs)
+        .set({
+          status: "failed",
+          error: "Failed to submit job to Modal",
+        })
+        .where(eq(jobs.id, jobId));
+
+      return c.json({
+        job: {
+          id: jobId,
+          status: "failed",
+          type,
+          error: "Failed to submit job to Modal",
+        },
+      }, 500);
+    }
+
+    // Job is now running in Modal - store call_id for tracking
+    await db
+      .update(jobs)
+      .set({
+        modalCallId: result.callId,
+        status: "running",
+      })
+      .where(eq(jobs.id, jobId));
+
+    return c.json({
+      job: {
+        id: jobId,
+        status: "running",
+        type,
+        modalCallId: result.callId,
+      },
+    }, 201);
+  } catch (error) {
+    console.error("Failed to submit job to inference provider:", error);
+    await db
+      .update(jobs)
+      .set({
+        status: "failed",
+        error: error instanceof Error ? error.message : "Modal job failed",
+      })
+      .where(eq(jobs.id, jobId));
+
+    return c.json({
+      job: {
+        id: jobId,
+        status: "failed",
+        type,
+        error: error instanceof Error ? error.message : "Modal job failed",
+      },
+    }, 500);
+  }
+});
+
+// GET /api/jobs/health - Check inference provider health (must be before /:id)
+app.get("/health", async (c) => {
+  const provider = getInferenceProvider();
+  const health = await provider.healthCheck();
+  return c.json(health, health.status === "ok" ? 200 : 503);
+});
+
+// Verify Modal callback secret helper
+function verifyCallbackSecret(c: { req: { header: (name: string) => string | undefined } }): boolean {
+  const callbackSecret = process.env.MODAL_CALLBACK_SECRET;
+  if (!callbackSecret) return true; // No secret configured, allow all
+  const providedSecret = c.req.header("X-Callback-Secret");
+  return providedSecret === callbackSecret;
+}
+
+// POST /api/jobs/:id/progress - Update job progress (called by Modal)
+app.post("/:id/progress", async (c) => {
+  if (!verifyCallbackSecret(c)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const { stage, message, timestamp } = body;
+
+  if (!stage || !message) {
+    return c.json({ error: "Missing required fields: stage, message" }, 400);
+  }
+
+  const job = await db.select().from(jobs).where(eq(jobs.id, id)).get();
+
+  if (!job) {
+    return c.json({ error: "Job not found" }, 404);
+  }
+
+  // Parse existing progress or start with empty array
+  const existingProgress = job.progress ? JSON.parse(job.progress) : [];
+
+  // Append new progress event
+  existingProgress.push({
+    stage,
+    message,
+    timestamp: timestamp || Date.now(),
+  });
+
+  // Update job with new progress
+  await db
+    .update(jobs)
+    .set({
+      progress: JSON.stringify(existingProgress),
+      // Also update status to running if still pending
+      ...(job.status === "pending" ? { status: "running" } : {}),
+    })
+    .where(eq(jobs.id, id));
+
+  return c.json({ success: true });
+});
+
+// POST /api/jobs/:id/complete - Mark job as completed (called by Modal)
+app.post("/:id/complete", async (c) => {
+  if (!verifyCallbackSecret(c)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const { status, output, error: jobError, usage } = body;
+
+  if (!status || !["completed", "failed"].includes(status)) {
+    return c.json({ error: "Invalid status, must be 'completed' or 'failed'" }, 400);
+  }
+
+  const job = await db.select().from(jobs).where(eq(jobs.id, id)).get();
+
+  if (!job) {
+    return c.json({ error: "Job not found" }, 404);
+  }
+
+  // Get user for billing
+  const jobUser = await db
+    .select({ id: user.id, balanceUsdCents: user.balanceUsdCents })
+    .from(user)
+    .where(eq(user.id, job.userId))
+    .get();
+
+  const updatePayload: Record<string, unknown> = {
+    status,
+    output: output ? JSON.stringify(output) : null,
+  };
+
+  if (status === "completed") {
+    updatePayload.completedAt = new Date();
+
+    // Handle billing if usage data provided
+    if (usage?.gpu_type && usage?.execution_seconds && jobUser) {
+      const gpuType = usage.gpu_type;
+      const executionSeconds = usage.execution_seconds;
+      const costCents = await calculateJobCost(gpuType, executionSeconds);
+
+      updatePayload.gpuType = gpuType;
+      updatePayload.executionSeconds = executionSeconds;
+      updatePayload.costUsdCents = costCents;
+
+      // Deduct from user balance
+      const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
+      await db
+        .update(user)
+        .set({ balanceUsdCents: newBalance })
+        .where(eq(user.id, jobUser.id));
+
+      // Record transaction
+      await db.insert(transactions).values({
+        id: randomUUID(),
+        userId: jobUser.id,
+        amountCents: -costCents,
+        type: "job_usage",
+        jobId: id,
+        description: `${job.type} job (${gpuType}, ${executionSeconds.toFixed(1)}s)`,
+        balanceAfterCents: newBalance,
+        createdAt: new Date(),
       });
+    }
+  } else if (status === "failed") {
+    updatePayload.error = jobError || "Job failed";
+  }
 
-      const output = result.result?.output ?? { callId: result.callId };
-      const updatePayload: Record<string, unknown> = {
-        status: result.status,
-        output: JSON.stringify(output),
-      };
+  await db.update(jobs).set(updatePayload).where(eq(jobs.id, id));
 
-      if (result.status === "completed") {
+  return c.json({ success: true });
+});
+
+// GET /api/jobs/:id - Get job status and result
+app.get("/:id", async (c) => {
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+  });
+
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const id = c.req.param("id");
+
+  let job = await db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.id, id), eq(jobs.userId, session.user.id)))
+    .get();
+
+  if (!job) {
+    return c.json({ error: "Job not found" }, 404);
+  }
+
+  // If job is still running, poll Modal for latest status
+  if (job.status === "pending" || job.status === "running") {
+    const provider = getInferenceProvider();
+    const modalStatus = await provider.getJobStatus(id);
+
+    // Update local DB with latest status from Modal
+    if (modalStatus.status !== job.status || modalStatus.progress || modalStatus.result) {
+      const updatePayload: Record<string, unknown> = {};
+
+      if (modalStatus.progress) {
+        updatePayload.progress = JSON.stringify(modalStatus.progress);
+      }
+
+      if (modalStatus.status === "completed" && modalStatus.result?.output) {
+        updatePayload.status = "completed";
+        updatePayload.output = JSON.stringify(modalStatus.result.output);
         updatePayload.completedAt = new Date();
 
-        // Extract usage data and calculate cost
-        const usage = output?.usage as { gpu_type?: string; execution_seconds?: number } | undefined;
-        if (usage?.gpu_type && usage?.execution_seconds) {
-          const gpuType = usage.gpu_type;
-          const executionSeconds = usage.execution_seconds;
-          const costCents = await calculateJobCost(gpuType, executionSeconds);
-
-          updatePayload.gpuType = gpuType;
-          updatePayload.executionSeconds = executionSeconds;
+        // Handle billing
+        if (modalStatus.usage?.gpu_type && modalStatus.usage?.execution_seconds) {
+          const costCents = await calculateJobCost(
+            modalStatus.usage.gpu_type,
+            modalStatus.usage.execution_seconds
+          );
+          updatePayload.gpuType = modalStatus.usage.gpu_type;
+          updatePayload.executionSeconds = modalStatus.usage.execution_seconds;
           updatePayload.costUsdCents = costCents;
 
           // Deduct from user balance
@@ -190,84 +405,47 @@ app.post("/", async (c) => {
               .set({ balanceUsdCents: newBalance })
               .where(eq(user.id, session.user.id));
 
-            // Record transaction
             await db.insert(transactions).values({
               id: randomUUID(),
               userId: session.user.id,
               amountCents: -costCents,
               type: "job_usage",
-              jobId,
-              description: `${type} job (${gpuType}, ${executionSeconds.toFixed(1)}s)`,
+              jobId: id,
+              description: `${job.type} job (${modalStatus.usage.gpu_type}, ${modalStatus.usage.execution_seconds.toFixed(1)}s)`,
               balanceAfterCents: newBalance,
               createdAt: new Date(),
             });
           }
         }
-      } else if (result.status === "failed") {
-        updatePayload.error =
-          result.result?.error ||
-          (result.result?.output?.message as string | undefined) ||
-          "Modal job failed";
+      } else if (modalStatus.status === "failed") {
+        updatePayload.status = "failed";
+        updatePayload.error = modalStatus.result?.error || "Job failed";
+      } else if (modalStatus.status === "running" && job.status === "pending") {
+        updatePayload.status = "running";
       }
 
-      await db.update(jobs).set(updatePayload).where(eq(jobs.id, jobId));
-    } catch (error) {
-      console.error("Failed to submit job to inference provider:", error);
-      await db
-        .update(jobs)
-        .set({
-          status: "failed",
-          error: error instanceof Error ? error.message : "Modal job failed",
-        })
-        .where(eq(jobs.id, jobId));
+      if (Object.keys(updatePayload).length > 0) {
+        await db.update(jobs).set(updatePayload).where(eq(jobs.id, id));
+
+        // Re-fetch updated job
+        job = await db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.id, id))
+          .get();
+      }
     }
-  })();
-
-  return c.json({
-    job: {
-      id: jobId,
-      status: "pending",
-      type,
-    },
-  }, 201);
-});
-
-// GET /api/jobs/health - Check inference provider health (must be before /:id)
-app.get("/health", async (c) => {
-  const provider = getInferenceProvider();
-  const health = await provider.healthCheck();
-  return c.json(health, health.status === "ok" ? 200 : 503);
-});
-
-// GET /api/jobs/:id - Get job status and result
-app.get("/:id", async (c) => {
-  const session = await auth.api.getSession({
-    headers: c.req.raw.headers,
-  });
-
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const id = c.req.param("id");
-
-  const job = await db
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.id, id), eq(jobs.userId, session.user.id)))
-    .get();
-
-  if (!job) {
-    return c.json({ error: "Job not found" }, 404);
-  }
-
-  const parsedOutput = job.output ? JSON.parse(job.output) : null;
+  const parsedOutput = job?.output ? JSON.parse(job.output) : null;
+  const parsedProgress = job?.progress ? JSON.parse(job.progress) : [];
 
   return c.json({
     job: {
       ...job,
-      input: job.input ? JSON.parse(job.input) : null,
+      input: job?.input ? JSON.parse(job.input) : null,
       output: parsedOutput ? attachSignedUrls(parsedOutput) : null,
+      progress: parsedProgress,
     },
   });
 });
@@ -291,10 +469,12 @@ app.get("/", async (c) => {
   return c.json({
     jobs: userJobs.map((job) => {
       const parsedOutput = job.output ? JSON.parse(job.output) : null;
+      const parsedProgress = job.progress ? JSON.parse(job.progress) : [];
       return {
         ...job,
         input: job.input ? JSON.parse(job.input) : null,
         output: parsedOutput ? attachSignedUrls(parsedOutput) : null,
+        progress: parsedProgress,
       };
     }),
   });

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useSubmissions } from "../lib/hooks";
+import { useSubmissions, useRetrySubmission } from "../lib/hooks";
 import { useSession } from "../lib/auth";
 import type { Submission } from "../lib/api";
 
@@ -9,14 +9,44 @@ function formatDate(value: string) {
   return date.toLocaleString();
 }
 
-function renderSubmissionRow(submission: Submission) {
-  const hasScore = submission.score !== null;
+function getStatusDisplay(submission: Submission) {
+  const status = submission.status || "pending";
+  switch (status) {
+    case "completed":
+      return { color: "bg-green-500", label: "Scored" };
+    case "failed":
+      return { color: "bg-red-500", label: "Failed" };
+    case "running":
+      return { color: "bg-blue-500 animate-pulse", label: "Scoring..." };
+    case "pending":
+    default:
+      return { color: "bg-yellow-500", label: "Pending" };
+  }
+}
+
+function isStuckPending(submission: Submission): boolean {
+  if (submission.status !== "pending") return false;
+  const createdAt = new Date(submission.createdAt);
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  return createdAt < fiveMinutesAgo;
+}
+
+function canRetry(submission: Submission): boolean {
+  return submission.status === "failed" || isStuckPending(submission);
+}
+
+interface SubmissionRowProps {
+  submission: Submission;
+  onRetry: (id: string) => void;
+  isRetrying: boolean;
+}
+
+function SubmissionRow({ submission, onRetry, isRetrying }: SubmissionRowProps) {
+  const statusDisplay = getStatusDisplay(submission);
+  const showRetry = canRetry(submission);
 
   return (
-    <div
-      key={submission.id}
-      className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col gap-3"
-    >
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-white font-medium">
@@ -28,12 +58,10 @@ function renderSubmissionRow(submission: Submission) {
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              hasScore ? "bg-green-500" : "bg-yellow-500"
-            }`}
+            className={`w-2.5 h-2.5 rounded-full ${statusDisplay.color}`}
           />
           <span className="text-sm text-slate-300">
-            {hasScore ? "Scored" : "Pending"}
+            {statusDisplay.label}
           </span>
         </div>
       </div>
@@ -52,20 +80,61 @@ function renderSubmissionRow(submission: Submission) {
         </p>
       </div>
 
-      {/* Score if available */}
-      {hasScore && (
-        <div className="flex items-center gap-4 bg-slate-700/50 rounded-lg p-2">
-          <div>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wide">
-              Score
-            </p>
-            <p className="text-lg font-semibold text-green-400">
-              {submission.score?.toFixed(2)}
-            </p>
+      {/* Scores if available */}
+      {submission.status === "completed" && submission.compositeScore !== null && (
+        <div className="bg-slate-700/50 rounded-lg p-3">
+          <div className="flex items-center gap-6 mb-2">
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                Composite Score
+              </p>
+              <p className="text-lg font-semibold text-green-400">
+                {submission.compositeScore?.toFixed(1)}
+              </p>
+            </div>
+            {submission.ipSaeScore !== null && (
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wide">
+                  ipSAE
+                </p>
+                <p className="text-sm font-medium text-slate-200">
+                  {submission.ipSaeScore?.toFixed(1)}
+                </p>
+              </div>
+            )}
           </div>
-          {submission.feedback && (
-            <p className="text-sm text-slate-300 flex-1">{submission.feedback}</p>
-          )}
+          <div className="flex items-center gap-4 text-xs text-slate-400">
+            {submission.interfaceArea !== null && (
+              <span>Interface: {submission.interfaceArea?.toFixed(0)} A²</span>
+            )}
+            {submission.shapeComplementarity !== null && (
+              <span>SC: {submission.shapeComplementarity?.toFixed(2)}</span>
+            )}
+            {submission.plddt !== null && (
+              <span>pLDDT: {submission.plddt?.toFixed(1)}</span>
+            )}
+            {submission.ptm !== null && (
+              <span>pTM: {submission.ptm?.toFixed(2)}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Error if failed */}
+      {submission.status === "failed" && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 flex items-center justify-between">
+          <p className="text-xs text-red-400">
+            {submission.error || "Scoring failed. Please try again."}
+          </p>
+        </div>
+      )}
+
+      {/* Stuck pending warning */}
+      {isStuckPending(submission) && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2">
+          <p className="text-xs text-yellow-400">
+            This submission has been pending for a while. You can retry scoring.
+          </p>
         </div>
       )}
 
@@ -77,12 +146,23 @@ function renderSubmissionRow(submission: Submission) {
             <span>Sequence only</span>
           )}
         </div>
-        <Link
-          to={`/challenges/${submission.challengeId}`}
-          className="text-sm text-blue-400 hover:text-blue-300"
-        >
-          View Challenge
-        </Link>
+        <div className="flex items-center gap-3">
+          {showRetry && (
+            <button
+              onClick={() => onRetry(submission.id)}
+              disabled={isRetrying}
+              className="text-sm text-orange-400 hover:text-orange-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRetrying ? "Retrying..." : "Retry Scoring"}
+            </button>
+          )}
+          <Link
+            to={`/challenges/${submission.challengeId}`}
+            className="text-sm text-blue-400 hover:text-blue-300"
+          >
+            View Challenge
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -91,6 +171,11 @@ function renderSubmissionRow(submission: Submission) {
 export default function Submissions() {
   const { data: session, isPending: sessionLoading } = useSession();
   const { data: submissions, isLoading, error } = useSubmissions();
+  const retryMutation = useRetrySubmission();
+
+  const handleRetry = (submissionId: string) => {
+    retryMutation.mutate(submissionId);
+  };
 
   if (sessionLoading) {
     return (
@@ -174,7 +259,14 @@ export default function Submissions() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {sortedSubmissions.map(renderSubmissionRow)}
+          {sortedSubmissions.map((submission) => (
+            <SubmissionRow
+              key={submission.id}
+              submission={submission}
+              onRetry={handleRetry}
+              isRetrying={retryMutation.isPending && retryMutation.variables === submission.id}
+            />
+          ))}
         </div>
       )}
     </div>

@@ -14,23 +14,29 @@ import type {
 } from "./types";
 import { randomUUID } from "crypto";
 
-// Modal endpoint URL
-const MODAL_ENDPOINT =
-  process.env.MODAL_ENDPOINT ||
+// Modal endpoint URLs
+const MODAL_SUBMIT_ENDPOINT =
+  process.env.MODAL_SUBMIT_ENDPOINT ||
   "https://zach-b-ocean--vibeproteins-submit-job.modal.run";
 
-export class ModalProvider implements InferenceProvider {
-  private endpoint: string;
+const MODAL_STATUS_ENDPOINT =
+  process.env.MODAL_STATUS_ENDPOINT ||
+  "https://zach-b-ocean--vibeproteins-get-job-status-endpoint.modal.run";
 
-  constructor(endpoint?: string) {
-    this.endpoint = endpoint || MODAL_ENDPOINT;
+export class ModalProvider implements InferenceProvider {
+  private submitEndpoint: string;
+  private statusEndpoint: string;
+
+  constructor(submitEndpoint?: string, statusEndpoint?: string) {
+    this.submitEndpoint = submitEndpoint || MODAL_SUBMIT_ENDPOINT;
+    this.statusEndpoint = statusEndpoint || MODAL_STATUS_ENDPOINT;
   }
 
   async submitJob(type: JobType, input: JobInput): Promise<SubmitJobResponse> {
-    const jobId = randomUUID();
+    const jobId = input.jobId || randomUUID();
 
     try {
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this.submitEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -38,6 +44,7 @@ export class ModalProvider implements InferenceProvider {
         body: JSON.stringify({
           job_type: type,
           params: this.transformInput(type, input),
+          async: true,
         }),
       });
 
@@ -47,22 +54,13 @@ export class ModalProvider implements InferenceProvider {
       }
 
       const result = await response.json();
-      const status: JobStatus =
-        result.status && ["pending", "running", "failed", "completed"].includes(result.status)
-          ? result.status
-          : "completed";
-      const completedAt = new Date();
 
+      // Async mode: Modal returns immediately with call_id
+      // We poll get_job_status for progress and completion
       return {
         jobId,
-        status,
-        callId: jobId, // In async mode, this would be the Modal call ID
-        result: {
-          status,
-          output: result,
-          startedAt: completedAt,
-          completedAt: status === "completed" ? completedAt : undefined,
-        },
+        status: "pending",
+        callId: result.call_id,
       };
     } catch (error) {
       console.error("Modal job submission failed:", error);
@@ -73,22 +71,59 @@ export class ModalProvider implements InferenceProvider {
     }
   }
 
-  async getJobStatus(callId: string): Promise<JobStatusResponse> {
-    // TODO: Implement proper async job status polling
-    // For now, jobs complete synchronously so this just returns completed
-    return {
-      jobId: callId,
-      status: "completed",
-      result: {
-        status: "completed",
-        output: { message: "Job completed (placeholder)" },
-      },
-    };
+  async getJobStatus(jobId: string): Promise<JobStatusResponse> {
+    try {
+      const response = await fetch(`${this.statusEndpoint}?job_id=${encodeURIComponent(jobId)}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          jobId,
+          status: "running", // Assume still running if we can't reach Modal
+        };
+      }
+
+      const result = await response.json();
+
+      if (result.status === "not_found") {
+        return {
+          jobId,
+          status: "pending",
+        };
+      }
+
+      const status: JobStatus =
+        result.status && ["pending", "running", "failed", "completed"].includes(result.status)
+          ? result.status
+          : "running";
+
+      return {
+        jobId,
+        status,
+        result: status === "completed" || status === "failed" ? {
+          status,
+          output: result.output,
+          error: result.error,
+        } : undefined,
+        progress: result.progress,
+        usage: result.usage,
+      };
+    } catch (error) {
+      console.error("Failed to get job status from Modal:", error);
+      return {
+        jobId,
+        status: "running", // Assume still running on error
+      };
+    }
   }
 
   async healthCheck(): Promise<{ status: "ok" | "error"; message: string }> {
     try {
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this.submitEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -174,6 +209,9 @@ export class ModalProvider implements InferenceProvider {
         return {
           design_pdb: input.designPdb || "",
           target_pdb: input.targetPdb || input.targetStructureUrl || "",
+          binder_sequence: input.binderSequence,
+          target_chain_ids: input.targetChainIds
+            || (input.targetChainId ? [input.targetChainId] : undefined),
           job_id: input.jobId,
         };
 
