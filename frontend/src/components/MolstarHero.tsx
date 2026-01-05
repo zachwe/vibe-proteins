@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Viewer } from "molstar/lib/apps/viewer/app";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import { Color } from "molstar/lib/mol-util/color";
+import { Binding } from "molstar/lib/mol-util/binding";
 
 interface MolstarHeroProps {
   pdbId: string;
@@ -70,11 +71,13 @@ export default function MolstarHero({ pdbId, className = "" }: MolstarHeroProps)
               ...renderer,
               backgroundColor: BG_COLOR,
             },
-            // Hide the axis indicator
             trackball: {
               ...canvas.props.trackball,
               animate: { name: 'off', params: {} },
-              noScroll: true, // Disable zoom via scroll
+              // Disable pinch-to-zoom gesture
+              gestureScaleFactor: 0,
+              // Set zoom speed to 0 as additional protection
+              zoomSpeed: 0,
             },
           });
 
@@ -84,6 +87,20 @@ export default function MolstarHero({ pdbId, className = "" }: MolstarHeroProps)
               ...canvas.props.camera,
               helper: {
                 axes: { name: 'off', params: {} },
+              },
+            },
+          });
+
+          // Disable all zoom-related bindings
+          canvas.setAttribs({
+            trackball: {
+              bindings: {
+                dragZoom: Binding.Empty,
+                dragFocus: Binding.Empty,
+                dragFocusZoom: Binding.Empty,
+                scrollZoom: Binding.Empty,
+                scrollFocus: Binding.Empty,
+                scrollFocusZoom: Binding.Empty,
               },
             },
           });
