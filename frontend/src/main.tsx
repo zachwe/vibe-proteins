@@ -12,6 +12,7 @@ import ChallengeDetail from "./pages/ChallengeDetail";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
 import Submissions from "./pages/Submissions";
+import Dashboard from "./pages/Dashboard";
 import Leaderboards from "./pages/Leaderboards";
 import Billing from "./pages/Billing";
 import Help from "./pages/Help";
@@ -48,6 +49,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
             <Route path="/submissions" element={<Submissions />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaderboards" element={<Leaderboards />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/help" element={<Help />} />

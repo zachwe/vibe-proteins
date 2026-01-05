@@ -12,6 +12,13 @@ Usage examples:
   # Run spike-rbd test with ACE2 hotspots
   uv run python scripts/run_modal_smoketest.py --jobs rfdiffusion3 --target spike-rbd --mode local
 
+  # Run BoltzGen smoketest with a challenge target
+  uv run python scripts/run_modal_smoketest.py --jobs boltzgen --target spike-rbd --mode local
+
+  # Run BoltzGen with custom parameters
+  uv run python scripts/run_modal_smoketest.py --jobs boltzgen --target lysozyme \
+      --boltzgen-binder-length "60..80" --boltzgen-budget 5 --mode local
+
   # Run against deployed app
   uv run python scripts/run_modal_smoketest.py --jobs rfdiffusion3 --target spike-rbd --mode deployed
 """
@@ -35,7 +42,7 @@ if str(MODAL_DIR) not in sys.path:
 import modal  # noqa: E402
 
 from core.config import app  # noqa: E402
-from pipelines import run_boltz2, run_proteinmpnn, run_rfdiffusion3, compute_scores  # noqa: E402
+from pipelines import run_boltz2, run_boltzgen, run_proteinmpnn, run_rfdiffusion3, compute_scores  # noqa: E402
 
 SAMPLE_DIR = REPO_ROOT / "sample_data"
 SAMPLE_DIR = REPO_ROOT / "sample_data"
@@ -81,8 +88,8 @@ def fetch_pdb(url: str) -> str:
     with urllib.request.urlopen(url, timeout=30) as response:
         return response.read().decode("utf-8")
 
-GPU_JOBS = {"rfdiffusion3", "proteinmpnn", "boltz2"}
-JOB_ORDER = ["rfdiffusion3", "proteinmpnn", "boltz2", "score"]
+GPU_JOBS = {"rfdiffusion3", "proteinmpnn", "boltz2", "boltzgen"}
+JOB_ORDER = ["rfdiffusion3", "proteinmpnn", "boltz2", "boltzgen", "score"]
 EXTRA_JOBS: List[str] = []
 JOB_CHOICES = JOB_ORDER + EXTRA_JOBS + ["all"]
 
@@ -90,6 +97,7 @@ FUNCTION_NAMES = {
     "rfdiffusion3": "run_rfdiffusion3",
     "proteinmpnn": "run_proteinmpnn",
     "boltz2": "run_boltz2",
+    "boltzgen": "run_boltzgen",
     "score": "compute_scores",
 }
 
@@ -107,6 +115,7 @@ LOCAL_FUNCTIONS = {
     "rfdiffusion3": run_rfdiffusion3,
     "proteinmpnn": run_proteinmpnn,
     "boltz2": run_boltz2,
+    "boltzgen": run_boltzgen,
     "score": compute_scores,
 }
 
@@ -168,6 +177,27 @@ def build_payload(job: str, args: argparse.Namespace) -> Dict[str, object]:
             "target_pdb": target_pdb,
         }
 
+    if job == "boltzgen":
+        payload = {
+            "target_pdb": target_pdb,
+            "binder_length": args.boltzgen_binder_length,
+            "protocol": args.boltzgen_protocol,
+            "num_designs": args.boltzgen_num_designs,
+            "budget": args.boltzgen_budget,
+            "alpha": args.boltzgen_alpha,
+        }
+        # Add target chain IDs if specified
+        if target_chain:
+            payload["target_chain_ids"] = [target_chain]
+            print(f"  Extracting only chain: {target_chain}")
+        # Add binding residues from hotspots if available
+        if hotspot_residues and not args.no_hotspots:
+            # Convert hotspot format (e.g., "E:417") to binding residue format (e.g., "417")
+            binding_residues = [hr.split(":")[-1] for hr in hotspot_residues]
+            payload["binding_residues"] = binding_residues
+            print(f"  Using binding residues: {binding_residues}")
+        return payload
+
     raise ValueError(f"Unsupported job: {job}")
 
 
@@ -208,6 +238,13 @@ Examples:
   # Run spike-rbd without hotspots (to compare)
   uv run python scripts/run_modal_smoketest.py --jobs rfdiffusion3 --target spike-rbd --no-hotspots --mode local
 
+  # Run BoltzGen smoketest
+  uv run python scripts/run_modal_smoketest.py --jobs boltzgen --target spike-rbd --mode local
+
+  # Run BoltzGen with custom parameters
+  uv run python scripts/run_modal_smoketest.py --jobs boltzgen --target lysozyme \\
+      --boltzgen-binder-length "60..80" --boltzgen-budget 5 --mode local
+
   # Run against deployed app
   uv run python scripts/run_modal_smoketest.py --jobs rfdiffusion3 --target spike-rbd --mode deployed
 """,
@@ -240,6 +277,23 @@ Examples:
     parser.add_argument("--diffusion-steps", type=int, default=20, help="RFDiffusion3 steps")
     parser.add_argument("--boltz-samples", type=int, default=1, help="Boltz-2 samples")
     parser.add_argument("--mpnn-sequences", type=int, default=4, help="ProteinMPNN sequences")
+    # BoltzGen arguments
+    parser.add_argument(
+        "--boltzgen-binder-length",
+        type=str,
+        default="80..100",
+        help="BoltzGen binder length (e.g., '80..100' or '90')",
+    )
+    parser.add_argument(
+        "--boltzgen-protocol",
+        type=str,
+        default="protein-anything",
+        choices=["protein-anything", "peptide-anything", "nanobody-anything", "antibody-anything"],
+        help="BoltzGen design protocol",
+    )
+    parser.add_argument("--boltzgen-num-designs", type=int, default=10, help="BoltzGen number of initial designs")
+    parser.add_argument("--boltzgen-budget", type=int, default=3, help="BoltzGen budget (final designs to keep)")
+    parser.add_argument("--boltzgen-alpha", type=float, default=0.01, help="BoltzGen alpha (quality vs diversity)")
     parser.add_argument(
         "--mode",
         choices=["local", "deployed"],

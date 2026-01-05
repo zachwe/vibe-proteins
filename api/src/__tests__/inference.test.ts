@@ -172,6 +172,110 @@ describe("ModalProvider", () => {
       });
     });
 
+    it("should submit boltzgen job with transformed params", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ call_id: "boltzgen-call-123" }),
+      });
+
+      await provider.submitJob("boltzgen", {
+        targetStructureUrl: "https://example.com/target.cif",
+        targetChainIds: ["A", "B"],
+        binderLengthRange: "80..120",
+        bindingResidues: ["10..15", "25"],
+        boltzgenProtocol: "protein-anything",
+        numDesigns: 100,
+        boltzgenBudget: 10,
+        boltzgenAlpha: 0.01,
+        diffusionBatchSize: 8,
+        stepScale: 1.5,
+        noiseScale: 0.5,
+        inverseFoldNumSequences: 2,
+        inverseFoldAvoid: "C",
+        skipInverseFolding: false,
+        filterBiased: true,
+        refoldingRmsdThreshold: 2.0,
+        additionalFilters: ["plddt > 0.7"],
+        metricsOverride: "custom_metric",
+        boltzgenDevices: 1,
+        boltzgenSteps: ["design", "folding"],
+        boltzgenReuse: true,
+        jobId: "test-job-id",
+        challengeId: "challenge-123",
+      });
+
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.job_type).toBe("boltzgen");
+      expect(callBody.params).toMatchObject({
+        target_pdb: "https://example.com/target.cif",
+        target_structure_url: "https://example.com/target.cif",
+        target_chain_ids: ["A", "B"],
+        binder_length: "80..120",
+        binding_residues: ["10..15", "25"],
+        protocol: "protein-anything",
+        num_designs: 100,
+        budget: 10,
+        alpha: 0.01,
+        diffusion_batch_size: 8,
+        step_scale: 1.5,
+        noise_scale: 0.5,
+        inverse_fold_num_sequences: 2,
+        inverse_fold_avoid: "C",
+        skip_inverse_folding: false,
+        filter_biased: true,
+        refolding_rmsd_threshold: 2.0,
+        additional_filters: ["plddt > 0.7"],
+        metrics_override: "custom_metric",
+        devices: 1,
+        steps: ["design", "folding"],
+        reuse: true,
+        job_id: "test-job-id",
+        challenge_id: "challenge-123",
+      });
+    });
+
+    it("should submit boltzgen job with default values", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ call_id: "boltzgen-call-456" }),
+      });
+
+      await provider.submitJob("boltzgen", {
+        targetStructureUrl: "https://example.com/target.pdb",
+      });
+
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.job_type).toBe("boltzgen");
+      expect(callBody.params).toMatchObject({
+        target_pdb: "https://example.com/target.pdb",
+        target_structure_url: "https://example.com/target.pdb",
+        binder_length: "80..120",
+        protocol: "protein-anything",
+        num_designs: 100,
+        budget: 10,
+        alpha: 0.01,
+        inverse_fold_num_sequences: 1,
+        skip_inverse_folding: false,
+        filter_biased: true,
+        reuse: false,
+      });
+    });
+
+    it("should handle boltzgen with hotspotResidues as binding_residues fallback", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ call_id: "boltzgen-call-789" }),
+      });
+
+      await provider.submitJob("boltzgen", {
+        targetStructureUrl: "https://example.com/target.pdb",
+        hotspotResidues: ["A:100", "A:105"],
+      });
+
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.params.binding_residues).toEqual(["A:100", "A:105"]);
+    });
+
     it("should return failed status when Modal request fails", async () => {
       fetchMock.mockResolvedValueOnce({
         ok: false,

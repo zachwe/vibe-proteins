@@ -66,9 +66,12 @@ export default function Header() {
                     {user?.balanceFormatted ?? "$0.00"}
                   </span>
                 </Link>
-                <span className="text-slate-300 text-sm">
+                <Link
+                  to="/dashboard"
+                  className="text-slate-300 hover:text-white text-sm transition-colors"
+                >
                   {session.user.name || session.user.email}
-                </span>
+                </Link>
                 <button
                   onClick={handleSignOut}
                   className="text-slate-400 hover:text-white text-sm transition-colors"

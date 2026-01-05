@@ -116,9 +116,9 @@
 
 ## Phase 7: Progress & Billing
 
-- [ ] User dashboard
-  - [ ] Curriculum progress
-  - [ ] Submission history
+- [x] User dashboard
+  - [x] Curriculum progress (challenges completed progress bar)
+  - [x] Submission history (recent submissions preview)
 - [x] Usage-based billing system
   - [x] Track USD balance in cents (displayed in header)
   - [x] Per-second GPU billing (Modal rates + 30% markup)
@@ -193,6 +193,28 @@
   - [ ] Add more detailed chain annotations for all targets
   - [ ] Expand educational content with more terminology links
   - [ ] Add hints that unlock progressively
+- [ ] Science content Claude Code subagent
+  - [ ] Create subagent that uses GPT-5.2 Pro (best scientific writing model) for content generation
+  - [ ] Subagent generates educational content for protein targets (background, mechanism, therapeutic relevance)
+  - [ ] Integrate with existing challenge content format (markdown with terminology links)
+  - [ ] Add fact-checking/citation verification step using web search
+  - [ ] Support batch generation for multiple targets
+
+## Phase 11: BoltzGen Production Readiness
+
+- [x] Smoketests & Testing
+  - [x] Modal-level smoketest for `run_boltzgen()` (added to `scripts/run_modal_smoketest.py`)
+  - [x] Unit tests for YAML generation (`write_boltzgen_yaml`) in `tests/test_boltzgen.py`
+  - [x] Unit tests for structure parsing and metrics extraction in `tests/test_boltzgen.py`
+  - [x] API parameter transformation tests in `inference.test.ts`
+  - [ ] E2E integration test in `jobs.e2e.test.ts`
+- [ ] Input validation (optional)
+  - [ ] Add Zod schema validation for BoltzGen parameters on API
+  - [ ] Validate binder_length format (numeric or range like "80..120")
+  - [ ] Validate binding_residues format
+- [ ] Monitoring (optional)
+  - [ ] BoltzGen-specific metrics in Datasette dashboard
+  - [ ] Track execution time by protocol
 
 ---
 
@@ -206,6 +228,8 @@ In progress:
 - Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
 
 Recently completed:
+- **BoltzGen production readiness**: Unit tests for YAML generation, metrics parsing, structure finding; API parameter transformation tests; CLI smoketest integration
+- **User Dashboard** (/dashboard) with stats, progress bar, recent activity, and quick actions
 - **Leaderboards page** with nav link, per-challenge rankings with metric sorting
 - **New user credits**: $1 starting balance for free trial
 - **Challenge levels fixed**: Correct Level 1/2/3 assignments per PLAN.md
