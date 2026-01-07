@@ -220,7 +220,8 @@ function buildSequenceEntries(
   job: Job,
   output: JobOutput | null,
   hasStructure: boolean,
-  structureSequence?: string
+  structureSequence?: string,
+  designIndex = 0
 ): SequenceEntry[] {
   const candidates: SequenceCandidate[] = [];
   let order = 0;
@@ -249,7 +250,7 @@ function buildSequenceEntries(
     });
   }
 
-  const design = output?.designs?.[0];
+  const design = output?.designs?.[designIndex];
   if (Array.isArray(design?.mpnn_sequences)) {
     design.mpnn_sequences.forEach((seq) => {
       pushCandidate(seq?.sequence, seq?.score);
@@ -383,7 +384,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   },
 ];
 
-function getScoreValue(output: JobOutput | null, key: string): number | undefined {
+function getScoreValue(output: JobOutput | null, key: string, designIndex = 0): number | undefined {
   if (!output) return undefined;
 
   // Check ipsae_scores first
@@ -401,7 +402,7 @@ function getScoreValue(output: JobOutput | null, key: string): number | undefine
   }
 
   // Check design scores
-  const design = output.designs?.[0];
+  const design = output.designs?.[designIndex];
   if (design?.ipsae_scores && key in design.ipsae_scores) {
     const val = design.ipsae_scores[key as keyof typeof design.ipsae_scores];
     if (typeof val === "number") return val;
@@ -433,12 +434,12 @@ function getScoreValue(output: JobOutput | null, key: string): number | undefine
   return undefined;
 }
 
-function buildStructureOptions(output: JobOutput | null): StructureOption[] {
+function buildStructureOptions(output: JobOutput | null, designIndex = 0): StructureOption[] {
   if (!output) return [];
 
   const options: StructureOption[] = [];
   const seen = new Set<string>();
-  const design = output.designs?.[0];
+  const design = output.designs?.[designIndex];
 
   const addOption = (option: StructureOption) => {
     if (!option.url || seen.has(option.url)) return;
@@ -516,8 +517,10 @@ export default function ResultsPanel({
   const navigate = useNavigate();
   const createSubmission = useCreateSubmission();
   const output = job.output as JobOutput | null;
-  const design = output?.designs?.[0];
-  const structureOptions = useMemo(() => buildStructureOptions(output), [output]);
+  const designCount = output?.designs?.length ?? 0;
+  const [selectedDesignIndex, setSelectedDesignIndex] = useState(0);
+  const design = output?.designs?.[selectedDesignIndex];
+  const structureOptions = useMemo(() => buildStructureOptions(output, selectedDesignIndex), [output, selectedDesignIndex]);
   const [activeStructureId, setActiveStructureId] = useState<string | null>(null);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
 
@@ -763,8 +766,7 @@ export default function ResultsPanel({
 
   // Completed job - show results
   const hasStructure = structureUrl || output?.pdbData;
-  const designCount = output?.designs?.length ?? 0;
-  const sequences = buildSequenceEntries(job, output, Boolean(hasStructure), design?.sequence);
+  const sequences = buildSequenceEntries(job, output, Boolean(hasStructure), design?.sequence, selectedDesignIndex);
   const chainInfo = activeStructure?.chainInfo ?? {
     target: design?.target_chains,
     binder: design?.binder_chains,
@@ -797,8 +799,41 @@ export default function ResultsPanel({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-medium text-slate-300">Predicted Fold</h3>
-                    {designCount > 0 && (
-                      <p className="text-xs text-slate-500">Design 1 of {designCount}</p>
+                    {designCount > 1 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          onClick={() => {
+                            setSelectedDesignIndex((i) => Math.max(0, i - 1));
+                            setActiveStructureId(null);
+                          }}
+                          disabled={selectedDesignIndex === 0}
+                          className="p-1 rounded hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Previous design"
+                        >
+                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <span className="text-xs text-slate-500">
+                          Design {selectedDesignIndex + 1} of {designCount}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedDesignIndex((i) => Math.min(designCount - 1, i + 1));
+                            setActiveStructureId(null);
+                          }}
+                          disabled={selectedDesignIndex === designCount - 1}
+                          className="p-1 rounded hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Next design"
+                        >
+                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {designCount === 1 && (
+                      <p className="text-xs text-slate-500">Design 1 of 1</p>
                     )}
                   </div>
                   {structureOptions.length > 1 && (
@@ -885,7 +920,7 @@ export default function ResultsPanel({
             {/* Scoring Metrics */}
             {(() => {
               const availableScores = SCORE_CONFIGS.filter(
-                (config) => getScoreValue(output, config.key) !== undefined
+                (config) => getScoreValue(output, config.key, selectedDesignIndex) !== undefined
               );
               if (availableScores.length === 0) return null;
 
@@ -896,7 +931,7 @@ export default function ResultsPanel({
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     {availableScores.map((config) => {
-                      const value = getScoreValue(output, config.key);
+                      const value = getScoreValue(output, config.key, selectedDesignIndex);
                       if (value === undefined) return null;
                       const colorClass = config.colorScale?.(value) || "text-slate-200";
 
