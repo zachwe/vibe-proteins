@@ -83,6 +83,47 @@ cd modal && uv run modal run pipelines/boltzgen.py
 uv run <tool-name> <args>
 ```
 
+## Database Migrations
+
+The project uses Drizzle ORM with SQL migrations stored in `api/drizzle/`.
+
+**How migrations work:**
+- Migrations run automatically on deploy (see `Dockerfile`: `node dist/db/migrate.js`)
+- Migration files: `api/drizzle/XXXX_name.sql`
+- Journal file: `api/drizzle/meta/_journal.json` (tracks which migrations have run)
+
+**Creating a new migration:**
+
+1. Update the schema in `api/src/db/schema.ts` or `api/src/db/auth-schema.ts`
+2. Create a new SQL file in `api/drizzle/` with the next sequence number:
+   ```sql
+   -- api/drizzle/0012_description.sql
+   ALTER TABLE `table_name` ADD COLUMN `column_name` text;
+   ```
+3. Add an entry to `api/drizzle/meta/_journal.json`:
+   ```json
+   {
+     "idx": 12,
+     "version": "6",
+     "when": 1736294400000,
+     "tag": "0012_description",
+     "breakpoints": true
+   }
+   ```
+4. Test locally: migrations auto-run when the API starts, or run manually:
+   ```bash
+   cd api && pnpm exec tsx src/db/migrate.ts
+   ```
+
+**Local database:**
+```bash
+# Direct SQLite access
+sqlite3 api/vibeproteins.db
+
+# Quick schema check
+sqlite3 api/vibeproteins.db ".schema table_name"
+```
+
 ## API Routes
 
 - Auth: `/api/auth/*` (BetterAuth)
