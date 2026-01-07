@@ -955,21 +955,24 @@ export default function ResultsPanel({
                         <div
                           key={config.key}
                           className="bg-slate-700 rounded-lg p-3"
-                          title={config.description}
                         >
                           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                             <span>{config.label}</span>
-                            <Link
-                              to={`/help/metrics#${config.key}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-slate-500 hover:text-blue-400 transition-colors"
-                              title={`Learn about ${config.label}`}
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </Link>
+                            <div className="relative group">
+                              <Link
+                                to={`/help/metrics#${config.key}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-slate-500 hover:text-blue-400 transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </Link>
+                              <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-600 rounded-lg text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10 pointer-events-none shadow-lg">
+                                {config.description}
+                              </div>
+                            </div>
                           </div>
                           <div className={`text-lg font-semibold ${colorClass}`}>
                             {config.format(value)}
