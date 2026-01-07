@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useCurrentUser } from "../lib/hooks";
-import { jobsApi } from "../lib/api";
+import { useCurrentUser, useChallenge, useJob } from "../lib/hooks";
+import { jobsApi, type ChainAnnotation } from "../lib/api";
+import MolstarViewer from "../components/MolstarViewer";
 
 interface JobResult {
   id: string;
@@ -85,11 +86,32 @@ const defaultFormState: FormState = {
 };
 
 export default function BoltzGenPlayground() {
+  const [searchParams] = useSearchParams();
   const { data: user, isLoading: userLoading } = useCurrentUser();
+
+  // Read URL params for challenge context
+  const challengeIdParam = searchParams.get("challengeId");
+  const targetUrlParam = searchParams.get("targetUrl");
+  const chainIdParam = searchParams.get("chainId");
+  const hotspotsParam = searchParams.get("hotspots");
+  const returnHashParam = searchParams.get("returnHash");
+
+  // Fetch challenge data if challengeId is provided
+  const { data: challenge } = useChallenge(challengeIdParam || "");
+
+  // Compute back URL with preserved hash state
+  const backUrl = useMemo(() => {
+    if (challengeIdParam) {
+      const hash = returnHashParam ? decodeURIComponent(returnHashParam) : "";
+      return `/challenges/${challengeIdParam}${hash}`;
+    }
+    return "/challenges";
+  }, [challengeIdParam, returnHashParam]);
+
   const [form, setForm] = useState<FormState>(defaultFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [job, setJob] = useState<JobResult | null>(null);
+  const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     target: true,
     design: true,
@@ -98,6 +120,63 @@ export default function BoltzGenPlayground() {
     filtering: false,
     execution: false,
   });
+
+  // Poll for job updates when a job is submitted
+  const { data: job } = useJob(submittedJobId || "");
+
+  // Pre-fill form from URL params on mount
+  useEffect(() => {
+    const updates: Partial<FormState> = {};
+
+    if (targetUrlParam) {
+      updates.targetStructureUrl = targetUrlParam;
+    }
+    if (chainIdParam) {
+      updates.targetChainIds = chainIdParam;
+    }
+    if (hotspotsParam) {
+      updates.bindingResidues = hotspotsParam;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setForm(prev => ({ ...prev, ...updates }));
+    }
+  }, [targetUrlParam, chainIdParam, hotspotsParam]);
+
+  // Parse chain annotations from challenge for Molstar coloring
+  const chainAnnotations = useMemo(() => {
+    if (!challenge?.chainAnnotations) return null;
+    try {
+      return JSON.parse(challenge.chainAnnotations) as Record<string, ChainAnnotation>;
+    } catch {
+      return null;
+    }
+  }, [challenge?.chainAnnotations]);
+
+  // Compute chain colors for Molstar viewer
+  const chainColors = useMemo(() => {
+    if (!chainAnnotations) return undefined;
+    const target: string[] = [];
+    const binder: string[] = [];
+    const context: string[] = [];
+    for (const [chainId, annotation] of Object.entries(chainAnnotations)) {
+      if (annotation.role === "target") {
+        target.push(chainId);
+      } else if (annotation.role === "binder") {
+        binder.push(chainId);
+      } else if (annotation.role === "context") {
+        context.push(chainId);
+      }
+    }
+    if (target.length === 0 && binder.length === 0 && context.length === 0) return undefined;
+    return { target, binder, context };
+  }, [chainAnnotations]);
+
+  // Parse binding residues for highlighting
+  const highlightResidues = useMemo(() => {
+    if (!form.bindingResidues) return undefined;
+    return form.bindingResidues.split(",").map(s => s.trim()).filter(Boolean);
+  }, [form.bindingResidues]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -143,12 +222,12 @@ export default function BoltzGenPlayground() {
       });
 
       const response = await jobsApi.create({
-        challengeId: "playground",
+        challengeId: challengeIdParam || "playground",
         type: "boltzgen",
         input,
       });
 
-      setJob(response.job);
+      setSubmittedJobId(response.job.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit job");
     } finally {
@@ -178,6 +257,9 @@ export default function BoltzGenPlayground() {
     );
   }
 
+  // Determine the structure URL for the viewer
+  const viewerStructureUrl = form.targetStructureUrl || challenge?.targetStructureUrl || undefined;
+
   return (
     <div className="min-h-screen bg-slate-900">
       <Helmet>
@@ -185,45 +267,107 @@ export default function BoltzGenPlayground() {
         <meta name="description" content="Design protein binders using BoltzGen - diffusion-based backbone design with Boltz-2 validation." />
       </Helmet>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <Link to="/challenges" className="text-blue-400 hover:text-blue-300">
-            &larr; Back to Challenges
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <Link
+            to={backUrl}
+            className="text-blue-400 hover:text-blue-300"
+          >
+            &larr; {challengeIdParam ? `Back to ${challenge?.name || "Challenge"}` : "Back to Challenges"}
           </Link>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">BoltzGen Playground</h1>
-          <p className="text-slate-400">
-            Design protein binders using diffusion-based backbone generation, inverse folding,
-            and Boltz-2 structure validation. <a href="https://github.com/HannesStark/boltzgen" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Learn more</a>
-          </p>
-        </div>
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Left side - Molstar viewer */}
+          <div className="lg:sticky lg:top-4 lg:self-start space-y-4">
+            <div className="bg-slate-800 rounded-xl p-4">
+              <h2 className="text-sm font-medium text-slate-400 mb-3">Target Structure</h2>
+              <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">
+                {viewerStructureUrl ? (
+                  <MolstarViewer
+                    pdbUrl={viewerStructureUrl}
+                    pdbId={challenge?.targetPdbId || undefined}
+                    highlightResidues={highlightResidues}
+                    chainColors={chainColors}
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-500">
+                    <div className="text-center">
+                      <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                      </svg>
+                      <p className="text-sm">Enter a structure URL below</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {highlightResidues && highlightResidues.length > 0 && (
+                <div className="mt-3 text-xs text-slate-400">
+                  <span className="text-purple-400 font-medium">{highlightResidues.length}</span> binding residues highlighted
+                </div>
+              )}
+            </div>
 
-        {/* Warning about cost/time */}
-        <div className="bg-amber-500/10 border border-amber-500 text-amber-400 rounded-lg p-4 mb-8">
-          <strong>Note:</strong> BoltzGen runs on A100 GPUs and can take several hours for large design runs.
-          Start with smaller num_designs (100) and budget (10) for testing.
-        </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-400 rounded-lg p-4 mb-8">
-            {error}
+            {/* Challenge info card when in challenge context */}
+            {challenge && (
+              <div className="bg-slate-800 rounded-xl p-4">
+                <h3 className="font-medium text-white mb-2">{challenge.name}</h3>
+                {challenge.mission && (
+                  <p className="text-sm text-slate-400 mb-3">{challenge.mission}</p>
+                )}
+                <div className="flex gap-2 text-xs">
+                  {challenge.targetPdbId && (
+                    <a
+                      href={`https://www.rcsb.org/structure/${challenge.targetPdbId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      PDB: {challenge.targetPdbId}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        )}
 
-        {job && (
-          <div className="bg-green-500/10 border border-green-500 text-green-400 rounded-lg p-4 mb-8">
-            <p className="font-semibold">Job submitted successfully!</p>
-            <p className="text-sm mt-1">Job ID: {job.id}</p>
-            <p className="text-sm">Status: {job.status}</p>
-            <Link to={`/jobs/${job.id}`} className="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block">
-              View job details &rarr;
-            </Link>
-          </div>
-        )}
+          {/* Right side - Form */}
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-white mb-2">
+                {challengeIdParam ? "Design with BoltzGen" : "BoltzGen Designer"}
+              </h1>
+              <p className="text-slate-400 text-sm">
+                Design protein binders using diffusion-based backbone generation, inverse folding,
+                and Boltz-2 structure validation.{" "}
+                <Link to="/help/design/boltzgen" className="text-blue-400 hover:text-blue-300">
+                  Learn more
+                </Link>
+              </p>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Warning about cost/time */}
+            <div className="bg-amber-500/10 border border-amber-500 text-amber-400 rounded-lg p-4">
+              <strong>Note:</strong> BoltzGen runs on A100 GPUs and can take several hours for large design runs.
+              Start with smaller num_designs (100) and budget (10) for testing.
+            </div>
+
+            {error && (
+              <div className="bg-red-500/10 border border-red-500 text-red-400 rounded-lg p-4">
+                {error}
+              </div>
+            )}
+
+            {submittedJobId && (
+              <JobStatusPanel
+                job={job}
+                jobId={submittedJobId}
+                onReset={() => setSubmittedJobId(null)}
+              />
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
           {/* Target Section */}
           <Section
             title="Target Structure"
@@ -579,20 +723,177 @@ export default function BoltzGenPlayground() {
             </div>
           </Section>
 
-          {/* Submit */}
-          <div className="flex items-center justify-between pt-4">
-            <div className="text-slate-400 text-sm">
-              Balance: <span className="text-white font-medium">{user?.balanceFormatted ?? "$0.00"}</span>
-            </div>
-            <button
-              type="submit"
-              disabled={isSubmitting || !form.targetStructureUrl}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Submitting..." : "Run BoltzGen"}
-            </button>
+              {/* Submit */}
+              <div className="flex items-center justify-between pt-4">
+                <div className="text-slate-400 text-sm">
+                  Balance: <span className="text-white font-medium">{user?.balanceFormatted ?? "$0.00"}</span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !form.targetStructureUrl}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Submitting..." : "Run BoltzGen"}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Job status panel with real-time progress
+function JobStatusPanel({
+  job,
+  jobId,
+  onReset,
+}: {
+  job: {
+    id: string;
+    status: "pending" | "running" | "completed" | "failed";
+    progress: { stage: string; message: string; timestamp: number }[] | null;
+    error: string | null;
+    costUsdCents: number | null;
+    executionSeconds: number | null;
+    gpuType: string | null;
+    createdAt: string;
+  } | undefined;
+  jobId: string;
+  onReset: () => void;
+}) {
+  // Stage icons for progress display
+  const stageIcons: Record<string, string> = {
+    init: "🔧",
+    design: "🎨",
+    inverse_folding: "🔤",
+    folding: "⚛️",
+    analysis: "📊",
+    filtering: "🎯",
+    processing: "⚙️",
+    upload: "☁️",
+    complete: "✓",
+  };
+
+  const isLoading = !job;
+  const progressEvents = job?.progress;
+  const latestProgress = progressEvents && progressEvents.length > 0
+    ? progressEvents[progressEvents.length - 1]
+    : null;
+
+  // Completed state
+  if (job?.status === "completed") {
+    return (
+      <div className="bg-green-500/10 border border-green-500 rounded-lg p-4">
+        <p className="text-green-400 font-medium mb-2">BoltzGen pipeline complete!</p>
+        <p className="text-slate-300 text-sm mb-3">
+          Your protein designs have been generated. View the job to see results.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to={`/jobs/${jobId}`}
+            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            View Results
+          </Link>
+          <button
+            onClick={onReset}
+            className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Run Another Job
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Failed state
+  if (job?.status === "failed") {
+    return (
+      <div className="bg-red-500/10 border border-red-500 rounded-lg p-4">
+        <p className="text-red-400 font-medium mb-2">Job failed</p>
+        <p className="text-slate-300 text-sm mb-3">
+          {job.error || "Something went wrong. Please check your parameters and try again."}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to={`/jobs/${jobId}`}
+            className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            View Details
+          </Link>
+          <button
+            onClick={onReset}
+            className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Running/pending state with progress
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-3 h-3 rounded-full ${
+          isLoading ? "bg-blue-500 animate-pulse" :
+          job?.status === "running" ? "bg-yellow-500 animate-pulse" :
+          "bg-slate-500 animate-pulse"
+        }`} />
+        <span className="text-white font-medium capitalize">
+          {isLoading ? "Submitting..." : job?.status || "pending"}
+        </span>
+      </div>
+
+      {/* Current status banner */}
+      <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
+        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+        <span className="text-blue-400 text-sm">
+          {isLoading ? "Submitting job..." :
+           latestProgress ? latestProgress.message : "Starting BoltzGen pipeline..."}
+        </span>
+      </div>
+
+      {/* Progress timeline */}
+      {progressEvents && progressEvents.length > 0 && (
+        <div className="border border-slate-700 rounded-lg overflow-hidden mb-4">
+          <div className="divide-y divide-slate-700/50 max-h-48 overflow-y-auto">
+            {progressEvents.map((event, index) => {
+              const isLatest = index === progressEvents.length - 1;
+              return (
+                <div
+                  key={index}
+                  className={`px-3 py-2 flex items-center gap-2 text-sm ${
+                    isLatest ? "bg-slate-700/30" : ""
+                  }`}
+                >
+                  <span>{stageIcons[event.stage] || "•"}</span>
+                  <span className={isLatest ? "text-white" : "text-slate-400"}>
+                    {event.message}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Job info and link */}
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-500 space-y-1">
+          <p>Job ID: <Link to={`/jobs/${jobId}`} className="text-blue-400 hover:text-blue-300 font-mono">{jobId}</Link></p>
+          {job?.gpuType && <p>GPU: {job.gpuType}</p>}
+          {job && <p>Started: {new Date(job.createdAt).toLocaleString()}</p>}
+        </div>
+        <Link
+          to={`/jobs/${jobId}`}
+          className="bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+        >
+          View Job →
+        </Link>
       </div>
     </div>
   );

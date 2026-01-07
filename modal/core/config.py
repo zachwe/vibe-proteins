@@ -130,6 +130,11 @@ BOLTZGEN_CACHE_DIR = "/boltzgen-cache"
 BOLTZGEN_VOLUME_NAME = os.environ.get("BOLTZGEN_VOLUME_NAME", "boltzgen-models")
 BOLTZGEN_MODEL_VOLUME = modal.Volume.from_name(BOLTZGEN_VOLUME_NAME, create_if_missing=True)
 
+# BoltzGen work directory volume for preemption recovery
+BOLTZGEN_WORK_DIR = "/boltzgen-work"
+BOLTZGEN_WORK_VOLUME_NAME = os.environ.get("BOLTZGEN_WORK_VOLUME_NAME", "boltzgen-work")
+BOLTZGEN_WORK_VOLUME = modal.Volume.from_name(BOLTZGEN_WORK_VOLUME_NAME, create_if_missing=True)
+
 COLABFOLD_VOLUME_NAME = os.environ.get("COLABFOLD_VOLUME_NAME", "colabfold-dbs")
 COLABFOLD_DB_DIR = Path("/colabfold-dbs")
 colabfold_volume = modal.Volume.from_name(COLABFOLD_VOLUME_NAME, create_if_missing=True)

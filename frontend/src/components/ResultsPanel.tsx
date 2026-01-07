@@ -4,11 +4,61 @@
  * Displays job results including the predicted structure and score breakdown.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Job, Suggestion, SuggestionRequest } from "../lib/api";
 import { useCreateSubmission, useSuggestions } from "../lib/hooks";
 import MolstarViewer from "./MolstarViewer";
+
+// LocalStorage key for cached suggestions
+const SUGGESTIONS_CACHE_KEY = "proteindojo_suggestions_cache";
+
+type CachedSuggestions = {
+  suggestions: Suggestion[];
+  cachedAt: number;
+};
+
+function getCachedSuggestions(jobId: string): CachedSuggestions | null {
+  try {
+    const cache = localStorage.getItem(SUGGESTIONS_CACHE_KEY);
+    if (!cache) return null;
+    const parsed = JSON.parse(cache) as Record<string, CachedSuggestions>;
+    return parsed[jobId] || null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedSuggestions(jobId: string, suggestions: Suggestion[]): void {
+  try {
+    const cache = localStorage.getItem(SUGGESTIONS_CACHE_KEY);
+    const parsed = cache ? (JSON.parse(cache) as Record<string, CachedSuggestions>) : {};
+    parsed[jobId] = { suggestions, cachedAt: Date.now() };
+    // Keep only the most recent 50 entries to avoid localStorage bloat
+    const entries = Object.entries(parsed);
+    if (entries.length > 50) {
+      entries.sort((a, b) => b[1].cachedAt - a[1].cachedAt);
+      const trimmed = Object.fromEntries(entries.slice(0, 50));
+      localStorage.setItem(SUGGESTIONS_CACHE_KEY, JSON.stringify(trimmed));
+    } else {
+      localStorage.setItem(SUGGESTIONS_CACHE_KEY, JSON.stringify(parsed));
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+function clearCachedSuggestions(jobId: string): void {
+  try {
+    const cache = localStorage.getItem(SUGGESTIONS_CACHE_KEY);
+    if (!cache) return;
+    const parsed = JSON.parse(cache) as Record<string, CachedSuggestions>;
+    delete parsed[jobId];
+    localStorage.setItem(SUGGESTIONS_CACHE_KEY, JSON.stringify(parsed));
+  } catch {
+    // Ignore localStorage errors
+  }
+}
 
 interface ResultsPanelProps {
   job: Job;
@@ -419,8 +469,17 @@ export default function ResultsPanel({
   const [activeStructureId, setActiveStructureId] = useState<string | null>(null);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
 
-  // Build suggestion request from job data
+  // Cached suggestions state
+  const [cachedSuggestions, setCachedSuggestionsState] = useState<Suggestion[] | null>(() => {
+    const cached = getCachedSuggestions(job.id);
+    return cached?.suggestions || null;
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Build suggestion request from job data - only when we need to fetch
   const suggestionRequest = useMemo((): SuggestionRequest | null => {
+    // Don't fetch if we have cached suggestions (refreshKey=0 means initial load)
+    if (cachedSuggestions && refreshKey === 0) return null;
     if (job.status !== "completed" || !output) return null;
 
     // Collect all scores
@@ -453,10 +512,31 @@ export default function ResultsPanel({
       hasHotspots,
       challengeName,
       challengeTaskType,
-    };
-  }, [job, output, design, challengeName, challengeTaskType]);
+      // Include refreshKey to bust React Query cache
+      _refreshKey: refreshKey,
+    } as SuggestionRequest;
+  }, [job, output, design, challengeName, challengeTaskType, cachedSuggestions, refreshKey]);
 
   const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions(suggestionRequest);
+
+  // Cache new suggestions when they arrive
+  useEffect(() => {
+    if (suggestionsData?.suggestions && suggestionsData.suggestions.length > 0) {
+      setCachedSuggestions(job.id, suggestionsData.suggestions);
+      setCachedSuggestionsState(suggestionsData.suggestions);
+    }
+  }, [suggestionsData, job.id]);
+
+  // Refresh handler - increment key to bust React Query cache
+  const handleRefreshSuggestions = useCallback(() => {
+    clearCachedSuggestions(job.id);
+    setCachedSuggestionsState(null);
+    setRefreshKey((k) => k + 1);
+  }, [job.id]);
+
+  // Use cached suggestions or freshly fetched ones
+  const displaySuggestions = cachedSuggestions || suggestionsData?.suggestions || [];
+  const isLoadingSuggestions = suggestionsLoading && !cachedSuggestions;
 
   useEffect(() => {
     if (structureOptions.length === 0) {
@@ -525,6 +605,12 @@ export default function ResultsPanel({
       scoring: { icon: "📊", color: "text-cyan-400" },
       upload: { icon: "☁️", color: "text-indigo-400" },
       complete: { icon: "✓", color: "text-green-400" },
+      // BoltzGen stages
+      design: { icon: "🎨", color: "text-purple-400" },
+      inverse_folding: { icon: "🔤", color: "text-blue-400" },
+      folding: { icon: "⚛️", color: "text-green-400" },
+      analysis: { icon: "📊", color: "text-cyan-400" },
+      filtering: { icon: "🎯", color: "text-amber-400" },
     };
 
     const getStageStyle = (stage: string) => {
@@ -805,20 +891,33 @@ export default function ResultsPanel({
             })()}
 
             {/* AI Suggestions */}
-            {(suggestionsLoading || (suggestionsData?.suggestions && suggestionsData.suggestions.length > 0)) && (
+            {(isLoadingSuggestions || displaySuggestions.length > 0) && (
               <div>
-                <h3 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                  <span>Next Steps</span>
-                  <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">AI</span>
-                </h3>
-                {suggestionsLoading ? (
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                    <span>Next Steps</span>
+                    <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">AI</span>
+                  </h3>
+                  {displaySuggestions.length > 0 && !isLoadingSuggestions && (
+                    <button
+                      onClick={handleRefreshSuggestions}
+                      className="text-slate-500 hover:text-slate-300 transition-colors p-1 rounded hover:bg-slate-700"
+                      title="Generate new suggestions"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {isLoadingSuggestions ? (
                   <div className="bg-slate-700/50 rounded-lg p-3 flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
                     <span className="text-sm text-slate-400">Analyzing your results...</span>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {suggestionsData?.suggestions.map((suggestion: Suggestion, index: number) => {
+                    {displaySuggestions.map((suggestion: Suggestion, index: number) => {
                       const typeStyles: Record<string, { bg: string; border: string; icon: string }> = {
                         success: { bg: "bg-green-500/10", border: "border-green-500/30", icon: "✓" },
                         improve: { bg: "bg-amber-500/10", border: "border-amber-500/30", icon: "→" },

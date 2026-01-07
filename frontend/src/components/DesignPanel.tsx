@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useCreateJob, useJob } from "../lib/hooks";
 import { useSession } from "../lib/auth";
 import { ApiError, type SuggestedHotspot } from "../lib/api";
@@ -24,27 +24,15 @@ interface DesignPanelProps {
   onHotspotsChange: (residues: string[]) => void;
 }
 
-type DesignTool = "rfdiffusion3" | "boltz2" | "proteinmpnn";
+type DesignTool = "rfdiffusion3";
 
-// Estimated costs based on typical run times (A10G at ~$0.024/min)
+// Tool info for display
 const toolInfo: Record<DesignTool, { name: string; description: string; estimatedCost: string; estimatedTime: string }> = {
   rfdiffusion3: {
     name: "RFDiffusion3",
-    description: "RFDiffusion3 backbone design + ProteinMPNN sequences + Boltz-2 sanity check",
+    description: "Backbone design + ProteinMPNN sequences + Boltz-2 validation",
     estimatedCost: "$0.50-2.00",
     estimatedTime: "2-5 min",
-  },
-  boltz2: {
-    name: "Boltz-2",
-    description: "Fast co-fold sanity check for binder + target complexes",
-    estimatedCost: "$0.10-0.50",
-    estimatedTime: "30s-2 min",
-  },
-  proteinmpnn: {
-    name: "ProteinMPNN",
-    description: "Sequence design for a given backbone structure",
-    estimatedCost: "$0.05-0.20",
-    estimatedTime: "15s-1 min",
   },
 };
 
@@ -64,10 +52,11 @@ export default function DesignPanel({
   onHotspotsChange,
 }: DesignPanelProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: session } = useSession();
   const createJob = useCreateJob();
 
-  const [selectedTool, setSelectedTool] = useState<DesignTool>("rfdiffusion3");
+  const selectedTool: DesignTool = "rfdiffusion3";
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
 
@@ -180,6 +169,12 @@ export default function DesignPanel({
       scoring: "📊",
       upload: "☁️",
       complete: "✓",
+      // BoltzGen stages
+      design: "🎨",
+      inverse_folding: "🔤",
+      folding: "⚛️",
+      analysis: "📊",
+      filtering: "🎯",
     };
 
     return (
@@ -345,36 +340,49 @@ export default function DesignPanel({
       )}
 
       <div className="space-y-4">
+        {/* Quick Design Tool */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">
-            Select Design Tool
+            Quick Design
           </label>
-          <div className="space-y-2">
-            {(Object.entries(toolInfo) as [DesignTool, typeof toolInfo[DesignTool]][]).map(
-              ([key, info]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedTool(key)}
-                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                    selectedTool === key
-                      ? "bg-blue-600/20 border-blue-500"
-                      : "bg-slate-700 border-slate-600 hover:border-slate-500"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-white font-medium">{info.name}</span>
-                    <span className="text-slate-400 text-sm">{info.estimatedCost} ({info.estimatedTime})</span>
-                  </div>
-                  <p className="text-slate-400 text-sm mt-1">{info.description}</p>
-                </button>
-              )
-            )}
+          <div className="bg-blue-600/20 border border-blue-500 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-white font-medium">{toolInfo.rfdiffusion3.name}</span>
+              <span className="text-slate-400 text-sm">
+                {toolInfo.rfdiffusion3.estimatedCost} ({toolInfo.rfdiffusion3.estimatedTime})
+              </span>
+            </div>
+            <p className="text-slate-400 text-sm mt-1">{toolInfo.rfdiffusion3.description}</p>
           </div>
         </div>
 
-        {/* Hotspot Selection - only for RFDiffusion3 */}
-        {selectedTool === "rfdiffusion3" && (
-          <div>
+        {/* BoltzGen Link */}
+        <div className="border-t border-slate-700 pt-4">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Advanced Design
+          </label>
+          <Link
+            to={`/design/boltzgen?challengeId=${challengeId}${targetStructureUrl ? `&targetUrl=${encodeURIComponent(targetStructureUrl)}` : ""}${targetChainId ? `&chainId=${targetChainId}` : ""}${selectedHotspots.length > 0 ? `&hotspots=${selectedHotspots.join(",")}` : ""}${location.hash ? `&returnHash=${encodeURIComponent(location.hash)}` : ""}`}
+            className="block w-full text-left p-3 rounded-lg border border-slate-600 hover:border-purple-500 hover:bg-purple-600/10 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-white font-medium">BoltzGen</span>
+              <span className="text-slate-400 text-sm">$0.50-3.00 (5-20 min)</span>
+            </div>
+            <p className="text-slate-400 text-sm mt-1">
+              Full diffusion pipeline with advanced filtering and ranking options
+            </p>
+            <p className="text-purple-400 text-xs mt-2 flex items-center gap-1">
+              Open BoltzGen Designer
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </p>
+          </Link>
+        </div>
+
+        {/* Hotspot Selection */}
+        <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-slate-300">
                 Target Hotspots
@@ -482,7 +490,6 @@ export default function DesignPanel({
               ))}
             </div>
           </div>
-        )}
 
         {targetSequence && (
           <div>

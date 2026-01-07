@@ -65,9 +65,22 @@ pnpm --filter api test
 
 # TypeScript check
 pnpm exec tsc --noEmit
+```
 
-# Python scripts (Modal helpers, etc.)
+## Python Commands
+
+**IMPORTANT:** Always use `uv run` for all Python commands to ensure the correct environment and dependencies are used. Never use `python`, `pip`, or activate venvs manually.
+
+```bash
+# Python scripts (from project root)
 uv run python <script>
+
+# Modal CLI commands (must run from modal/ directory)
+cd modal && uv run modal deploy app.py
+cd modal && uv run modal run pipelines/boltzgen.py
+
+# Any other Python tools
+uv run <tool-name> <args>
 ```
 
 ## API Routes

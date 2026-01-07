@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { useJobs } from "../lib/hooks";
+import { useJobs, useChallenges } from "../lib/hooks";
 import { useSession } from "../lib/auth";
-import type { Job } from "../lib/api";
+import type { Job, Challenge } from "../lib/api";
 
 const statusStyles: Record<Job["status"], string> = {
   pending: "bg-slate-500",
@@ -45,7 +45,8 @@ function getJobDuration(job: Job): string | null {
   return formatDuration(start, end);
 }
 
-function renderJobRow(job: Job) {
+function renderJobRow(job: Job, challengeMap: Map<string, Challenge>) {
+  const challenge = challengeMap.get(job.challengeId);
   return (
     <div
       key={job.id}
@@ -54,7 +55,11 @@ function renderJobRow(job: Job) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-white font-medium">
-            {typeLabels[job.type] || job.type}
+            {challenge?.name || job.challengeId}
+            <span className="text-slate-400 font-normal"> · </span>
+            <span className="text-slate-300 font-normal">
+              {typeLabels[job.type] || job.type}
+            </span>
           </p>
           <p className="text-xs text-slate-400">
             {formatDate(job.createdAt)}
@@ -98,6 +103,15 @@ function renderJobRow(job: Job) {
 export default function Jobs() {
   const { data: session, isPending: sessionLoading } = useSession();
   const { data: jobs, isLoading, error } = useJobs();
+  const { data: challenges } = useChallenges();
+
+  // Build a lookup map from challengeId to challenge
+  const challengeMap = new Map<string, Challenge>();
+  if (challenges) {
+    for (const c of challenges) {
+      challengeMap.set(c.id, c);
+    }
+  }
 
   if (sessionLoading) {
     return (
@@ -186,7 +200,7 @@ export default function Jobs() {
             {activeJobs.length === 0 ? (
               <p className="text-slate-500 text-sm">No active jobs.</p>
             ) : (
-              <div className="grid gap-3">{activeJobs.map(renderJobRow)}</div>
+              <div className="grid gap-3">{activeJobs.map((job) => renderJobRow(job, challengeMap))}</div>
             )}
           </section>
 
@@ -197,7 +211,7 @@ export default function Jobs() {
             {completedJobs.length === 0 ? (
               <p className="text-slate-500 text-sm">No completed jobs yet.</p>
             ) : (
-              <div className="grid gap-3">{completedJobs.map(renderJobRow)}</div>
+              <div className="grid gap-3">{completedJobs.map((job) => renderJobRow(job, challengeMap))}</div>
             )}
           </section>
         </div>

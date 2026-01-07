@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import Markdown from "react-markdown";
 import type { Components } from "react-markdown";
@@ -211,14 +211,82 @@ function ChainLegend({
 
 type InfoTab = "overview" | "learn" | "sequence" | "leaderboard";
 
+// Parse hash params from URL
+function parseHashParams(hash: string): Record<string, string> {
+  if (!hash || hash === "#") return {};
+  const params: Record<string, string> = {};
+  const searchParams = new URLSearchParams(hash.slice(1));
+  searchParams.forEach((value, key) => {
+    params[key] = value;
+  });
+  return params;
+}
+
+// Build hash string from params
+function buildHashString(params: Record<string, string | undefined>): string {
+  const filtered = Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][];
+  if (filtered.length === 0) return "";
+  return "#" + new URLSearchParams(filtered).toString();
+}
+
 export default function ChallengeDetail() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { data: challenge, isLoading, error } = useChallenge(id || "");
-  const [showDesignPanel, setShowDesignPanel] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [activeTab, setActiveTab] = useState<InfoTab>("overview");
+
+  // Parse initial state from URL hash
+  const initialHashParams = useMemo(() => parseHashParams(location.hash), []);
+
+  const [showDesignPanel, setShowDesignPanel] = useState(() => initialHashParams.design === "1");
+  const [currentStep, setCurrentStep] = useState(() => {
+    const step = parseInt(initialHashParams.step || "1", 10);
+    return isNaN(step) || step < 1 || step > 4 ? 1 : step;
+  });
+  const [activeTab, setActiveTab] = useState<InfoTab>(() => {
+    const tab = initialHashParams.tab as InfoTab;
+    return ["overview", "learn", "sequence", "leaderboard"].includes(tab) ? tab : "overview";
+  });
   // Selected hotspot residues - lifted up for shared state between viewer and design panel
-  const [selectedHotspots, setSelectedHotspots] = useState<string[]>([]);
+  const [selectedHotspots, setSelectedHotspots] = useState<string[]>(() => {
+    const hotspots = initialHashParams.hotspots;
+    return hotspots ? hotspots.split(",").filter(Boolean) : [];
+  });
+
+  // Update URL hash when state changes
+  const updateHash = useCallback((updates: Partial<{
+    tab: InfoTab;
+    design: boolean;
+    step: number;
+    hotspots: string[];
+  }>) => {
+    const currentParams = parseHashParams(location.hash);
+
+    const newParams: Record<string, string | undefined> = {
+      ...currentParams,
+    };
+
+    if (updates.tab !== undefined) {
+      newParams.tab = updates.tab === "overview" ? undefined : updates.tab;
+    }
+    if (updates.design !== undefined) {
+      newParams.design = updates.design ? "1" : undefined;
+    }
+    if (updates.step !== undefined) {
+      newParams.step = updates.step === 1 ? undefined : String(updates.step);
+    }
+    if (updates.hotspots !== undefined) {
+      newParams.hotspots = updates.hotspots.length > 0 ? updates.hotspots.join(",") : undefined;
+    }
+
+    const newHash = buildHashString(newParams);
+    navigate({ hash: newHash }, { replace: true });
+  }, [location.hash, navigate]);
+
+  // Sync state changes to URL
+  useEffect(() => {
+    updateHash({ tab: activeTab, design: showDesignPanel, step: currentStep, hotspots: selectedHotspots });
+  }, [activeTab, showDesignPanel, currentStep, selectedHotspots, updateHash]);
 
   // Parse chain annotations from JSON string
   const chainAnnotations = useMemo(() => {

@@ -58,7 +58,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/help/design/bindcraft" element={<BindCraftHelp />} />
             <Route path="/help/design/boltzgen" element={<BoltzGenHelp />} />
           <Route path="/help/metrics" element={<MetricsHelp />} />
-          <Route path="/playground/boltzgen" element={<BoltzGenPlayground />} />
+          <Route path="/design/boltzgen" element={<BoltzGenPlayground />} />
           <Route path="*" element={<NotFound />} />
         </Route>
           <Route path="/login" element={<Login />} />
