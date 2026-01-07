@@ -28,7 +28,7 @@ from core.config import (
     BOLTZGEN_WORK_VOLUME,
     RESULTS_PREFIX,
 )
-from core.job_status import send_progress, send_completion
+from core.job_status import send_progress, send_completion, send_usage_update
 from pipelines.proteinmpnn import resolve_structure_source
 from utils.boltz_helpers import _extract_chain_sequences
 from utils.pdb import ordered_chain_ids_from_pdb, cif_to_pdb, tail_file
@@ -140,6 +140,8 @@ def run_boltzgen_with_progress(
     job_id: str | None,
     num_designs: int,
     budget: int,
+    start_time: float,
+    gpu_type: str = "A100",
 ) -> None:
     """
     Run BoltzGen subprocess with real-time progress streaming.
@@ -202,9 +204,14 @@ def run_boltzgen_with_progress(
         return None
 
     def progress_monitor():
-        """Background thread to monitor design progress."""
+        """Background thread to monitor design progress and send usage updates."""
         while not stop_progress_monitor.wait(timeout=30):  # Check every 30 seconds
             try:
+                # Send usage update for billing
+                elapsed = time.time() - start_time
+                send_usage_update(job_id, gpu_type, elapsed)
+
+                # Check design progress
                 result = count_designs_in_stage()
                 if result:
                     stage_name, count, total = result
@@ -460,6 +467,8 @@ def run_boltzgen(
             job_id=job_id,
             num_designs=num_designs,
             budget=budget,
+            start_time=start_time,
+            gpu_type=gpu_type,
         )
     except RuntimeError as exc:
         # Commit volume before failing to save partial progress

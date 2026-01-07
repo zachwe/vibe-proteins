@@ -45,9 +45,10 @@ export const jobs = sqliteTable("jobs", {
   // Modal async tracking
   modalCallId: text("modal_call_id"), // Modal FunctionCall ID for async polling
   progress: text("progress"), // JSON array of progress events: [{stage, message, timestamp}]
-  // Usage tracking (populated on completion)
+  // Usage tracking (populated on completion, updated periodically for long jobs)
   gpuType: text("gpu_type"), // e.g., 'A10G', 'A100_40GB', etc.
   executionSeconds: real("execution_seconds"), // Actual GPU time used
+  billedSeconds: real("billed_seconds").default(0), // Seconds already billed (for partial billing)
   costUsdCents: integer("cost_usd_cents"), // Calculated cost in cents
   error: text("error"),
   createdAt: integer("created_at", { mode: "timestamp" })

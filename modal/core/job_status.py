@@ -62,6 +62,39 @@ def send_progress(job_id: str | None, stage: str, message: str) -> None:
         update_job_status(job_id, status="running", stage=stage, message=message)
 
 
+def send_usage_update(
+    job_id: str | None,
+    gpu_type: str,
+    execution_seconds: float,
+) -> None:
+    """
+    Send periodic usage update for long-running jobs.
+
+    This allows the API to track and bill for partial usage,
+    protecting against preemption and giving users cost visibility.
+    """
+    if not job_id:
+        return
+
+    existing = get_job_status(job_id) or {
+        "job_id": job_id,
+        "status": "running",
+        "progress": [],
+        "created_at": time.time(),
+    }
+
+    # Track cumulative usage with timestamp
+    existing["usage"] = {
+        "gpu_type": gpu_type,
+        "execution_seconds": execution_seconds,
+        "last_updated": time.time(),
+    }
+    existing["updated_at"] = time.time()
+
+    job_status_dict[job_id] = existing
+    print(f"[usage] {gpu_type}: {execution_seconds:.1f}s elapsed")
+
+
 def send_completion(
     job_id: str | None,
     status: str,

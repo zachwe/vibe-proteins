@@ -31,6 +31,66 @@ async function calculateJobCost(gpuType: string, executionSeconds: number): Prom
   return Math.ceil(ourRate * executionSeconds * 100);
 }
 
+// Helper to process partial billing for long-running jobs
+async function processPartialBilling(
+  jobId: string,
+  userId: string,
+  jobType: string,
+  gpuType: string,
+  executionSeconds: number,
+  currentBilledSeconds: number
+): Promise<{ billedSeconds: number; costCents: number } | null> {
+  // Only bill for time beyond what we've already billed
+  const unbilledSeconds = executionSeconds - currentBilledSeconds;
+
+  // Skip if less than 30 seconds of new usage (avoid micro-transactions)
+  if (unbilledSeconds < 30) {
+    return null;
+  }
+
+  const costCents = await calculateJobCost(gpuType, unbilledSeconds);
+
+  // Skip if cost is less than 1 cent
+  if (costCents < 1) {
+    return null;
+  }
+
+  // Get user's current balance
+  const jobUser = await db
+    .select({ balanceUsdCents: user.balanceUsdCents })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
+
+  if (!jobUser) {
+    return null;
+  }
+
+  // Deduct from user balance
+  const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
+  await db
+    .update(user)
+    .set({ balanceUsdCents: newBalance })
+    .where(eq(user.id, userId));
+
+  // Record transaction for partial billing
+  await db.insert(transactions).values({
+    id: randomUUID(),
+    userId,
+    amountCents: -costCents,
+    type: "job_usage",
+    jobId,
+    description: `${jobType} job (${gpuType}, ${unbilledSeconds.toFixed(1)}s partial)`,
+    balanceAfterCents: newBalance,
+    createdAt: new Date(),
+  });
+
+  return {
+    billedSeconds: executionSeconds,
+    costCents,
+  };
+}
+
 const SIGNED_URL_TTL_SECONDS = Number.parseInt(
   process.env.R2_SIGNED_URL_TTL_SECONDS || "900",
   10
@@ -303,34 +363,47 @@ app.post("/:id/complete", async (c) => {
   if (status === "completed") {
     updatePayload.completedAt = new Date();
 
-    // Handle billing if usage data provided
+    // Handle final billing if usage data provided (only for unbilled time)
     if (usage?.gpu_type && usage?.execution_seconds && jobUser) {
       const gpuType = usage.gpu_type;
-      const executionSeconds = usage.execution_seconds;
-      const costCents = await calculateJobCost(gpuType, executionSeconds);
+      const totalExecutionSeconds = usage.execution_seconds;
+      const billedSeconds = job.billedSeconds ?? 0;
+      const unbilledSeconds = totalExecutionSeconds - billedSeconds;
 
       updatePayload.gpuType = gpuType;
-      updatePayload.executionSeconds = executionSeconds;
-      updatePayload.costUsdCents = costCents;
+      updatePayload.executionSeconds = totalExecutionSeconds;
+      updatePayload.billedSeconds = totalExecutionSeconds;
 
-      // Deduct from user balance
-      const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
-      await db
-        .update(user)
-        .set({ balanceUsdCents: newBalance })
-        .where(eq(user.id, jobUser.id));
+      // Only charge for remaining unbilled time
+      if (unbilledSeconds > 0) {
+        const costCents = await calculateJobCost(gpuType, unbilledSeconds);
 
-      // Record transaction
-      await db.insert(transactions).values({
-        id: randomUUID(),
-        userId: jobUser.id,
-        amountCents: -costCents,
-        type: "job_usage",
-        jobId: id,
-        description: `${job.type} job (${gpuType}, ${executionSeconds.toFixed(1)}s)`,
-        balanceAfterCents: newBalance,
-        createdAt: new Date(),
-      });
+        // Track total cost across all partial + final billing
+        const previousCost = job.costUsdCents ?? 0;
+        updatePayload.costUsdCents = previousCost + costCents;
+
+        // Deduct remaining cost from user balance
+        const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
+        await db
+          .update(user)
+          .set({ balanceUsdCents: newBalance })
+          .where(eq(user.id, jobUser.id));
+
+        // Record transaction for final billing
+        await db.insert(transactions).values({
+          id: randomUUID(),
+          userId: jobUser.id,
+          amountCents: -costCents,
+          type: "job_usage",
+          jobId: id,
+          description: `${job.type} job (${gpuType}, ${unbilledSeconds.toFixed(1)}s final)`,
+          balanceAfterCents: newBalance,
+          createdAt: new Date(),
+        });
+      } else {
+        // All time was already billed via partial billing
+        updatePayload.costUsdCents = job.costUsdCents ?? 0;
+      }
     }
   } else if (status === "failed") {
     updatePayload.error = jobError || "Job failed";
@@ -381,40 +454,55 @@ app.get("/:id", async (c) => {
         updatePayload.output = JSON.stringify(modalStatus.result.output);
         updatePayload.completedAt = new Date();
 
-        // Handle billing
+        // Handle final billing (only for unbilled time if partial billing occurred)
         if (modalStatus.usage?.gpu_type && modalStatus.usage?.execution_seconds) {
-          const costCents = await calculateJobCost(
-            modalStatus.usage.gpu_type,
-            modalStatus.usage.execution_seconds
-          );
+          const totalExecutionSeconds = modalStatus.usage.execution_seconds;
+          const billedSeconds = job.billedSeconds ?? 0;
+          const unbilledSeconds = totalExecutionSeconds - billedSeconds;
+
           updatePayload.gpuType = modalStatus.usage.gpu_type;
-          updatePayload.executionSeconds = modalStatus.usage.execution_seconds;
-          updatePayload.costUsdCents = costCents;
+          updatePayload.executionSeconds = totalExecutionSeconds;
+          updatePayload.billedSeconds = totalExecutionSeconds;
 
-          // Deduct from user balance
-          const jobUser = await db
-            .select({ balanceUsdCents: user.balanceUsdCents })
-            .from(user)
-            .where(eq(user.id, session.user.id))
-            .get();
+          // Only charge for remaining unbilled time
+          if (unbilledSeconds > 0) {
+            const costCents = await calculateJobCost(
+              modalStatus.usage.gpu_type,
+              unbilledSeconds
+            );
 
-          if (jobUser) {
-            const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
-            await db
-              .update(user)
-              .set({ balanceUsdCents: newBalance })
-              .where(eq(user.id, session.user.id));
+            // Track total cost across all partial + final billing
+            const previousCost = job.costUsdCents ?? 0;
+            updatePayload.costUsdCents = previousCost + costCents;
 
-            await db.insert(transactions).values({
-              id: randomUUID(),
-              userId: session.user.id,
-              amountCents: -costCents,
-              type: "job_usage",
-              jobId: id,
-              description: `${job.type} job (${modalStatus.usage.gpu_type}, ${modalStatus.usage.execution_seconds.toFixed(1)}s)`,
-              balanceAfterCents: newBalance,
-              createdAt: new Date(),
-            });
+            // Deduct remaining cost from user balance
+            const jobUser = await db
+              .select({ balanceUsdCents: user.balanceUsdCents })
+              .from(user)
+              .where(eq(user.id, session.user.id))
+              .get();
+
+            if (jobUser && costCents > 0) {
+              const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
+              await db
+                .update(user)
+                .set({ balanceUsdCents: newBalance })
+                .where(eq(user.id, session.user.id));
+
+              await db.insert(transactions).values({
+                id: randomUUID(),
+                userId: session.user.id,
+                amountCents: -costCents,
+                type: "job_usage",
+                jobId: id,
+                description: `${job.type} job (${modalStatus.usage.gpu_type}, ${unbilledSeconds.toFixed(1)}s final)`,
+                balanceAfterCents: newBalance,
+                createdAt: new Date(),
+              });
+            }
+          } else {
+            // All time was already billed via partial billing
+            updatePayload.costUsdCents = job.costUsdCents ?? 0;
           }
         }
       } else if (modalStatus.status === "failed") {
@@ -422,6 +510,29 @@ app.get("/:id", async (c) => {
         updatePayload.error = modalStatus.result?.error || "Job failed";
       } else if (modalStatus.status === "running" && job.status === "pending") {
         updatePayload.status = "running";
+      }
+
+      // Handle partial billing for long-running jobs (e.g., BoltzGen)
+      if (
+        modalStatus.status === "running" &&
+        modalStatus.usage?.gpu_type &&
+        modalStatus.usage?.execution_seconds
+      ) {
+        const currentBilledSeconds = job.billedSeconds ?? 0;
+        const partialBilling = await processPartialBilling(
+          id,
+          session.user.id,
+          job.type,
+          modalStatus.usage.gpu_type,
+          modalStatus.usage.execution_seconds,
+          currentBilledSeconds
+        );
+
+        if (partialBilling) {
+          updatePayload.billedSeconds = partialBilling.billedSeconds;
+          updatePayload.gpuType = modalStatus.usage.gpu_type;
+          updatePayload.executionSeconds = modalStatus.usage.execution_seconds;
+        }
       }
 
       if (Object.keys(updatePayload).length > 0) {

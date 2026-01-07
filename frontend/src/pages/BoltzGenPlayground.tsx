@@ -757,12 +757,31 @@ function JobStatusPanel({
     error: string | null;
     costUsdCents: number | null;
     executionSeconds: number | null;
+    billedSeconds: number | null;
     gpuType: string | null;
     createdAt: string;
   } | undefined;
   jobId: string;
   onReset: () => void;
 }) {
+  // Estimate cost based on execution time (A100 rate ~$1.10/hr = $0.000306/sec, with 30% markup)
+  const A100_RATE_PER_SEC = 0.000306 * 1.3;
+  const estimatedCost = job?.executionSeconds
+    ? (job.executionSeconds * A100_RATE_PER_SEC).toFixed(2)
+    : null;
+  const billedCost = job?.costUsdCents
+    ? (job.costUsdCents / 100).toFixed(2)
+    : null;
+
+  // Format elapsed time
+  const formatElapsed = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hours > 0) return `${hours}h ${mins}m ${secs}s`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  };
   // Stage icons for progress display
   const stageIcons: Record<string, string> = {
     init: "🔧",
@@ -784,12 +803,21 @@ function JobStatusPanel({
 
   // Completed state
   if (job?.status === "completed") {
+    const totalCost = job.costUsdCents ? (job.costUsdCents / 100).toFixed(2) : null;
+    const totalTime = job.executionSeconds ? formatElapsed(job.executionSeconds) : null;
+
     return (
       <div className="bg-green-500/10 border border-green-500 rounded-lg p-4">
         <p className="text-green-400 font-medium mb-2">BoltzGen pipeline complete!</p>
         <p className="text-slate-300 text-sm mb-3">
           Your protein designs have been generated. View the job to see results.
         </p>
+        {(totalCost || totalTime) && (
+          <div className="flex gap-4 text-sm text-slate-400 mb-3">
+            {totalTime && <span>Duration: <span className="text-white">{totalTime}</span></span>}
+            {totalCost && <span>Cost: <span className="text-green-400">${totalCost}</span></span>}
+          </div>
+        )}
         <div className="flex flex-wrap gap-3">
           <Link
             to={`/jobs/${jobId}`}
@@ -878,6 +906,29 @@ function JobStatusPanel({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Running cost estimate */}
+      {job?.executionSeconds && (
+        <div className="bg-slate-700/50 rounded-lg p-3 mb-4">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Elapsed</div>
+              <div className="text-white font-mono">{formatElapsed(job.executionSeconds)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Est. Cost</div>
+              <div className="text-yellow-400 font-mono">${estimatedCost}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Billed</div>
+              <div className="text-green-400 font-mono">${billedCost || "0.00"}</div>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 text-center mt-2">
+            Cost is billed periodically as the job runs
+          </p>
         </div>
       )}
 
