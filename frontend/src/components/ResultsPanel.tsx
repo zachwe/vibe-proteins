@@ -359,11 +359,27 @@ const SCORE_CONFIGS: ScoreConfig[] = [
     higherIsBetter: true,
   },
   {
+    key: "ptm",
+    label: "pTM",
+    description: "Predicted TM-score for design confidence (0-1, higher = better)",
+    format: (v) => v.toFixed(3),
+    colorScale: (v) => v >= 0.8 ? "text-green-400" : v >= 0.6 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: true,
+  },
+  {
     key: "plddt",
     label: "pLDDT",
     description: "Confidence score (0-100, higher = more confident)",
     format: (v) => v.toFixed(1),
     colorScale: (v) => v >= 90 ? "text-green-400" : v >= 70 ? "text-yellow-400" : "text-red-400",
+    higherIsBetter: true,
+  },
+  {
+    key: "interface_area",
+    label: "Interface",
+    description: "Buried surface area at the binding interface (Å²)",
+    format: (v) => v.toFixed(0) + " Å²",
+    colorScale: (v) => v >= 1000 ? "text-green-400" : v >= 500 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
   },
   {

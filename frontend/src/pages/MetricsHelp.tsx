@@ -81,6 +81,25 @@ const METRICS: MetricInfo[] = [
     ],
   },
   {
+    id: "ptm",
+    name: "Predicted TM-score (pTM)",
+    shortName: "pTM",
+    description:
+      "pTM (predicted Template Modeling score) measures the overall confidence in the predicted structure. It estimates how similar the predicted structure would be to the true structure if it were known. For designed proteins, it indicates how confident the model is that the design will fold correctly.",
+    interpretation:
+      "Higher values (0-1) indicate higher confidence that the designed protein will fold into the predicted shape. A pTM > 0.8 suggests the design is likely to fold as predicted.",
+    thresholds: {
+      good: "> 0.8 (High confidence fold)",
+      moderate: "0.6 to 0.8 (Moderate confidence)",
+      poor: "< 0.6 (Low confidence in structure)",
+    },
+    examples: [
+      "pTM of 0.85: Excellent! The model is confident this design will fold correctly.",
+      "pTM of 0.55: The fold prediction is uncertain - consider alternative designs.",
+    ],
+    learnMore: "https://alphafold.ebi.ac.uk/faq#faq-7",
+  },
+  {
     id: "plddt",
     name: "Predicted Local Distance Difference Test (pLDDT)",
     shortName: "pLDDT",
@@ -112,6 +131,24 @@ const METRICS: MetricInfo[] = [
       moderate: "0.4 to 0.7 (Moderate interactions)",
       poor: "< 0.4 (Weak local contacts)",
     },
+  },
+  {
+    id: "interface_area",
+    name: "Buried Surface Area (Interface Area)",
+    shortName: "Interface",
+    description:
+      "The buried surface area (BSA) measures how much protein surface becomes hidden when the binder and target come together. It's calculated as the difference in solvent-accessible surface area (SASA) between the unbound and bound states. Larger interfaces generally indicate more extensive protein-protein contacts.",
+    interpretation:
+      "Higher values (in Å²) indicate a larger binding interface. Typical protein-protein interfaces range from 500-2000 Å². Very small interfaces (<500 Å²) may indicate weak or transient binding.",
+    thresholds: {
+      good: "> 1000 Å² (Large, stable interface)",
+      moderate: "500 to 1000 Å² (Medium interface)",
+      poor: "< 500 Å² (Small interface - may be weak)",
+    },
+    examples: [
+      "Interface of 1500 Å²: A substantial binding interface with good coverage.",
+      "Interface of 300 Å²: Small interface - binding may be weak or transient.",
+    ],
   },
   {
     id: "n_interface_contacts",
