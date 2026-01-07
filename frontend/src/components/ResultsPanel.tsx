@@ -128,6 +128,17 @@ interface JobOutput {
       url?: string;
       signedUrl?: string;
     };
+    // BoltzGen output format
+    structure?: {
+      key?: string;
+      url?: string;
+      signedUrl?: string;
+    };
+    sequences?: Array<{
+      chain_id?: string;
+      sequence?: string;
+    }>;
+    metrics?: Record<string, string | number | boolean>;
     target_chains?: string[];
     binder_chains?: string[];
     binder_sequences?: Array<{
@@ -243,6 +254,14 @@ function buildSequenceEntries(
     design.mpnn_sequences.forEach((seq) => {
       pushCandidate(seq?.sequence, seq?.score);
     });
+  }
+
+  // BoltzGen sequences format - chain A is the binder
+  if (Array.isArray(design?.sequences)) {
+    const binderSeq = design.sequences.find(s => s.chain_id === "A");
+    if (binderSeq?.sequence) {
+      pushCandidate(binderSeq.sequence, undefined, true);
+    }
   }
 
   if (candidates.length === 0) {
@@ -392,6 +411,25 @@ function getScoreValue(output: JobOutput | null, key: string): number | undefine
     if (typeof val === "number") return val;
   }
 
+  // Check BoltzGen metrics format
+  if (design?.metrics) {
+    // Map standard metric keys to BoltzGen metric names
+    const boltzgenKeyMap: Record<string, string> = {
+      iptm: "design_to_target_iptm",
+      ptm: "design_ptm",
+      plddt: "design_ptm", // BoltzGen uses ptm as confidence metric
+      interface_area: "delta_sasa_refolded",
+    };
+    const boltzgenKey = boltzgenKeyMap[key] || key;
+    const val = design.metrics[boltzgenKey];
+    if (typeof val === "number") return val;
+    // BoltzGen metrics are sometimes stored as strings
+    if (typeof val === "string") {
+      const parsed = parseFloat(val);
+      if (!isNaN(parsed)) return parsed;
+    }
+  }
+
   return undefined;
 }
 
@@ -407,6 +445,20 @@ function buildStructureOptions(output: JobOutput | null): StructureOption[] {
     seen.add(option.url);
     options.push(option);
   };
+
+  // BoltzGen structure format
+  if (design?.structure) {
+    addOption({
+      id: "boltzgen-structure",
+      label: "Complex (target + binder)",
+      url: design.structure.signedUrl || design.structure.url,
+      description: "BoltzGen-designed binder (chain A, gold) docked to the target (chain B, blue).",
+      chainInfo: {
+        binder: ["A"],
+        target: ["B"],
+      },
+    });
+  }
 
   if (design?.complex) {
     addOption({
@@ -1025,7 +1077,10 @@ export default function ResultsPanel({
             <button
               onClick={async () => {
                 // Get the primary binder sequence from the design
+                // BoltzGen uses design.sequences with chain_id, where A is the binder
+                const boltzgenBinderSeq = design?.sequences?.find(s => s.chain_id === "A")?.sequence;
                 const binderSequence = design?.sequence
+                  || boltzgenBinderSeq
                   || design?.binder_sequences?.[0]?.sequence
                   || design?.mpnn_sequences?.[0]?.sequence
                   || output?.sequence
@@ -1036,8 +1091,10 @@ export default function ResultsPanel({
                   return;
                 }
 
-                // Get the structure URL
-                const structureUrl = design?.complex?.signedUrl
+                // Get the structure URL (including BoltzGen's design.structure format)
+                const structureUrl = design?.structure?.signedUrl
+                  || design?.structure?.url
+                  || design?.complex?.signedUrl
                   || design?.complex?.url
                   || output?.complex?.signedUrl
                   || output?.complex?.url
