@@ -85,6 +85,13 @@
       "when": 1736294400000,
       "tag": "0011_add_username",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1736380800000,
+      "tag": "0012_add_billed_seconds",
+      "breakpoints": true
     }
   ]
 }
