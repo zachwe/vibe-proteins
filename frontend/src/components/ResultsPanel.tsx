@@ -337,7 +337,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "ipsae",
     label: "ipSAE",
-    description: "How confidently the AI predicts binding — more negative means stronger predicted binding.",
+    description: "Interface Predicted Score from Aligned Errors — how confidently the AI predicts binding. More negative means stronger.",
     format: (v) => v.toFixed(3),
     colorScale: (v) => v <= -0.7 ? "text-green-400" : v <= -0.4 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: false,
@@ -345,7 +345,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "pdockq",
     label: "pDockQ",
-    description: "Predicted quality of how well the proteins dock together — higher means a more stable interface.",
+    description: "Predicted Dock Quality — how well the proteins fit together. Higher means a more stable interface.",
     format: (v) => v.toFixed(3),
     colorScale: (v) => v >= 0.5 ? "text-green-400" : v >= 0.23 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
@@ -353,7 +353,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "iptm",
     label: "ipTM",
-    description: "Confidence in the binding interface structure — higher means more reliable interface prediction.",
+    description: "Interface Predicted Template Modeling score — confidence in the binding interface structure. Higher is better.",
     format: (v) => v.toFixed(3),
     colorScale: (v) => v >= 0.7 ? "text-green-400" : v >= 0.5 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
@@ -361,7 +361,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "ptm",
     label: "pTM",
-    description: "Confidence that the designed protein will fold into the predicted shape — higher is better.",
+    description: "Predicted Template Modeling score — confidence that the design will fold into the predicted shape. Higher is better.",
     format: (v) => v.toFixed(3),
     colorScale: (v) => v >= 0.8 ? "text-green-400" : v >= 0.6 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
@@ -369,7 +369,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "plddt",
     label: "pLDDT",
-    description: "Per-residue confidence in structure prediction — higher means more reliable atom positions.",
+    description: "Predicted Local Distance Difference Test — per-residue confidence in atom positions. Higher is better.",
     format: (v) => v.toFixed(1),
     colorScale: (v) => v >= 90 ? "text-green-400" : v >= 70 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
@@ -377,7 +377,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "interface_area",
     label: "Interface",
-    description: "Surface area buried when proteins bind — larger interfaces typically mean stronger binding.",
+    description: "Buried Surface Area — how much surface is hidden when proteins bind. Larger interfaces typically bind stronger.",
     format: (v) => v.toFixed(0) + " Å²",
     colorScale: (v) => v >= 1000 ? "text-green-400" : v >= 500 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
@@ -385,7 +385,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "lis",
     label: "LIS",
-    description: "Quality of atomic-level contacts at the interface — higher means better local interactions.",
+    description: "Local Interaction Score — quality of atomic-level contacts at the interface. Higher means better interactions.",
     format: (v) => v.toFixed(3),
     colorScale: (v) => v >= 0.7 ? "text-green-400" : v >= 0.4 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
@@ -393,7 +393,7 @@ const SCORE_CONFIGS: ScoreConfig[] = [
   {
     key: "n_interface_contacts",
     label: "Contacts",
-    description: "Number of residue pairs making confident contact — more contacts suggest a larger interface.",
+    description: "Number of residue pairs making confident contact at the interface. More contacts suggest stronger binding.",
     format: (v) => v.toFixed(0),
     colorScale: (v) => v >= 100 ? "text-green-400" : v >= 30 ? "text-yellow-400" : "text-red-400",
     higherIsBetter: true,
