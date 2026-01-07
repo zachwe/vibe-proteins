@@ -415,10 +415,10 @@ function getScoreValue(output: JobOutput | null, key: string, designIndex = 0): 
   // Check BoltzGen metrics format
   if (design?.metrics) {
     // Map standard metric keys to BoltzGen metric names
+    // Note: BoltzGen outputs pTM (0-1) not pLDDT (0-100), so we don't map plddt
     const boltzgenKeyMap: Record<string, string> = {
       iptm: "design_to_target_iptm",
       ptm: "design_ptm",
-      plddt: "design_ptm", // BoltzGen uses ptm as confidence metric
       interface_area: "delta_sasa_refolded",
     };
     const boltzgenKey = boltzgenKeyMap[key] || key;
