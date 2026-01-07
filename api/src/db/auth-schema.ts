@@ -10,6 +10,7 @@ export const user = sqliteTable("user", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   // Custom fields
+  username: text("username").unique(), // Public display name for leaderboards
   balanceUsdCents: integer("balance_usd_cents").notNull().default(100), // USD balance in cents (e.g., 1000 = $10.00) - new users get $1 free
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for payments
 });

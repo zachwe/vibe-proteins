@@ -41,6 +41,15 @@ export const auth = betterAuth({
     schema: authSchema,
   }),
   basePath: "/api/auth",
+  user: {
+    additionalFields: {
+      username: {
+        type: "string",
+        required: false,
+        input: true, // Allow during signup
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: isProduction, // Only require in production

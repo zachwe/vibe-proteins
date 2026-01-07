@@ -77,7 +77,7 @@ app.get("/:id/leaderboard", async (c) => {
       shapeComplementarity: submissions.shapeComplementarity,
       createdAt: submissions.createdAt,
       userId: submissions.userId,
-      userName: user.name,
+      userName: sql<string>`COALESCE(${user.username}, ${user.name})`.as("user_name"),
     })
     .from(submissions)
     .innerJoin(user, eq(submissions.userId, user.id))

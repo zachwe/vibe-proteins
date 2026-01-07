@@ -8,6 +8,7 @@ const isProduction = import.meta.env.PROD;
 export default function Signup() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,6 +25,7 @@ export default function Signup() {
         name,
         email,
         password,
+        username: username || undefined, // Only include if provided
       });
 
       if (result.error) {
@@ -108,6 +110,28 @@ export default function Signup() {
               placeholder="Your name"
               required
             />
+          </div>
+          <div>
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-slate-300 mb-1"
+            >
+              Username
+              <span className="text-slate-500 font-normal ml-1">(shown on leaderboards)</span>
+            </label>
+            <input
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="protein_designer"
+              pattern="[a-z0-9_-]+"
+              minLength={3}
+              maxLength={20}
+              required
+            />
+            <p className="text-xs text-slate-500 mt-1">Lowercase letters, numbers, underscores, dashes only</p>
           </div>
           <div>
             <label
