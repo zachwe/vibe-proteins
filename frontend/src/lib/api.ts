@@ -43,6 +43,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  username?: string | null;
   balanceUsdCents: number;
   balanceFormatted: string;
 }
@@ -178,6 +179,7 @@ export const challengesApi = {
 // User API
 export const usersApi = {
   me: () => apiFetch<{ user: User }>("/api/users/me"),
+  deleteAccount: () => apiFetch<{ success: boolean }>("/api/users/me", { method: "DELETE" }),
 };
 
 // Jobs API

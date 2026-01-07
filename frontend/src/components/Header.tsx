@@ -5,17 +5,12 @@
  */
 
 import { Link } from "react-router-dom";
-import { useSession, signOut } from "../lib/auth";
+import { useSession } from "../lib/auth";
 import { useCurrentUser } from "../lib/hooks";
 
 export default function Header() {
   const { data: session, isPending } = useSession();
   const { data: user } = useCurrentUser();
-
-  const handleSignOut = async () => {
-    await signOut();
-    window.location.href = "/";
-  };
 
   return (
     <header className="bg-slate-800 border-b border-slate-700">
@@ -70,14 +65,8 @@ export default function Header() {
                   to="/dashboard"
                   className="text-slate-300 hover:text-white text-sm transition-colors"
                 >
-                  {session.user.name || session.user.email}
+                  {user?.username || session.user.name || session.user.email}
                 </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="text-slate-400 hover:text-white text-sm transition-colors"
-                >
-                  Sign Out
-                </button>
               </div>
             ) : (
               <div className="flex items-center gap-3">

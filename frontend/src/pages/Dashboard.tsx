@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useSession } from "../lib/auth";
+import { useSession, signOut } from "../lib/auth";
 import { useCurrentUser, useSubmissions, useJobs, useChallenges } from "../lib/hooks";
+import { usersApi } from "../lib/api";
 import type { Submission, Job } from "../lib/api";
 
 function formatDate(value: string) {
@@ -163,12 +165,67 @@ function ProgressBar({ current, total, label }: {
   );
 }
 
+// Delete account confirmation modal
+function DeleteAccountModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  isDeleting
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+        <h2 className="text-xl font-bold text-white mb-2">Delete Account</h2>
+        <p className="text-slate-300 mb-4">
+          Are you sure you want to delete your account? This action is <span className="text-red-400 font-semibold">permanent</span> and cannot be undone.
+        </p>
+        <p className="text-slate-400 text-sm mb-6">
+          All your data will be deleted, including:
+        </p>
+        <ul className="text-slate-400 text-sm mb-6 list-disc list-inside space-y-1">
+          <li>Your profile and settings</li>
+          <li>All design jobs and history</li>
+          <li>All submissions and scores</li>
+          <li>Any remaining account balance</li>
+        </ul>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="px-4 py-2 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? "Deleting..." : "Delete Account"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { data: session, isPending: sessionLoading } = useSession();
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const { data: submissions, isLoading: submissionsLoading } = useSubmissions();
   const { data: jobs, isLoading: jobsLoading } = useJobs();
   const { data: challenges } = useChallenges();
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Compute stats
   const totalSubmissions = submissions?.length ?? 0;
@@ -378,6 +435,42 @@ export default function Dashboard() {
                 Help & Documentation
               </Link>
             </div>
+
+            {/* Sign Out / Delete Account */}
+            <div className="mt-12 pt-6 border-t border-slate-800 flex justify-center gap-6">
+              <button
+                onClick={async () => {
+                  await signOut();
+                  window.location.href = "/";
+                }}
+                className="text-slate-500 hover:text-white text-sm transition-colors"
+              >
+                Sign Out
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="text-slate-500 hover:text-red-400 text-sm transition-colors"
+              >
+                Delete Account
+              </button>
+            </div>
+
+            <DeleteAccountModal
+              isOpen={showDeleteModal}
+              onClose={() => setShowDeleteModal(false)}
+              isDeleting={isDeleting}
+              onConfirm={async () => {
+                setIsDeleting(true);
+                try {
+                  await usersApi.deleteAccount();
+                  await signOut();
+                  window.location.href = "/";
+                } catch (error) {
+                  console.error("Failed to delete account:", error);
+                  setIsDeleting(false);
+                }
+              }}
+            />
           </>
         )}
       </div>

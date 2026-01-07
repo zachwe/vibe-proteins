@@ -124,6 +124,13 @@ sqlite3 api/vibeproteins.db
 sqlite3 api/vibeproteins.db ".schema table_name"
 ```
 
+**Known issue:** Drizzle's migrator may report "completed" without actually applying migrations. This happens due to a mismatch between hash-based tracking (older migrations) and tag-based tracking (newer migrations) in `__drizzle_migrations`. If `pnpm prod:migrate` doesn't apply your migration:
+
+1. Connect to prod: `pnpm prod:db`
+2. Check what's missing: `.schema table_name`
+3. Run the SQL manually from `api/drizzle/XXXX_name.sql`
+4. Record it: `INSERT INTO __drizzle_migrations VALUES (NULL, '0012_name', 1736294400000);`
+
 ## API Routes
 
 - Auth: `/api/auth/*` (BetterAuth)
