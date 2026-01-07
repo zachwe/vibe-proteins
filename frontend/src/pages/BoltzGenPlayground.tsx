@@ -756,6 +756,7 @@ function JobStatusPanel({
     progress: { stage: string; message: string; timestamp: number }[] | null;
     error: string | null;
     costUsdCents: number | null;
+    estimatedCostCents: number | null;
     executionSeconds: number | null;
     billedSeconds: number | null;
     gpuType: string | null;
@@ -764,10 +765,9 @@ function JobStatusPanel({
   jobId: string;
   onReset: () => void;
 }) {
-  // Estimate cost based on execution time (A100 rate ~$1.10/hr = $0.000306/sec, with 30% markup)
-  const A100_RATE_PER_SEC = 0.000306 * 1.3;
-  const estimatedCost = job?.executionSeconds
-    ? (job.executionSeconds * A100_RATE_PER_SEC).toFixed(2)
+  // Use API-calculated estimated cost (based on actual GPU pricing)
+  const estimatedCost = job?.estimatedCostCents
+    ? (job.estimatedCostCents / 100).toFixed(2)
     : null;
   const billedCost = job?.costUsdCents
     ? (job.costUsdCents / 100).toFixed(2)

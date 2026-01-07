@@ -551,12 +551,19 @@ app.get("/:id", async (c) => {
   const parsedOutput = job?.output ? JSON.parse(job.output) : null;
   const parsedProgress = job?.progress ? JSON.parse(job.progress) : [];
 
+  // Calculate estimated total cost based on current execution time
+  let estimatedCostCents: number | null = null;
+  if (job?.executionSeconds && job?.gpuType) {
+    estimatedCostCents = await calculateJobCost(job.gpuType, job.executionSeconds);
+  }
+
   return c.json({
     job: {
       ...job,
       input: job?.input ? JSON.parse(job.input) : null,
       output: parsedOutput ? attachSignedUrls(parsedOutput) : null,
       progress: parsedProgress,
+      estimatedCostCents,
     },
   });
 });
