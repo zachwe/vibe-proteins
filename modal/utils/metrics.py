@@ -31,6 +31,13 @@ def _format_residue(atom) -> str:
   return f"{chain.id}:{resseq}:{residue.get_resname().strip()}"
 
 
+def _is_protein_residue(residue) -> bool:
+  """Check if a residue is a standard protein residue (not water/heteroatom)."""
+  # Residue ID is (hetfield, resseq, icode) - hetfield is ' ' for standard residues
+  hetfield = residue.get_id()[0]
+  return hetfield == ' ' or hetfield == ''
+
+
 def compute_interface_metrics(
   complex_path: Path,
   target_chain_ids: Iterable[str] | None = None,
@@ -42,15 +49,20 @@ def compute_interface_metrics(
   target_chain_set = set(target_chain_ids or [])
 
   for chain in structure.get_chains():
-    atoms = list(chain.get_atoms())
+    # Filter to only protein residues (exclude water, ligands, etc.)
+    protein_atoms = [
+      atom for residue in chain.get_residues()
+      if _is_protein_residue(residue)
+      for atom in residue.get_atoms()
+    ]
     if target_chain_set:
       if chain.id in target_chain_set:
-        target_atoms.extend(atoms)
+        target_atoms.extend(protein_atoms)
       else:
-        binder_atoms.extend(atoms)
+        binder_atoms.extend(protein_atoms)
     else:
       # Split by first chain as target if not provided
-      (target_atoms if not target_atoms else binder_atoms).extend(atoms)
+      (target_atoms if not target_atoms else binder_atoms).extend(protein_atoms)
 
   if not binder_atoms or not target_atoms:
     return {

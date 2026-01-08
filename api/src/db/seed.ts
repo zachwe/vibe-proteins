@@ -1,11 +1,15 @@
 /**
- * Seed script for initial challenge, GPU pricing, and deposit preset data
+ * Seed script for initial challenge, GPU pricing, deposit preset, reference binder, and help article data
  *
  * Run with: pnpm db:seed
  */
 
-import { db, challenges, gpuPricing, depositPresets } from "./index";
+import * as fs from "fs";
+import * as path from "path";
+import { db, challenges, gpuPricing, depositPresets, referenceBinders, helpArticles } from "./index";
 import challengesData from "./challenges.json";
+import referenceBindersData from "./reference-binders.json";
+import helpArticlesData from "./help-articles.json";
 
 interface ChainAnnotation {
   name: string;
@@ -37,6 +41,52 @@ interface ChallengeInput {
   chainAnnotations: { [key: string]: ChainAnnotation };
   suggestedHotspots?: SuggestedHotspot[];
   educationalContent: string;
+}
+
+interface ReferenceBinderScores {
+  plddt?: number;
+  ptm?: number;
+  iptm?: number;
+  ipSaeScore?: number;
+  pdockq?: number;
+  pdockq2?: number;
+  lis?: number;
+  interfaceArea?: number;
+  shapeComplementarity?: number;
+}
+
+interface ReferenceBinderInput {
+  id: string;
+  challengeId: string;
+  name: string;
+  slug: string;
+  binderType: string;
+  pdbId?: string;
+  pdbUrl?: string;
+  binderChainId?: string;
+  binderSequence?: string;
+  complexStructureUrl?: string;
+  scores?: ReferenceBinderScores;
+  // Legacy individual score fields (deprecated, use scores object)
+  compositeScore?: number;
+  ipSaeScore?: number;
+  plddt?: number;
+  ptm?: number;
+  interfaceArea?: number;
+  shapeComplementarity?: number;
+  helpArticleSlug?: string;
+  shortDescription?: string;
+  discoveryYear?: number;
+  approvalStatus?: string;
+  sortOrder?: number;
+}
+
+interface HelpArticleInput {
+  slug: string;
+  title: string;
+  contentFile: string;
+  category: string;
+  relatedChallenges?: string[];
 }
 
 async function seed() {
@@ -149,6 +199,125 @@ async function seed() {
   }
 
   console.log(`Done! Seeded ${presets.length} deposit presets.`);
+
+  // Seed help articles first (reference binders depend on them)
+  console.log("\nSeeding help articles...");
+
+  const dbDir = path.dirname(new URL(import.meta.url).pathname);
+
+  for (const article of helpArticlesData as unknown as HelpArticleInput[]) {
+    // Load content from markdown file
+    const contentPath = path.join(dbDir, article.contentFile);
+    const content = fs.readFileSync(contentPath, "utf-8");
+
+    await db
+      .insert(helpArticles)
+      .values({
+        slug: article.slug,
+        title: article.title,
+        content: content,
+        category: article.category,
+        relatedChallenges: article.relatedChallenges ? JSON.stringify(article.relatedChallenges) : null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: helpArticles.slug,
+        set: {
+          title: article.title,
+          content: content,
+          category: article.category,
+          relatedChallenges: article.relatedChallenges ? JSON.stringify(article.relatedChallenges) : null,
+          updatedAt: new Date(),
+        },
+      });
+    console.log(`  - ${article.title}`);
+  }
+
+  console.log(`Done! Seeded ${helpArticlesData.length} help articles.`);
+
+  // Seed reference binders
+  console.log("\nSeeding reference binders...");
+
+  for (const binder of referenceBindersData as unknown as ReferenceBinderInput[]) {
+    // Extract scores from nested object or use individual fields (for backwards compatibility)
+    const scores = binder.scores ?? {};
+    const plddt = scores.plddt ?? binder.plddt;
+    const ptm = scores.ptm ?? binder.ptm;
+    const iptm = scores.iptm;
+    const ipSaeScore = scores.ipSaeScore ?? binder.ipSaeScore;
+    const pdockq = scores.pdockq;
+    const pdockq2 = scores.pdockq2;
+    const lis = scores.lis;
+    const interfaceArea = scores.interfaceArea ?? binder.interfaceArea;
+    const shapeComplementarity = scores.shapeComplementarity ?? binder.shapeComplementarity;
+
+    await db
+      .insert(referenceBinders)
+      .values({
+        id: binder.id,
+        challengeId: binder.challengeId,
+        name: binder.name,
+        slug: binder.slug,
+        binderType: binder.binderType,
+        pdbId: binder.pdbId,
+        pdbUrl: binder.pdbUrl,
+        binderChainId: binder.binderChainId,
+        binderSequence: binder.binderSequence,
+        complexStructureUrl: binder.complexStructureUrl,
+        compositeScore: binder.compositeScore,
+        ipSaeScore,
+        plddt,
+        ptm,
+        iptm,
+        pdockq,
+        pdockq2,
+        lis,
+        interfaceArea,
+        shapeComplementarity,
+        helpArticleSlug: binder.helpArticleSlug,
+        shortDescription: binder.shortDescription,
+        discoveryYear: binder.discoveryYear,
+        approvalStatus: binder.approvalStatus,
+        isActive: true,
+        sortOrder: binder.sortOrder ?? 0,
+        createdAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: referenceBinders.id,
+        set: {
+          challengeId: binder.challengeId,
+          name: binder.name,
+          slug: binder.slug,
+          binderType: binder.binderType,
+          pdbId: binder.pdbId,
+          pdbUrl: binder.pdbUrl,
+          binderChainId: binder.binderChainId,
+          binderSequence: binder.binderSequence,
+          complexStructureUrl: binder.complexStructureUrl,
+          compositeScore: binder.compositeScore,
+          ipSaeScore,
+          plddt,
+          ptm,
+          iptm,
+          pdockq,
+          pdockq2,
+          lis,
+          interfaceArea,
+          shapeComplementarity,
+          helpArticleSlug: binder.helpArticleSlug,
+          shortDescription: binder.shortDescription,
+          discoveryYear: binder.discoveryYear,
+          approvalStatus: binder.approvalStatus,
+          sortOrder: binder.sortOrder ?? 0,
+          isActive: true,
+        },
+      });
+    const scoreInfo = pdockq ? ` [pDockQ: ${pdockq.toFixed(3)}]` : "";
+    console.log(`  - ${binder.name} (${binder.challengeId})${scoreInfo}`);
+  }
+
+  console.log(`Done! Seeded ${referenceBindersData.length} reference binders.`);
 }
 
 seed().catch(console.error);

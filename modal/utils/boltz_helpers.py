@@ -12,10 +12,13 @@ def _clean_sequence(sequence: str) -> str:
 
 
 def _extract_chain_sequences(path: Path) -> List[tuple[str, str]]:
-  from Bio.PDB import PDBParser
+  from Bio.PDB import PDBParser, MMCIFParser
   from Bio.PDB.Polypeptide import PPBuilder
 
-  parser = PDBParser(QUIET=True)
+  if path.suffix.lower() == ".cif":
+    parser = MMCIFParser(QUIET=True)
+  else:
+    parser = PDBParser(QUIET=True)
   structure = parser.get_structure("structure", str(path))
   builder = PPBuilder()
   sequences: List[tuple[str, str]] = []
@@ -35,22 +38,24 @@ def _select_chain_id(used: set[str]) -> str:
 
 def _write_boltz_yaml(
   target_sequences: List[tuple[str, str]],
-  binder_sequence: str,
-  binder_chain_id: str,
-  output_path: Path,
-  use_msa_server: bool,
+  binder_sequence: str | None = None,
+  binder_chain_id: str | None = None,
+  output_path: Path = None,
+  use_msa_server: bool = True,
   msa_paths: dict[str, str] | None = None,
+  binder_sequences: List[tuple[str, str]] | None = None,
 ) -> Path:
   """
   Write a Boltz input YAML file.
 
   Args:
     target_sequences: List of (chain_id, sequence) tuples for target chains
-    binder_sequence: Binder sequence
-    binder_chain_id: Chain ID to assign to binder
+    binder_sequence: Single binder sequence (for single-chain binders like nanobodies)
+    binder_chain_id: Chain ID to assign to single binder
     output_path: Path to write YAML file
     use_msa_server: If True, let Boltz use its MSA server
     msa_paths: Optional dict mapping chain_id -> A3M file path for pre-computed MSAs
+    binder_sequences: List of (chain_id, sequence) tuples for multi-chain binders (e.g., antibody H+L)
   """
   import yaml
 
@@ -66,13 +71,23 @@ def _write_boltz_yaml(
       entry["protein"]["msa"] = "empty"
     sequences_payload.append(entry)
 
-  binder_entry = {"protein": {"id": binder_chain_id, "sequence": binder_sequence}}
-  if binder_chain_id in msa_paths:
-    # Use pre-computed MSA for binder
-    binder_entry["protein"]["msa"] = msa_paths[binder_chain_id]
-  elif not use_msa_server:
-    binder_entry["protein"]["msa"] = "empty"
-  sequences_payload.append(binder_entry)
+  # Handle multi-chain binders (e.g., antibody H+L chains)
+  if binder_sequences:
+    for chain_id, sequence in binder_sequences:
+      binder_entry = {"protein": {"id": chain_id, "sequence": sequence}}
+      if chain_id in msa_paths:
+        binder_entry["protein"]["msa"] = msa_paths[chain_id]
+      elif not use_msa_server:
+        binder_entry["protein"]["msa"] = "empty"
+      sequences_payload.append(binder_entry)
+  elif binder_sequence and binder_chain_id:
+    # Single-chain binder (nanobody, designed binder, etc.)
+    binder_entry = {"protein": {"id": binder_chain_id, "sequence": binder_sequence}}
+    if binder_chain_id in msa_paths:
+      binder_entry["protein"]["msa"] = msa_paths[binder_chain_id]
+    elif not use_msa_server:
+      binder_entry["protein"]["msa"] = "empty"
+    sequences_payload.append(binder_entry)
 
   payload = {"version": 1, "sequences": sequences_payload}
   output_path.write_text(yaml.safe_dump(payload, sort_keys=False))

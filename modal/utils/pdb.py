@@ -81,23 +81,61 @@ def ordered_chain_ids_from_pdb(path: Path) -> List[str]:
     return seen
 
 
-def write_pdb_chains(source_path: Path, chain_ids: set[str], output_path: Path) -> Path:
-    """Extract specific chains from a PDB file to a new file."""
+def write_pdb_chains(source_path: Path, chain_ids: set[str], output_path: Path) -> dict[str, str]:
+    """Extract specific chains from a PDB/mmCIF file to a new PDB file.
+
+    Returns a dict mapping original chain IDs to new chain IDs (identity for PDB,
+    may be remapped for mmCIF with multi-character chain IDs).
+    """
+    # For mmCIF files, use BioPython to parse and write
+    if source_path.suffix.lower() == ".cif":
+        import string
+        from Bio.PDB import MMCIFParser, PDBIO, Select
+
+        parser = MMCIFParser(QUIET=True)
+        structure = parser.get_structure("structure", str(source_path))
+
+        # Build mapping for multi-character chain IDs
+        chain_id_map: dict[str, str] = {}
+        available = iter(c for c in string.ascii_uppercase if c not in chain_ids)
+        for chain in structure.get_chains():
+            if chain.id in chain_ids:
+                if len(chain.id) > 1:
+                    # Need to remap this chain
+                    new_id = next(available)
+                    chain_id_map[chain.id] = new_id
+                    chain.id = new_id
+                else:
+                    chain_id_map[chain.id] = chain.id
+
+        class ChainSelect(Select):
+            def accept_chain(self, chain):
+                return chain.id in chain_id_map.values()
+
+        io = PDBIO()
+        io.set_structure(structure)
+        io.save(str(output_path), ChainSelect())
+        return chain_id_map
+
+    # For PDB files, use line-based filtering (faster, preserves formatting)
     keep_lines: List[str] = []
     last_chain = None
+    seen_chains: set[str] = set()
     for line in source_path.read_text().splitlines():
         if line.startswith(("ATOM", "HETATM")):
             chain_id = line[21].strip() or "_"
             if chain_id in chain_ids:
                 keep_lines.append(line)
                 last_chain = chain_id
+                seen_chains.add(chain_id)
         elif line.startswith("TER") and last_chain in chain_ids:
             keep_lines.append(line)
         elif line.startswith("END"):
             continue
     keep_lines.append("END")
     output_path.write_text("\n".join(keep_lines) + "\n")
-    return output_path
+    # Return identity mapping for PDB files
+    return {c: c for c in seen_chains}
 
 
 def cif_to_pdb(cif_path: Path, pdb_path: Path) -> Path:

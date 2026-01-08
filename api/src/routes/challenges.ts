@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq, desc, sql, and, isNotNull } from "drizzle-orm";
-import { db, challenges, submissions, user } from "../db";
+import { db, challenges, submissions, user, referenceBinders } from "../db";
 
 const app = new Hono();
 
@@ -119,6 +119,36 @@ app.get("/:id/leaderboard", async (c) => {
     limit,
     offset,
   });
+});
+
+// GET /api/challenges/:id/reference-binders - Get reference binders for a challenge
+app.get("/:id/reference-binders", async (c) => {
+  const id = c.req.param("id");
+
+  // Verify challenge exists
+  const challenge = await db
+    .select()
+    .from(challenges)
+    .where(eq(challenges.id, id))
+    .get();
+
+  if (!challenge) {
+    return c.json({ error: "Challenge not found" }, 404);
+  }
+
+  const binders = await db
+    .select()
+    .from(referenceBinders)
+    .where(
+      and(
+        eq(referenceBinders.challengeId, id),
+        eq(referenceBinders.isActive, true)
+      )
+    )
+    .orderBy(referenceBinders.sortOrder)
+    .all();
+
+  return c.json({ referenceBinders: binders });
 });
 
 export default app;

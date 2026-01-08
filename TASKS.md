@@ -200,7 +200,66 @@
   - [ ] Add fact-checking/citation verification step using web search
   - [ ] Support batch generation for multiple targets
 
-## Phase 11: BoltzGen Production Readiness
+## Phase 11: Reference Binders & Leaderboard Seeding
+
+Design doc: `docs/reference-binders-design.md`
+
+- [x] Database schema
+  - [x] Create `reference_binders` table (migration 0013, 0014)
+  - [x] Create `help_articles` table (migration 0013)
+  - [x] Add seed data loading script (`seed.ts`)
+- [x] API endpoints
+  - [x] `GET /api/challenges/:id/reference-binders` - list reference binders for challenge
+  - [x] `GET /api/reference-binders/:id` - single reference binder with article
+  - [x] `GET /api/help/:slug` - help article content
+- [x] Content pipeline
+  - [x] Script to download PDB structures and extract binder chains
+  - [x] Script to run reference binders through scoring pipeline (`score_all_reference_binders.py`)
+  - [x] Upload processed structures to S3
+- [x] Boltz-2 scoring for reference binders (26/27 scored)
+  - [x] Batch scoring script with A10G/A100/H100 GPU support
+  - [x] mmCIF fallback for newer structures
+  - [x] Multi-chain antibody deduplication
+  - [x] Scores loaded into database via seed script
+  - [ ] Pertuzumab (1S78) - complex too large, no interface contacts
+- [ ] Help article content (priority order)
+  - [x] Lysozyme references (3 articles) - scored
+    - [x] HyHEL-10 antibody (PDB 3HFM) - pDockQ 0.742
+    - [x] D3-L11 nanobody (PDB 6JB8) - pDockQ 0.739
+    - [x] cAbHuL5 camelid nanobody (PDB 4I0C) - pDockQ 0.742
+  - [x] GFP references (3 articles) - scored
+    - [x] GFP Enhancer nanobody (PDB 3K1K) - pDockQ 0.741
+    - [x] LaG16 nanobody (PDB 6LR7) - pDockQ 0.734
+    - [x] GFP Minimizer nanobody (PDB 3G9A) - pDockQ 0.742
+  - [x] Spike RBD references (3 articles) - scored
+    - [x] LY-CoV555 / bamlanivimab - pDockQ 0.742
+    - [x] S309 broadly neutralizing antibody - pDockQ 0.742
+    - [x] ACE2 decoy / engineered receptor - pDockQ 0.742
+  - [x] TNF-alpha references (3 articles) - scored
+    - [x] Adalimumab (PDB 3WD5) - pDockQ 0.742
+    - [x] Infliximab (PDB 4G3Y) - pDockQ 0.742
+    - [x] Certolizumab (Cimzia) - pDockQ 0.742
+  - [x] IL-6 references (2 articles) - scored
+    - [x] Tocilizumab (PDB 8J6F) - pDockQ 0.742
+    - [x] Sarilumab (PDB 8IOW) - pDockQ 0.742
+  - [x] HER2 references (2 articles)
+    - [x] Trastuzumab (PDB 1N8Z) - pDockQ 0.742
+    - [ ] Pertuzumab (PDB 1S78) - prediction failed
+  - [x] Insulin references (2 articles) - scored
+    - [x] S2B de novo designed binder (PDB 9DNN) - pDockQ 0.741 ⭐
+    - [x] OXI-005 analytical antibody (PDB 6Z7Y) - pDockQ 0.742
+  - [x] Remaining targets - scored
+- [ ] Frontend
+  - [ ] Reference binder section on leaderboard (above user submissions)
+  - [ ] Binder type badges (antibody, nanobody, fusion, designed)
+  - [ ] "Learn more" links to help articles
+  - [ ] Help article page component (`/help/:slug`)
+  - [ ] Reference binder detail page with Mol* viewer
+- [ ] Polish
+  - [ ] Add reference binders to challenge detail page as "Known binders" section
+  - [ ] Score comparison: "Your best vs. Adalimumab" widget
+
+## Phase 12: BoltzGen Production Readiness (formerly Phase 11)
 
 - [x] Smoketests & Testing
   - [x] Modal-level smoketest for `run_boltzgen()` (added to `scripts/run_modal_smoketest.py`)
@@ -225,9 +284,16 @@
 Site live at: https://proteindojo.com
 
 In progress:
+- Phase 11: Reference binders frontend (leaderboard integration, help articles UI)
 - Phase 5: Step 3 Evaluate (compare candidates) & Step 4 submit workflow
 
 Recently completed:
+- **Phase 11: Reference Binders Scoring** (26/27 binders scored):
+  - Boltz-2 scoring pipeline for all 27 reference binders across 13 challenges
+  - Database migrations (0013, 0014) for reference_binders + help_articles tables
+  - Seed script with nested scores object support
+  - Multi-chain antibody handling, mmCIF support, A10G/A100/H100 GPU tiers
+  - Sarilumab scored (pDockQ 0.742), Pertuzumab failed (structure too complex)
 - **BoltzGen production readiness**: Unit tests for YAML generation, metrics parsing, structure finding; API parameter transformation tests; CLI smoketest integration
 - **User Dashboard** (/dashboard) with stats, progress bar, recent activity, and quick actions
 - **Leaderboards page** with nav link, per-challenge rankings with metric sorting
@@ -243,6 +309,7 @@ Recently completed:
 - Usage-based billing with Stripe integration
 
 Next up:
+- Reference binders frontend (leaderboard integration, help article pages)
 - Set up ColabFold databases on Modal Volume (~500GB-1TB)
 - Hints system UI
 - Phase 5: Complete evaluate/submit workflow

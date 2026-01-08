@@ -9,6 +9,8 @@ import jobsRoutes from "./routes/jobs";
 import submissionsRoutes from "./routes/submissions";
 import billingRoutes from "./routes/billing";
 import suggestionsRoutes from "./routes/suggestions";
+import referenceBindersRoutes from "./routes/reference-binders";
+import helpRoutes from "./routes/help";
 
 // CORS origins based on environment
 const corsOrigins =
@@ -53,6 +55,8 @@ export function createApp() {
   app.route("/api/submissions", submissionsRoutes);
   app.route("/api/billing", billingRoutes);
   app.route("/api/suggestions", suggestionsRoutes);
+  app.route("/api/reference-binders", referenceBindersRoutes);
+  app.route("/api/help", helpRoutes);
 
   return app;
 }

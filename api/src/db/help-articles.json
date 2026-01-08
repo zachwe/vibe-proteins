@@ -1,0 +1,164 @@
+[
+  {
+    "slug": "hyhel10",
+    "title": "HyHEL-10: The Classic Antibody-Antigen Complex",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "lysozyme"
+    ],
+    "contentFile": "help-articles/hyhel10.md"
+  },
+  {
+    "slug": "d3l11",
+    "title": "D3-L11: A High-Affinity Lysozyme Nanobody",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "lysozyme"
+    ],
+    "contentFile": "help-articles/d3l11.md"
+  },
+  {
+    "slug": "cabhul5",
+    "title": "cAbHuL5: The Amyloid-Blocking Nanobody",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "lysozyme"
+    ],
+    "contentFile": "help-articles/cabhul5.md"
+  },
+  {
+    "slug": "gfp-enhancer",
+    "title": "GFP Enhancer: The Brightness-Boosting Nanobody",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "gfp"
+    ],
+    "contentFile": "help-articles/gfp-enhancer.md"
+  },
+  {
+    "slug": "lag16",
+    "title": "LaG16: Ultra-High Affinity GFP Binder",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "gfp"
+    ],
+    "contentFile": "help-articles/lag16.md"
+  },
+  {
+    "slug": "gfp-minimizer",
+    "title": "GFP Minimizer: The Dimming Nanobody",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "gfp"
+    ],
+    "contentFile": "help-articles/gfp-minimizer.md"
+  },
+  {
+    "slug": "bamlanivimab",
+    "title": "Bamlanivimab: First COVID-19 Antibody Therapy",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "spike-rbd"
+    ],
+    "contentFile": "help-articles/bamlanivimab.md"
+  },
+  {
+    "slug": "s309",
+    "title": "S309: The Broadly Neutralizing Antibody",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "spike-rbd"
+    ],
+    "contentFile": "help-articles/s309.md"
+  },
+  {
+    "slug": "ace2-decoy",
+    "title": "ACE2: The Natural Receptor as Decoy",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "spike-rbd"
+    ],
+    "contentFile": "help-articles/ace2-decoy.md"
+  },
+  {
+    "slug": "adalimumab",
+    "title": "Adalimumab: The World's Best-Selling Drug",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "tnf-alpha"
+    ],
+    "contentFile": "help-articles/adalimumab.md"
+  },
+  {
+    "slug": "infliximab",
+    "title": "Infliximab: The First TNF Blocker",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "tnf-alpha"
+    ],
+    "contentFile": "help-articles/infliximab.md"
+  },
+  {
+    "slug": "certolizumab",
+    "title": "Certolizumab: The Fab-Only Approach",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "tnf-alpha"
+    ],
+    "contentFile": "help-articles/certolizumab.md"
+  },
+  {
+    "slug": "s2b-insulin",
+    "title": "S2B: The AI-Designed Insulin Receptor Binder",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "insulin"
+    ],
+    "contentFile": "help-articles/s2b-insulin.md"
+  },
+  {
+    "slug": "atezolizumab",
+    "title": "Atezolizumab: Cancer Immunotherapy Pioneer",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "pd-l1"
+    ],
+    "contentFile": "help-articles/atezolizumab.md"
+  },
+  {
+    "slug": "trastuzumab",
+    "title": "Trastuzumab: The Breast Cancer Revolution",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "her2"
+    ],
+    "contentFile": "help-articles/trastuzumab.md"
+  },
+  {
+    "slug": "rituximab",
+    "title": "Rituximab: The First Cancer Antibody",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "cd20"
+    ],
+    "contentFile": "help-articles/rituximab.md"
+  },
+  {
+    "slug": "bevacizumab",
+    "title": "Bevacizumab: Starving Tumors of Blood",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "vegf-a"
+    ],
+    "contentFile": "help-articles/bevacizumab.md"
+  },
+  {
+    "slug": "evolocumab",
+    "title": "Evolocumab: Genetic Discovery to Drug",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "pcsk9"
+    ],
+    "contentFile": "help-articles/evolocumab.md"
+  }
+]
