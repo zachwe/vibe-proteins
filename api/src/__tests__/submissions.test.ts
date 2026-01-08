@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { randomUUID } from "crypto";
 import { app } from "../app";
-import { db, challenges, user } from "../db";
+import { db, challenges } from "../db";
 
 // Test challenge with target structure
 const testChallenge = {
@@ -50,14 +50,6 @@ async function signUpAndGetCookie(): Promise<string> {
     .filter((value): value is string => Boolean(value));
 
   return cookies.join("; ");
-}
-
-// Helper to add balance to a user
-async function addBalanceToUser(userId: string, amountCents: number): Promise<void> {
-  await db
-    .update(user)
-    .set({ balanceUsdCents: amountCents })
-    .where((eb: typeof user.$inferSelect) => eb.id === userId);
 }
 
 describe("Submissions API", () => {
