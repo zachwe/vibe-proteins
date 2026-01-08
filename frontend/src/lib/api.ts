@@ -264,6 +264,68 @@ export type LeaderboardSortBy =
   | "interfaceArea"
   | "shapeComplementarity";
 
+// Reference binder types
+export interface ReferenceBinder {
+  id: string;
+  challengeId: string;
+  name: string;
+  slug: string;
+  binderType: "antibody" | "nanobody" | "fusion_protein" | "designed" | "natural";
+  pdbId: string | null;
+  pdbUrl: string | null;
+  binderChainId: string | null;
+  binderSequence: string | null;
+  complexStructureUrl: string | null;
+  compositeScore: number | null;
+  ipSaeScore: number | null;
+  plddt: number | null;
+  ptm: number | null;
+  interfaceArea: number | null;
+  shapeComplementarity: number | null;
+  helpArticleSlug: string | null;
+  shortDescription: string | null;
+  discoveryYear: number | null;
+  approvalStatus: "fda_approved" | "clinical_trial" | "research_tool" | "de_novo_designed" | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface HelpArticle {
+  slug: string;
+  title: string;
+  content: string;
+  category: "reference-binder" | "concept" | "tutorial";
+  relatedChallenges: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Reference binders API
+export const referenceBindersApi = {
+  list: () => apiFetch<{ referenceBinders: ReferenceBinder[] }>("/api/reference-binders"),
+
+  get: (id: string) =>
+    apiFetch<{ referenceBinder: ReferenceBinder; article: HelpArticle | null }>(
+      `/api/reference-binders/${id}`
+    ),
+
+  forChallenge: (challengeId: string) =>
+    apiFetch<{ referenceBinders: ReferenceBinder[] }>(
+      `/api/challenges/${challengeId}/reference-binders`
+    ),
+};
+
+// Help articles API
+export const helpApi = {
+  list: (category?: string) => {
+    const params = category ? `?category=${category}` : "";
+    return apiFetch<{ articles: HelpArticle[] }>(`/api/help${params}`);
+  },
+
+  get: (slug: string) => apiFetch<{ article: HelpArticle }>(`/api/help/${slug}`),
+};
+
 // Suggestion types
 export interface Suggestion {
   text: string;

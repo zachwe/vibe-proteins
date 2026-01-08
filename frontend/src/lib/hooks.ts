@@ -3,7 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { challengesApi, usersApi, jobsApi, submissionsApi, billingApi, suggestionsApi, type SuggestionRequest, type LeaderboardSortBy } from "./api";
+import { challengesApi, usersApi, jobsApi, submissionsApi, billingApi, suggestionsApi, referenceBindersApi, helpApi, type SuggestionRequest, type LeaderboardSortBy } from "./api";
 
 // Query keys for cache management
 export const queryKeys = {
@@ -11,6 +11,9 @@ export const queryKeys = {
   challenge: (id: string) => ["challenges", id] as const,
   leaderboard: (id: string, sortBy?: LeaderboardSortBy) =>
     ["challenges", id, "leaderboard", sortBy] as const,
+  referenceBinders: (challengeId: string) => ["challenges", challengeId, "referenceBinders"] as const,
+  referenceBinder: (id: string) => ["referenceBinders", id] as const,
+  helpArticle: (slug: string) => ["help", slug] as const,
   user: ["user"] as const,
   jobs: ["jobs"] as const,
   job: (id: string) => ["jobs", id] as const,
@@ -245,5 +248,40 @@ export function useSuggestions(request: SuggestionRequest | null) {
     enabled: !!request,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     retry: 1,
+  });
+}
+
+// Reference binders hooks
+export function useReferenceBinders(challengeId: string) {
+  return useQuery({
+    queryKey: queryKeys.referenceBinders(challengeId),
+    queryFn: async () => {
+      const data = await referenceBindersApi.forChallenge(challengeId);
+      return data.referenceBinders;
+    },
+    enabled: !!challengeId,
+  });
+}
+
+export function useReferenceBinder(id: string) {
+  return useQuery({
+    queryKey: queryKeys.referenceBinder(id),
+    queryFn: async () => {
+      const data = await referenceBindersApi.get(id);
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+// Help article hooks
+export function useHelpArticle(slug: string) {
+  return useQuery({
+    queryKey: queryKeys.helpArticle(slug),
+    queryFn: async () => {
+      const data = await helpApi.get(slug);
+      return data.article;
+    },
+    enabled: !!slug,
   });
 }

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useChallenges, useLeaderboard } from "../lib/hooks";
-import type { Challenge, LeaderboardSortBy } from "../lib/api";
+import { useChallenges, useLeaderboard, useReferenceBinders } from "../lib/hooks";
+import type { Challenge, LeaderboardSortBy, ReferenceBinder } from "../lib/api";
 
 const sortOptions: { value: LeaderboardSortBy; label: string }[] = [
   { value: "compositeScore", label: "Composite Score" },
@@ -11,6 +11,69 @@ const sortOptions: { value: LeaderboardSortBy; label: string }[] = [
   { value: "ipSaeScore", label: "ipSAE" },
   { value: "interfaceArea", label: "Interface Area" },
 ];
+
+const BINDER_TYPE_BADGES: Record<string, { label: string; color: string }> = {
+  antibody: { label: "Ab", color: "bg-blue-500/30 text-blue-300" },
+  nanobody: { label: "Nb", color: "bg-purple-500/30 text-purple-300" },
+  fusion_protein: { label: "Fc", color: "bg-green-500/30 text-green-300" },
+  designed: { label: "AI", color: "bg-orange-500/30 text-orange-300" },
+  natural: { label: "Nat", color: "bg-teal-500/30 text-teal-300" },
+};
+
+function ReferenceBinderRow({ binder, sortBy }: { binder: ReferenceBinder; sortBy: LeaderboardSortBy }) {
+  const getScore = () => {
+    switch (sortBy) {
+      case "plddt": return binder.plddt;
+      case "ptm": return binder.ptm;
+      case "ipSaeScore": return binder.ipSaeScore;
+      case "interfaceArea": return binder.interfaceArea;
+      default: return binder.compositeScore;
+    }
+  };
+
+  const score = getScore();
+  const badge = BINDER_TYPE_BADGES[binder.binderType] || BINDER_TYPE_BADGES.antibody;
+
+  return (
+    <tr className="border-b border-amber-500/20 bg-amber-900/10">
+      <td className="py-2 px-2">
+        <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold ${badge.color}`}>
+          {badge.label}
+        </span>
+      </td>
+      <td className="py-2 px-2">
+        <div className="flex items-center gap-2">
+          <span className="text-amber-200 font-medium">{binder.name}</span>
+          {binder.helpArticleSlug && (
+            <Link
+              to={`/help/${binder.helpArticleSlug}`}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              info
+            </Link>
+          )}
+        </div>
+        {binder.shortDescription && (
+          <p className="text-xs text-slate-500 truncate max-w-xs" title={binder.shortDescription}>
+            {binder.shortDescription}
+          </p>
+        )}
+      </td>
+      <td className="py-2 px-2 text-right font-mono text-amber-300">
+        {score?.toFixed(1) ?? "-"}
+      </td>
+      <td className="py-2 px-2 text-right font-mono text-slate-400">
+        {binder.plddt?.toFixed(1) ?? "-"}
+      </td>
+      <td className="py-2 px-2 text-right font-mono text-slate-400">
+        {binder.ptm?.toFixed(2) ?? "-"}
+      </td>
+      <td className="py-2 px-2 text-right text-slate-500 hidden sm:table-cell">
+        {binder.discoveryYear || "-"}
+      </td>
+    </tr>
+  );
+}
 
 function ChallengeLeaderboard({ challenge }: { challenge: Challenge }) {
   const [sortBy, setSortBy] = useState<LeaderboardSortBy>("compositeScore");
@@ -21,6 +84,8 @@ function ChallengeLeaderboard({ challenge }: { challenge: Challenge }) {
     limit: 10,
     enabled: isExpanded,
   });
+
+  const { data: referenceBinders } = useReferenceBinders(challenge.id);
 
   const formatScore = (value: number | null, decimals = 1) => {
     if (value === null || value === undefined) return "-";
@@ -90,13 +155,13 @@ function ChallengeLeaderboard({ challenge }: { challenge: Challenge }) {
             </div>
           )}
 
-          {data && data.leaderboard.length === 0 && (
+          {data && data.leaderboard.length === 0 && (!referenceBinders || referenceBinders.length === 0) && (
             <div className="text-center py-8 text-slate-400">
               No submissions yet. Be the first to submit!
             </div>
           )}
 
-          {data && data.leaderboard.length > 0 && (
+          {(data && data.leaderboard.length > 0) || (referenceBinders && referenceBinders.length > 0) ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -110,7 +175,32 @@ function ChallengeLeaderboard({ challenge }: { challenge: Challenge }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.leaderboard.map((entry) => (
+                  {/* Reference binders first */}
+                  {referenceBinders && referenceBinders.length > 0 && (
+                    <>
+                      <tr>
+                        <td colSpan={6} className="py-2 px-2">
+                          <span className="text-xs text-amber-400 uppercase tracking-wide font-medium">
+                            Reference Binders
+                          </span>
+                        </td>
+                      </tr>
+                      {referenceBinders.map((binder) => (
+                        <ReferenceBinderRow key={binder.id} binder={binder} sortBy={sortBy} />
+                      ))}
+                      {data && data.leaderboard.length > 0 && (
+                        <tr>
+                          <td colSpan={6} className="py-2 px-2">
+                            <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">
+                              User Submissions
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  )}
+                  {/* User submissions */}
+                  {data?.leaderboard.map((entry) => (
                     <tr
                       key={entry.id}
                       className="border-b border-slate-700/50 hover:bg-slate-750/50"
@@ -152,13 +242,13 @@ function ChallengeLeaderboard({ challenge }: { challenge: Challenge }) {
                 </tbody>
               </table>
 
-              {data.totalCount > data.leaderboard.length && (
+              {data && data.totalCount > data.leaderboard.length && (
                 <p className="text-center text-slate-400 text-sm mt-4">
                   Showing top {data.leaderboard.length} of {data.totalCount} submissions
                 </p>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

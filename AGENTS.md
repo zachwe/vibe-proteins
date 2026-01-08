@@ -79,6 +79,13 @@ The project uses Drizzle ORM with SQL migrations stored in `api/drizzle/`.
    -- api/drizzle/0012_description.sql
    ALTER TABLE `table_name` ADD COLUMN `column_name` text;
    ```
+   **IMPORTANT:** If your migration has multiple statements, add `--> statement-breakpoint` between them:
+   ```sql
+   ALTER TABLE foo ADD COLUMN bar TEXT;
+   --> statement-breakpoint
+   ALTER TABLE foo ADD COLUMN baz INTEGER;
+   ```
+   Without these breakpoints, Drizzle's SQLite driver (better-sqlite3) will fail with "more than one statement" error.
 3. Add an entry to `api/drizzle/meta/_journal.json`:
    ```json
    {

@@ -389,7 +389,8 @@ def compute_interface_scores_from_boltz(
     structure_path: Path,
     input_name: str,
     target_chains: list[str],
-    binder_chain: str,
+    binder_chain: str | None = None,
+    binder_chains: list[str] | None = None,
 ) -> dict[str, Any]:
     """
     Compute PAE-based interface scores from Boltz-2 output.
@@ -401,13 +402,23 @@ def compute_interface_scores_from_boltz(
         structure_path: Path to predicted structure (PDB/CIF)
         input_name: Input name used for Boltz run
         target_chains: List of target chain IDs
-        binder_chain: Binder chain ID
+        binder_chain: Single binder chain ID (for single-chain binders)
+        binder_chains: List of binder chain IDs (for multi-chain binders like antibodies)
 
     Returns:
         Dict with ipSAE, ipTM, pDockQ, pDockQ2, LIS scores
     """
+    # Handle both single and multi-chain binders
+    if binder_chains:
+        all_binder_chains = binder_chains
+    elif binder_chain:
+        all_binder_chains = [binder_chain]
+    else:
+        print("[ipSAE] ERROR: No binder chain(s) provided!")
+        return _empty_scores()
+
     print(f"[ipSAE] Looking for PAE in {out_dir} with input_name={input_name}")
-    print(f"[ipSAE] Target chains: {target_chains}, Binder chain: {binder_chain}")
+    print(f"[ipSAE] Target chains: {target_chains}, Binder chains: {all_binder_chains}")
 
     # Debug: list prediction directories and files
     predictions_dir = out_dir / "predictions"
@@ -426,8 +437,12 @@ def compute_interface_scores_from_boltz(
 
     print(f"[ipSAE] PAE matrix shape: {pae_matrix.shape}")
 
-    # Create chain pairs: binder vs each target chain
-    chain_pairs = [(binder_chain, target) for target in target_chains]
+    # Create chain pairs: each binder chain vs each target chain
+    chain_pairs = [
+        (binder_ch, target_ch)
+        for binder_ch in all_binder_chains
+        for target_ch in target_chains
+    ]
 
     return compute_ipsae_from_pae(
         pae_matrix=pae_matrix,

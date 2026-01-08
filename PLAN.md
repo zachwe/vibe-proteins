@@ -1,3 +1,9 @@
+> **Note:** This document is preserved as a historical record of early project planning and design decisions. It is not actively maintained and may be out of date. For current project information, refer to:
+> - **README.md** - Project overview and setup
+> - **CLAUDE.md** - Development instructions and commands
+> - **AGENTS.md** - Agent configuration
+> - **TASKS.md** - Current implementation status and task tracking
+
 # VibeProteins: A Protein Design Learning Platform
 
 A platform for learning protein design by practicing computationally designing proteins against real druggable targets.

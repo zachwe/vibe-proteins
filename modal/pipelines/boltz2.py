@@ -91,6 +91,7 @@ def run_boltz2(
     target_pdb: str,
     binder_pdb: str | None = None,
     binder_sequence: str | None = None,
+    binder_sequences: list[tuple[str, str]] | None = None,
     boltz_mode: str = "complex",
     num_samples: int = 1,
     job_id: str | None = None,
@@ -118,17 +119,37 @@ def run_boltz2(
             raise ValueError("No protein chains found in target PDB.")
         target_chain_ids = {chain_id for chain_id, _ in target_sequences}
 
-        binder_seq = _clean_sequence(binder_sequence) if binder_sequence else ""
-        if not binder_seq and binder_pdb:
-            binder_path = download_to_path(binder_pdb, tmpdir_path / "binder.pdb")
-            binder_sequences = _extract_chain_sequences(binder_path)
-            if binder_sequences:
-                binder_seq = binder_sequences[0][1]
+        # Handle binder input - either single sequence or multi-chain sequences
+        binder_seq = ""
+        binder_seqs_processed: list[tuple[str, str]] | None = None
+        binder_chain_id = None
+        binder_chain_ids: list[str] = []
 
-        if not binder_seq:
-            raise ValueError("A binder_sequence or binder_pdb with a protein chain is required.")
+        if binder_sequences:
+            # Multi-chain binder (e.g., antibody H+L chains)
+            # Assign unique chain IDs that don't conflict with target
+            used_ids = set(target_chain_ids)
+            binder_seqs_processed = []
+            for orig_chain_id, seq in binder_sequences:
+                new_chain_id = _select_chain_id(used_ids)
+                used_ids.add(new_chain_id)
+                binder_seqs_processed.append((new_chain_id, _clean_sequence(seq)))
+                binder_chain_ids.append(new_chain_id)
+            print(f"[Boltz2] Multi-chain binder: {len(binder_seqs_processed)} chains with IDs {binder_chain_ids}")
+        else:
+            # Single-chain binder
+            binder_seq = _clean_sequence(binder_sequence) if binder_sequence else ""
+            if not binder_seq and binder_pdb:
+                binder_path = download_to_path(binder_pdb, tmpdir_path / "binder.pdb")
+                extracted_binder_seqs = _extract_chain_sequences(binder_path)
+                if extracted_binder_seqs:
+                    binder_seq = extracted_binder_seqs[0][1]
 
-        binder_chain_id = _select_chain_id(target_chain_ids)
+            if not binder_seq:
+                raise ValueError("A binder_sequence, binder_sequences, or binder_pdb is required.")
+
+            binder_chain_id = _select_chain_id(target_chain_ids)
+            binder_chain_ids = [binder_chain_id]
         input_name = "boltz_input"
         input_path = tmpdir_path / f"{input_name}.yaml"
         out_dir = tmpdir_path / "boltz_out"
@@ -144,11 +165,12 @@ def run_boltz2(
 
             _write_boltz_yaml(
                 target_sequences=target_sequences,
-                binder_sequence=binder_seq,
+                binder_sequence=binder_seq if binder_seq else None,
                 binder_chain_id=binder_chain_id,
                 output_path=input_path,
                 use_msa_server=True,
                 msa_paths=msa_paths,
+                binder_sequences=binder_seqs_processed,
             )
 
             try:
@@ -175,11 +197,12 @@ def run_boltz2(
 
             _write_boltz_yaml(
                 target_sequences=target_sequences,
-                binder_sequence=binder_seq,
+                binder_sequence=binder_seq if binder_seq else None,
                 binder_chain_id=binder_chain_id,
                 output_path=input_path,
                 use_msa_server=False,
                 msa_paths=msa_paths,
+                binder_sequences=binder_seqs_processed,
             )
 
             if out_dir.exists():
@@ -208,6 +231,7 @@ def run_boltz2(
             input_name=input_name,
             target_chains=list(target_chain_ids),
             binder_chain=binder_chain_id,
+            binder_chains=binder_chain_ids if len(binder_chain_ids) > 1 else None,
         )
 
         # Upload results
