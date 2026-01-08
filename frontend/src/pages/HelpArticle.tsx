@@ -6,6 +6,7 @@ import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import Markdown from "react-markdown";
 import type { Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useHelpArticle } from "../lib/hooks";
 
 // Custom markdown components for help articles
@@ -61,6 +62,31 @@ function createMarkdownComponents(): Components {
       <blockquote className="border-l-4 border-blue-500 pl-4 my-4 italic text-slate-400">
         {children}
       </blockquote>
+    ),
+    // Table support (requires remark-gfm)
+    table: ({ children }) => (
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full border border-slate-600 rounded-lg overflow-hidden">
+          {children}
+        </table>
+      </div>
+    ),
+    thead: ({ children }) => (
+      <thead className="bg-slate-700">{children}</thead>
+    ),
+    tbody: ({ children }) => (
+      <tbody className="divide-y divide-slate-700">{children}</tbody>
+    ),
+    tr: ({ children }) => (
+      <tr className="hover:bg-slate-800/50">{children}</tr>
+    ),
+    th: ({ children }) => (
+      <th className="px-4 py-2 text-left text-sm font-semibold text-slate-200">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="px-4 py-2 text-sm text-slate-300">{children}</td>
     ),
   };
 }
@@ -172,7 +198,9 @@ export default function HelpArticle() {
 
       {/* Article Content */}
       <article className="prose prose-invert max-w-none">
-        <Markdown components={markdownComponents}>{article.content}</Markdown>
+        <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+          {article.content}
+        </Markdown>
       </article>
 
       {/* Back Link */}
