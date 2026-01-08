@@ -77,11 +77,37 @@ export function useCurrentUser() {
 
 // Job hooks
 export function useJobs() {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: queryKeys.jobs,
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const data = await jobsApi.list();
-      return data.jobs;
+      const jobs = data.jobs;
+
+      // Get previous jobs data to detect cost changes
+      const previousJobs = queryClient.getQueryData<typeof jobs>(queryKey);
+
+      if (previousJobs) {
+        // Check if any job's cost changed (billing occurred)
+        const costChanged = jobs.some((job) => {
+          const prevJob = previousJobs.find((p) => p.id === job.id);
+          return prevJob && job.costUsdCents !== prevJob.costUsdCents;
+        });
+
+        // Check if any job transitioned to completed/failed
+        const statusChanged = jobs.some((job) => {
+          const prevJob = previousJobs.find((p) => p.id === job.id);
+          return prevJob && prevJob.status !== job.status &&
+            (job.status === "completed" || job.status === "failed");
+        });
+
+        if (costChanged || statusChanged) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.user });
+        }
+      }
+
+      return jobs;
     },
     refetchInterval: (query) => {
       const jobs = query.state.data;
@@ -95,11 +121,29 @@ export function useJobs() {
 }
 
 export function useJob(id: string) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: queryKeys.job(id),
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const data = await jobsApi.get(id);
-      return data.job;
+      const job = data.job;
+
+      // Get previous job data to detect cost changes
+      const previousJob = queryClient.getQueryData<typeof job>(queryKey);
+
+      // Invalidate user balance if cost changed (billing occurred)
+      if (previousJob && job.costUsdCents !== previousJob.costUsdCents) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.user });
+      }
+
+      // Also invalidate on status change to completed/failed (final billing)
+      if (previousJob && previousJob.status !== job.status &&
+          (job.status === "completed" || job.status === "failed")) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.user });
+      }
+
+      return job;
     },
     enabled: !!id,
     // Poll for status updates if job is pending/running
@@ -127,11 +171,31 @@ export function useCreateJob() {
 
 // Submission hooks
 export function useSubmissions() {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: queryKeys.submissions,
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const data = await submissionsApi.list();
-      return data.submissions;
+      const submissions = data.submissions;
+
+      // Get previous submissions to detect status changes
+      const previousSubmissions = queryClient.getQueryData<typeof submissions>(queryKey);
+
+      if (previousSubmissions) {
+        // Check if any submission transitioned to completed/failed (billing may have occurred)
+        const statusChanged = submissions.some((sub) => {
+          const prevSub = previousSubmissions.find((p) => p.id === sub.id);
+          return prevSub && prevSub.status !== sub.status &&
+            (sub.status === "completed" || sub.status === "failed");
+        });
+
+        if (statusChanged) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.user });
+        }
+      }
+
+      return submissions;
     },
     // Poll for status updates if any submission is pending/running
     refetchInterval: (query) => {
@@ -182,6 +246,19 @@ export function useRetrySubmission() {
     mutationFn: submissionsApi.retry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.submissions });
+    },
+  });
+}
+
+export function useCreateCustomSubmission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: submissionsApi.createCustom,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.submissions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs });
+      queryClient.invalidateQueries({ queryKey: queryKeys.user }); // Balance will change
     },
   });
 }

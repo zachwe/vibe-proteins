@@ -132,14 +132,14 @@ export default function Help() {
       <div className="mt-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-blue-400 mb-2">New to Protein Design?</h2>
         <p className="text-slate-300 text-sm mb-4">
-          Start with a Level 1 challenge like BDNF - it's beginner-friendly and includes
+          Start with a Level 1 challenge like IL-6 - it's beginner-friendly and includes
           detailed guidance. The platform will walk you through the entire design process.
         </p>
         <Link
-          to="/challenges/bdnf"
+          to="/challenges/il-6"
           className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg transition-colors"
         >
-          Try BDNF Challenge
+          Try IL-6 Challenge
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>

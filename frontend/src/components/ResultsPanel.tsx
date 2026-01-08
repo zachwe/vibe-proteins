@@ -735,7 +735,7 @@ export default function ResultsPanel({
               <div className="bg-slate-700/50 px-4 py-2 border-b border-slate-700">
                 <h3 className="text-sm font-medium text-slate-300">Progress</h3>
               </div>
-              <div className="divide-y divide-slate-700/50 max-h-64 overflow-y-auto">
+              <div className="divide-y divide-slate-700/50">
                 {progressEvents.map((event, index) => {
                   const style = getStageStyle(event.stage);
                   const isLatest = index === progressEvents.length - 1;

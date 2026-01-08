@@ -27,6 +27,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Verified from "./pages/Verified";
 import NotFound from "./pages/NotFound";
+import Submit from "./pages/Submit";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
             <Route path="/submissions" element={<Submissions />} />
+            <Route path="/submit" element={<Submit />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaderboards" element={<Leaderboards />} />
             <Route path="/billing" element={<Billing />} />

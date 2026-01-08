@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
-import { db, submissions, challenges } from "../db";
+import { db, submissions, challenges, jobs, user, transactions, gpuPricing } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider } from "../inference/modal";
@@ -228,6 +228,399 @@ async function runScoringInBackground(
       .where(eq(submissions.id, submissionId));
   }
 }
+
+// Minimum balance required to submit custom sequences (in cents)
+const MIN_BALANCE_CENTS = 10; // $0.10 minimum
+
+// Valid amino acid characters
+const VALID_AA_REGEX = /^[ACDEFGHIKLMNPQRSTVWY]+$/i;
+
+// Helper to calculate cost from GPU usage (duplicated from jobs.ts for isolation)
+async function calculateJobCost(gpuType: string, executionSeconds: number): Promise<number> {
+  const pricing = await db
+    .select()
+    .from(gpuPricing)
+    .where(eq(gpuPricing.id, gpuType))
+    .get();
+
+  if (!pricing) {
+    // Fallback to A10G rate if GPU type not found
+    const fallbackRate = 0.000306 * 1.3; // A10G + 30%
+    return Math.ceil(fallbackRate * executionSeconds * 100);
+  }
+
+  const ourRate = pricing.modalRatePerSec * (1 + pricing.markupPercent / 100);
+  return Math.ceil(ourRate * executionSeconds * 100);
+}
+
+/**
+ * Validate amino acid sequence
+ */
+function validateSequence(sequence: string): { valid: boolean; cleaned: string; error?: string } {
+  // Remove whitespace and convert to uppercase
+  const cleaned = sequence.toUpperCase().replace(/\s/g, "");
+
+  if (!cleaned) {
+    return { valid: false, cleaned, error: "Sequence is required" };
+  }
+
+  if (cleaned.length < 20) {
+    return { valid: false, cleaned, error: "Sequence too short (minimum 20 residues)" };
+  }
+
+  if (cleaned.length > 500) {
+    return { valid: false, cleaned, error: "Sequence too long (maximum 500 residues)" };
+  }
+
+  if (!VALID_AA_REGEX.test(cleaned)) {
+    return { valid: false, cleaned, error: "Invalid characters - use only standard amino acids (ACDEFGHIKLMNPQRSTVWY)" };
+  }
+
+  return { valid: true, cleaned };
+}
+
+/**
+ * Run custom submission pipeline: Boltz-2 folding → Scoring
+ * Creates a job for billing, runs folding, then scoring
+ */
+async function runCustomSubmissionPipeline(
+  submissionId: string,
+  jobId: string,
+  challengeId: string,
+  binderSequence: string,
+  userId: string,
+  targetStructureUrl: string,
+  targetChainIds: string[]
+) {
+  const provider = getInferenceProvider();
+
+  try {
+    // Convert target URL to Modal-compatible format
+    const targetUri = toModalDownloadUri(targetStructureUrl);
+
+    // Update submission status to "running"
+    await db
+      .update(submissions)
+      .set({ status: "running" })
+      .where(eq(submissions.id, submissionId));
+
+    // Submit Boltz-2 job to Modal
+    const submitResult = await provider.submitJob("boltz2", {
+      targetPdb: targetUri,
+      binderSequence: binderSequence,
+      numSamples: 1,
+      boltzMode: "complex",
+      jobId: jobId,
+    });
+
+    if (submitResult.status === "failed") {
+      await db
+        .update(submissions)
+        .set({ status: "failed", error: "Failed to submit folding job" })
+        .where(eq(submissions.id, submissionId));
+      await db
+        .update(jobs)
+        .set({ status: "failed", error: "Failed to submit to Modal" })
+        .where(eq(jobs.id, jobId));
+      return;
+    }
+
+    // Update job with Modal call ID
+    await db
+      .update(jobs)
+      .set({ modalCallId: submitResult.callId, status: "running" })
+      .where(eq(jobs.id, jobId));
+
+    // Poll for Boltz-2 completion
+    const maxWaitMs = 5 * 60 * 1000; // 5 minutes for folding
+    const pollIntervalMs = 3000;
+    const startTime = Date.now();
+    let result = submitResult;
+
+    while (Date.now() - startTime < maxWaitMs) {
+      if (result.status === "completed" || result.status === "failed") {
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+
+      const statusResult = await provider.getJobStatus(jobId);
+      result = {
+        ...result,
+        status: statusResult.status,
+        result: statusResult.result,
+      };
+
+      // Handle billing from usage data if available
+      if (statusResult.usage?.gpu_type && statusResult.usage?.execution_seconds) {
+        const gpuType = statusResult.usage.gpu_type;
+        const executionSeconds = statusResult.usage.execution_seconds;
+        await db
+          .update(jobs)
+          .set({ gpuType, executionSeconds })
+          .where(eq(jobs.id, jobId));
+      }
+    }
+
+    // Check if folding failed
+    if (result.status === "failed" || result.result?.status === "failed") {
+      const errorMsg = result.result?.error || "Folding failed";
+      await db
+        .update(submissions)
+        .set({ status: "failed", error: errorMsg })
+        .where(eq(submissions.id, submissionId));
+      await db
+        .update(jobs)
+        .set({ status: "failed", error: errorMsg })
+        .where(eq(jobs.id, jobId));
+      return;
+    }
+
+    if (result.status !== "completed") {
+      await db
+        .update(submissions)
+        .set({ status: "failed", error: "Folding job timed out" })
+        .where(eq(submissions.id, submissionId));
+      await db
+        .update(jobs)
+        .set({ status: "failed", error: "Job timed out" })
+        .where(eq(jobs.id, jobId));
+      return;
+    }
+
+    // Extract structure URL from output
+    const output = result.result?.output as Record<string, unknown> | undefined;
+
+    // Boltz-2 output structure: { designs: [{ structure: { key: "..." } }] } or { structure: { key: "..." } }
+    let structureKey: string | null = null;
+
+    if (output?.designs && Array.isArray(output.designs) && output.designs.length > 0) {
+      const design = output.designs[0] as Record<string, unknown>;
+      const structure = design.structure as Record<string, unknown> | undefined;
+      structureKey = structure?.key as string | undefined ?? null;
+    } else if (output?.structure) {
+      const structure = output.structure as Record<string, unknown>;
+      structureKey = structure?.key as string | undefined ?? null;
+    }
+
+    if (!structureKey) {
+      await db
+        .update(submissions)
+        .set({ status: "failed", error: "No structure generated from folding" })
+        .where(eq(submissions.id, submissionId));
+      await db
+        .update(jobs)
+        .set({ status: "failed", error: "No structure in output" })
+        .where(eq(jobs.id, jobId));
+      return;
+    }
+
+    // Convert key to full URL and S3 URI
+    const structureUrl = `s3://${R2_BUCKET_NAME}/${structureKey}`;
+
+    // Update submission with structure URL
+    await db
+      .update(submissions)
+      .set({ designStructureUrl: structureUrl })
+      .where(eq(submissions.id, submissionId));
+
+    // Mark job as completed
+    await db
+      .update(jobs)
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        output: JSON.stringify(output),
+      })
+      .where(eq(jobs.id, jobId));
+
+    // Handle billing for the job
+    if (output) {
+      const usage = result.result?.output as { gpu_type?: string; execution_seconds?: number } | undefined;
+      const jobRecord = await db.select().from(jobs).where(eq(jobs.id, jobId)).get();
+
+      if (jobRecord?.gpuType && jobRecord?.executionSeconds) {
+        const costCents = await calculateJobCost(jobRecord.gpuType, jobRecord.executionSeconds);
+
+        const jobUser = await db
+          .select({ balanceUsdCents: user.balanceUsdCents })
+          .from(user)
+          .where(eq(user.id, userId))
+          .get();
+
+        if (jobUser && costCents > 0) {
+          const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
+          await db
+            .update(user)
+            .set({ balanceUsdCents: newBalance })
+            .where(eq(user.id, userId));
+
+          await db.insert(transactions).values({
+            id: randomUUID(),
+            userId,
+            amountCents: -costCents,
+            type: "job_usage",
+            jobId,
+            description: `Custom sequence folding (${jobRecord.gpuType}, ${jobRecord.executionSeconds.toFixed(1)}s)`,
+            balanceAfterCents: newBalance,
+            createdAt: new Date(),
+          });
+
+          await db
+            .update(jobs)
+            .set({ costUsdCents: costCents, billedSeconds: jobRecord.executionSeconds })
+            .where(eq(jobs.id, jobId));
+        }
+      }
+    }
+
+    // Now run scoring on the folded structure
+    await runScoringInBackground(
+      submissionId,
+      structureUrl,
+      targetStructureUrl,
+      binderSequence,
+      targetChainIds
+    );
+  } catch (error) {
+    console.error("Custom submission pipeline failed:", error);
+    await db
+      .update(submissions)
+      .set({
+        status: "failed",
+        error: error instanceof Error ? error.message : "Unknown pipeline error",
+      })
+      .where(eq(submissions.id, submissionId));
+    await db
+      .update(jobs)
+      .set({
+        status: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      })
+      .where(eq(jobs.id, jobId));
+  }
+}
+
+// POST /api/submissions/custom - Submit a custom sequence for folding and scoring
+app.post("/custom", async (c) => {
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+  });
+
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const body = await c.req.json();
+  const { challengeId, designSequence } = body;
+
+  if (!challengeId) {
+    return c.json({ error: "Missing required field: challengeId" }, 400);
+  }
+
+  if (!designSequence) {
+    return c.json({ error: "Missing required field: designSequence" }, 400);
+  }
+
+  // Validate sequence
+  const validation = validateSequence(designSequence);
+  if (!validation.valid) {
+    return c.json({ error: validation.error }, 400);
+  }
+
+  // Get challenge
+  const challenge = await db
+    .select()
+    .from(challenges)
+    .where(eq(challenges.id, challengeId))
+    .get();
+
+  if (!challenge) {
+    return c.json({ error: "Challenge not found" }, 404);
+  }
+
+  if (!challenge.targetStructureUrl) {
+    return c.json({ error: "Challenge has no target structure" }, 400);
+  }
+
+  // Check user balance
+  const currentUser = await db
+    .select({ balanceUsdCents: user.balanceUsdCents })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+    .get();
+
+  if (!currentUser || currentUser.balanceUsdCents < MIN_BALANCE_CENTS) {
+    return c.json(
+      {
+        error: "Insufficient balance",
+        message: "Please add funds to your account to submit custom sequences",
+        requiredCents: MIN_BALANCE_CENTS,
+        availableCents: currentUser?.balanceUsdCents ?? 0,
+      },
+      402
+    );
+  }
+
+  const submissionId = randomUUID();
+  const jobId = randomUUID();
+  const now = new Date();
+
+  // Create submission
+  await db.insert(submissions).values({
+    id: submissionId,
+    userId: session.user.id,
+    challengeId,
+    jobId,
+    designSequence: validation.cleaned,
+    status: "pending",
+    createdAt: now,
+  });
+
+  // Create job for billing tracking
+  await db.insert(jobs).values({
+    id: jobId,
+    userId: session.user.id,
+    challengeId,
+    type: "boltz2",
+    status: "pending",
+    input: JSON.stringify({
+      binderSequence: validation.cleaned,
+      targetStructureUrl: challenge.targetStructureUrl,
+      customSubmission: true,
+    }),
+    createdAt: now,
+  });
+
+  // Get target chain IDs
+  const targetChainIds = challenge.targetChainId ? [challenge.targetChainId] : [];
+
+  // Fire and forget - run pipeline in background
+  runCustomSubmissionPipeline(
+    submissionId,
+    jobId,
+    challengeId,
+    validation.cleaned,
+    session.user.id,
+    challenge.targetStructureUrl,
+    targetChainIds
+  ).catch((err) => {
+    console.error("Background custom submission pipeline error:", err);
+  });
+
+  return c.json(
+    {
+      submission: {
+        id: submissionId,
+        challengeId,
+        jobId,
+        designSequence: validation.cleaned,
+        status: "pending",
+      },
+    },
+    201
+  );
+});
 
 // POST /api/submissions - Submit a design for scoring
 app.post("/", async (c) => {

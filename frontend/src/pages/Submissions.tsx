@@ -237,12 +237,20 @@ export default function Submissions() {
             Designs you've submitted for scoring.
           </p>
         </div>
-        <Link
-          to="/challenges"
-          className="text-sm text-blue-400 hover:text-blue-300"
-        >
-          Start a new design
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/submit"
+            className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Submit Your Own
+          </Link>
+          <Link
+            to="/challenges"
+            className="text-sm text-blue-400 hover:text-blue-300"
+          >
+            Use Design Tools
+          </Link>
+        </div>
       </div>
 
       {sortedSubmissions.length === 0 ? (

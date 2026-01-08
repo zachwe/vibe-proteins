@@ -677,41 +677,91 @@ export default function ChallengeDetail() {
               onHotspotsChange={setSelectedHotspots}
             />
           ) : (
-            <>
+            <div className="space-y-3">
               {activeTab === "overview" && (
-                <button
-                  onClick={() => setActiveTab("learn")}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  Learn More
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                <>
+                  <button
+                    onClick={() => setActiveTab("learn")}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    Learn More
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDesignPanel(true);
+                      setCurrentStep(2);
+                    }}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                  >
+                    Start Designing
+                  </button>
+                </>
               )}
               {activeTab === "learn" && (
-                <button
-                  onClick={() => setActiveTab("sequence")}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  View Sequence
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                <>
+                  <button
+                    onClick={() => setActiveTab("sequence")}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    View Sequence
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDesignPanel(true);
+                      setCurrentStep(2);
+                    }}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                  >
+                    Start Designing
+                  </button>
+                </>
               )}
               {activeTab === "sequence" && (
-                <button
-                  onClick={() => {
-                    setShowDesignPanel(true);
-                    setCurrentStep(2);
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-                >
-                  Start Designing
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      setShowDesignPanel(true);
+                      setCurrentStep(2);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                  >
+                    Start Designing
+                  </button>
+                  <Link
+                    to={`/submit?challengeId=${challenge.id}`}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    Have your own design?
+                    <span className="text-slate-400 text-sm">Submit sequence</span>
+                  </Link>
+                </>
               )}
-            </>
+              {activeTab === "leaderboard" && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowDesignPanel(true);
+                      setCurrentStep(2);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                  >
+                    Start Designing
+                  </button>
+                  <Link
+                    to="/leaderboards"
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    All Leaderboards
+                  </Link>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
