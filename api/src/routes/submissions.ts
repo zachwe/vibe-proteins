@@ -503,16 +503,17 @@ async function runCustomSubmissionPipeline(
 
 // POST /api/submissions/custom - Submit a custom sequence for folding and scoring
 app.post("/custom", async (c) => {
-  const session = await auth.api.getSession({
-    headers: c.req.raw.headers,
-  });
+  try {
+    const session = await auth.api.getSession({
+      headers: c.req.raw.headers,
+    });
 
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+    if (!session) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
 
-  const body = await c.req.json();
-  const { challengeId, designSequence } = body;
+    const body = await c.req.json();
+    const { challengeId, designSequence } = body;
 
   if (!challengeId) {
     return c.json({ error: "Missing required field: challengeId" }, 400);
@@ -566,18 +567,7 @@ app.post("/custom", async (c) => {
   const jobId = randomUUID();
   const now = new Date();
 
-  // Create submission
-  await db.insert(submissions).values({
-    id: submissionId,
-    userId: session.user.id,
-    challengeId,
-    jobId,
-    designSequence: validation.cleaned,
-    status: "pending",
-    createdAt: now,
-  });
-
-  // Create job for billing tracking
+  // Create job first (submission references job via foreign key)
   await db.insert(jobs).values({
     id: jobId,
     userId: session.user.id,
@@ -589,6 +579,17 @@ app.post("/custom", async (c) => {
       targetStructureUrl: challenge.targetStructureUrl,
       customSubmission: true,
     }),
+    createdAt: now,
+  });
+
+  // Create submission (references the job we just created)
+  await db.insert(submissions).values({
+    id: submissionId,
+    userId: session.user.id,
+    challengeId,
+    jobId,
+    designSequence: validation.cleaned,
+    status: "pending",
     createdAt: now,
   });
 
@@ -620,6 +621,13 @@ app.post("/custom", async (c) => {
     },
     201
   );
+  } catch (error) {
+    console.error("Error in POST /api/submissions/custom:", error);
+    return c.json(
+      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
+      500
+    );
+  }
 });
 
 // POST /api/submissions - Submit a design for scoring
