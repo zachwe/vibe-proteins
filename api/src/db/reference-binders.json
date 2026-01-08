@@ -21,6 +21,21 @@
       "pdockq": 0.742,
       "pdockq2": 0.115,
       "lis": 0.457
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "Y"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -44,7 +59,21 @@
       "ipSaeScore": -0.215,
       "pdockq": 0.739,
       "pdockq2": 0.015,
-      "lis": 0.060
+      "lis": 0.06
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A"
+      ],
+      "binderChains": [
+        "B"
+      ]
     }
   },
   {
@@ -69,6 +98,20 @@
       "pdockq": 0.742,
       "pdockq2": 0.015,
       "lis": 0.075
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A"
+      ],
+      "binderChains": [
+        "B"
+      ]
     }
   },
   {
@@ -93,6 +136,20 @@
       "pdockq": 0.741,
       "pdockq2": 0.018,
       "lis": 0.045
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A"
+      ],
+      "binderChains": [
+        "B"
+      ]
     }
   },
   {
@@ -117,6 +174,20 @@
       "pdockq": 0.734,
       "pdockq2": 0.019,
       "lis": 0.044
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "G"
+      ],
+      "binderChains": [
+        "A"
+      ]
     }
   },
   {
@@ -141,6 +212,20 @@
       "pdockq": 0.742,
       "pdockq2": 0.046,
       "lis": 0.297
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "G"
+      ],
+      "binderChains": [
+        "N"
+      ]
     }
   },
   {
@@ -165,6 +250,21 @@
       "pdockq": 0.742,
       "pdockq2": 0.076,
       "lis": 0.365
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "binderChains": [
+        "B",
+        "C"
+      ],
+      "targetChains": [
+        "inferred"
+      ]
     }
   },
   {
@@ -184,11 +284,26 @@
     "scores": {
       "plddt": 88.08,
       "ptm": 0.424,
-      "iptm": 0.290,
-      "ipSaeScore": -0.290,
+      "iptm": 0.29,
+      "ipSaeScore": -0.29,
       "pdockq": 0.742,
       "pdockq2": 0.021,
       "lis": 0.059
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "C"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -208,11 +323,25 @@
     "scores": {
       "plddt": 92.99,
       "ptm": 0.876,
-      "iptm": 0.440,
-      "ipSaeScore": -0.440,
+      "iptm": 0.44,
+      "ipSaeScore": -0.44,
       "pdockq": 0.742,
       "pdockq2": 0.054,
       "lis": 0.095
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "E"
+      ],
+      "binderChains": [
+        "A"
+      ]
     }
   },
   {
@@ -230,13 +359,29 @@
     "approvalStatus": "fda_approved",
     "sortOrder": 0,
     "scores": {
-      "plddt": 90.80,
+      "plddt": 90.8,
       "ptm": 0.848,
       "iptm": 0.329,
       "ipSaeScore": -0.329,
       "pdockq": 0.742,
       "pdockq2": 0.025,
-      "lis": 0.160
+      "lis": 0.16
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A",
+        "B"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -260,7 +405,22 @@
       "ipSaeScore": -0.295,
       "pdockq": 0.742,
       "pdockq2": 0.023,
-      "lis": 0.100
+      "lis": 0.1
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "T"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -284,7 +444,22 @@
       "ipSaeScore": -0.262,
       "pdockq": 0.742,
       "pdockq2": 0.016,
-      "lis": 0.050
+      "lis": 0.05
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "C"
+      ],
+      "binderChains": [
+        "A",
+        "B"
+      ]
     }
   },
   {
@@ -309,6 +484,21 @@
       "pdockq": 0.733,
       "pdockq2": 0.021,
       "lis": 0.035
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -333,6 +523,21 @@
       "pdockq": 0.742,
       "pdockq2": 0.027,
       "lis": 0.164
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -357,6 +562,21 @@
       "pdockq": 0.742,
       "pdockq2": 0.073,
       "lis": 0.171
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "C"
+      ],
+      "binderChains": [
+        "A",
+        "B"
+      ]
     }
   },
   {
@@ -372,7 +592,23 @@
     "helpArticleSlug": "pertuzumab",
     "discoveryYear": 2012,
     "approvalStatus": "fda_approved",
-    "sortOrder": 1
+    "sortOrder": 1,
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "H100",
+      "targetChains": [
+        "B"
+      ],
+      "binderChains": [
+        "C",
+        "D"
+      ],
+      "note": "Prediction failed - no interface contacts formed"
+    }
   },
   {
     "id": "bevacizumab-vegf",
@@ -395,7 +631,22 @@
       "ipSaeScore": -0.265,
       "pdockq": 0.742,
       "pdockq2": 0.019,
-      "lis": 0.100
+      "lis": 0.1
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "Y"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -420,6 +671,21 @@
       "pdockq": 0.742,
       "pdockq2": 0.023,
       "lis": 0.152
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "V"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -438,12 +704,27 @@
     "sortOrder": 0,
     "scores": {
       "plddt": 91.82,
-      "ptm": 0.900,
+      "ptm": 0.9,
       "iptm": 0.308,
       "ipSaeScore": -0.308,
       "pdockq": 0.742,
       "pdockq2": 0.024,
       "lis": 0.216
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "R"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -468,6 +749,22 @@
       "pdockq": 0.742,
       "pdockq2": 0.625,
       "lis": 0.875
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "I"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ],
+      "note": "mmCIF format only (8IOW), auth chain IDs"
     }
   },
   {
@@ -492,6 +789,21 @@
       "pdockq": 0.742,
       "pdockq2": 0.138,
       "lis": 0.311
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "B"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -509,13 +821,28 @@
     "approvalStatus": "fda_approved",
     "sortOrder": 1,
     "scores": {
-      "plddt": 94.10,
+      "plddt": 94.1,
       "ptm": 0.554,
       "iptm": 0.436,
       "ipSaeScore": -0.436,
       "pdockq": 0.742,
       "pdockq2": 0.054,
       "lis": 0.262
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -534,12 +861,28 @@
     "sortOrder": 0,
     "scores": {
       "plddt": 92.22,
-      "ptm": 0.640,
+      "ptm": 0.64,
       "iptm": 0.271,
       "ipSaeScore": -0.271,
       "pdockq": 0.711,
-      "pdockq2": 0.020,
+      "pdockq2": 0.02,
       "lis": 0.023
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A100",
+      "targetChains": [
+        "G"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ],
+      "note": "Large complex required A100"
     }
   },
   {
@@ -559,11 +902,26 @@
     "scores": {
       "plddt": 89.86,
       "ptm": 0.907,
-      "iptm": 0.530,
-      "ipSaeScore": -0.530,
+      "iptm": 0.53,
+      "ipSaeScore": -0.53,
       "pdockq": 0.742,
       "pdockq2": 0.079,
       "lis": 0.409
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "C"
+      ],
+      "binderChains": [
+        "A",
+        "B"
+      ]
     }
   },
   {
@@ -583,11 +941,26 @@
     "scores": {
       "plddt": 89.52,
       "ptm": 0.828,
-      "iptm": 0.440,
-      "ipSaeScore": -0.440,
+      "iptm": 0.44,
+      "ipSaeScore": -0.44,
       "pdockq": 0.742,
       "pdockq2": 0.046,
       "lis": 0.251
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "D"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   },
   {
@@ -607,11 +980,26 @@
     "scores": {
       "plddt": 84.37,
       "ptm": 0.455,
-      "iptm": 0.250,
-      "ipSaeScore": -0.250,
+      "iptm": 0.25,
+      "ipSaeScore": -0.25,
       "pdockq": 0.741,
       "pdockq2": 0.016,
       "lis": 0.465
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "A",
+        "B"
+      ],
+      "binderChains": [
+        "C"
+      ]
     }
   },
   {
@@ -636,6 +1024,21 @@
       "pdockq": 0.742,
       "pdockq2": 0.018,
       "lis": 0.105
+    },
+    "inferenceParams": {
+      "method": "boltz2",
+      "boltzVersion": "0.4.x",
+      "diffusionSamples": 1,
+      "useMsa": false,
+      "outputFormat": "pdb",
+      "gpu": "A10G",
+      "targetChains": [
+        "I"
+      ],
+      "binderChains": [
+        "H",
+        "L"
+      ]
     }
   }
 ]
