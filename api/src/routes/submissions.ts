@@ -391,15 +391,24 @@ async function runCustomSubmissionPipeline(
     // Extract structure URL from output
     const output = result.result?.output as Record<string, unknown> | undefined;
 
-    // Boltz-2 output structure: { designs: [{ structure: { key: "..." } }] } or { structure: { key: "..." } }
+    // Boltz-2 output structure: { complex: { key: "..." } } or { structureUrl: "..." }
     let structureKey: string | null = null;
 
-    if (output?.designs && Array.isArray(output.designs) && output.designs.length > 0) {
+    if (output?.complex) {
+      // Primary format: complex.key
+      const complex = output.complex as Record<string, unknown>;
+      structureKey = complex?.key as string | undefined ?? null;
+    } else if (output?.structureUrl) {
+      // Alternative: direct structureUrl (extract key from s3:// URL)
+      const url = output.structureUrl as string;
+      if (url.startsWith("s3://")) {
+        const parts = url.split("://")[1].split("/");
+        structureKey = parts.slice(1).join("/");
+      }
+    } else if (output?.designs && Array.isArray(output.designs) && output.designs.length > 0) {
+      // Legacy format: designs[0].structure.key
       const design = output.designs[0] as Record<string, unknown>;
       const structure = design.structure as Record<string, unknown> | undefined;
-      structureKey = structure?.key as string | undefined ?? null;
-    } else if (output?.structure) {
-      const structure = output.structure as Record<string, unknown>;
       structureKey = structure?.key as string | undefined ?? null;
     }
 
