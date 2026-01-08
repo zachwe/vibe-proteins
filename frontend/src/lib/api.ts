@@ -209,6 +209,12 @@ export const submissionsApi = {
       body: JSON.stringify(data),
     }),
 
+  createCustom: (data: { challengeId: string; designSequence: string }) =>
+    apiFetch<{ submission: Submission & { jobId: string } }>("/api/submissions/custom", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   retry: (id: string) =>
     apiFetch<{ success: boolean; status: string }>(`/api/submissions/${id}/retry`, {
       method: "POST",
@@ -284,6 +290,7 @@ export interface ReferenceBinder {
   shapeComplementarity: number | null;
   helpArticleSlug: string | null;
   shortDescription: string | null;
+  scoringNote: string | null;
   discoveryYear: number | null;
   approvalStatus: "fda_approved" | "clinical_trial" | "research_tool" | "de_novo_designed" | null;
   isActive: boolean;

@@ -593,21 +593,31 @@
     "discoveryYear": 2012,
     "approvalStatus": "fda_approved",
     "sortOrder": 1,
+    "scores": {
+      "plddt": 89.67,
+      "ptm": 0.596,
+      "iptm": 0.351,
+      "ipSaeScore": null,
+      "pdockq": 0,
+      "pdockq2": 0,
+      "lis": 0
+    },
+    "scoringNote": "Boltz-2 does not predict the antibody-HER2 interface for this complex. The Fab folds correctly (H-L ipTM ~0.81) but does not dock to HER2. This is a known limitation - the crystal structure shows binding at a domain II epitope that differs from trastuzumab.",
     "inferenceParams": {
       "method": "boltz2",
       "boltzVersion": "0.4.x",
       "diffusionSamples": 1,
-      "useMsa": false,
+      "useMsa": true,
       "outputFormat": "pdb",
-      "gpu": "H100",
+      "gpu": "A10G",
       "targetChains": [
-        "B"
+        "A"
       ],
       "binderChains": [
-        "C",
-        "D"
+        "H",
+        "L"
       ],
-      "note": "Prediction failed - no interface contacts formed"
+      "note": "Sequence-only prediction with MSA. Interface not predicted despite correct Fab folding."
     }
   },
   {

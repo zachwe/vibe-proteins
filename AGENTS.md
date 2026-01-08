@@ -62,6 +62,20 @@ pnpm exec tsc --noEmit
 uv run python <script>
 ```
 
+## Boltz-2 Inference
+
+**IMPORTANT:** Always run Boltz-2 with MSA enabled for production scoring. Single-sequence mode produces suboptimal predictions, especially for antibody-antigen complexes.
+
+```bash
+# Boltz CLI with MSA (recommended)
+boltz predict input.yaml --use_msa_server --cache /cache --output_format pdb
+```
+
+**Key parameters:**
+- `--use_msa_server`: Fetches MSAs from ColabFold public server (required for good predictions)
+- `--diffusion_samples 1`: Number of structure samples
+- `--write_full_pae`: Outputs PAE matrix for interface scoring
+
 ## Database Migrations
 
 The project uses Drizzle ORM with SQL migrations stored in `api/drizzle/`.

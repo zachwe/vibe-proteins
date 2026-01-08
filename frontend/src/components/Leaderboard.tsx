@@ -167,8 +167,18 @@ function ReferenceBinderRow({
 
       <div className="text-right flex flex-col items-end gap-1">
         {score !== null ? (
-          <div className="text-lg font-bold text-amber-400">
-            {formatScore(score, sortBy)}
+          <div className="flex items-center gap-1.5">
+            {binder.scoringNote && (
+              <span
+                className="text-amber-500 cursor-help"
+                title={binder.scoringNote}
+              >
+                ⚠️
+              </span>
+            )}
+            <span className="text-lg font-bold text-amber-400">
+              {formatScore(score, sortBy)}
+            </span>
           </div>
         ) : (
           <div className="text-sm text-slate-500">—</div>

@@ -76,6 +76,7 @@ interface ReferenceBinderInput {
   shapeComplementarity?: number;
   helpArticleSlug?: string;
   shortDescription?: string;
+  scoringNote?: string;
   discoveryYear?: number;
   approvalStatus?: string;
   sortOrder?: number;
@@ -277,6 +278,7 @@ async function seed() {
         shapeComplementarity,
         helpArticleSlug: binder.helpArticleSlug,
         shortDescription: binder.shortDescription,
+        scoringNote: binder.scoringNote,
         discoveryYear: binder.discoveryYear,
         approvalStatus: binder.approvalStatus,
         isActive: true,
@@ -307,6 +309,7 @@ async function seed() {
           shapeComplementarity,
           helpArticleSlug: binder.helpArticleSlug,
           shortDescription: binder.shortDescription,
+          scoringNote: binder.scoringNote,
           discoveryYear: binder.discoveryYear,
           approvalStatus: binder.approvalStatus,
           sortOrder: binder.sortOrder ?? 0,

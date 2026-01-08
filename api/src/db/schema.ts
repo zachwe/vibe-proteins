@@ -156,6 +156,7 @@ export const referenceBinders = sqliteTable("reference_binders", {
   // Educational content
   helpArticleSlug: text("help_article_slug"), // Link to help article
   shortDescription: text("short_description"), // One-liner for leaderboard
+  scoringNote: text("scoring_note"), // Note about scoring limitations (shown as tooltip)
   // Metadata
   discoveryYear: integer("discovery_year"),
   approvalStatus: text("approval_status"), // 'fda_approved', 'clinical_trial', 'research_tool', 'de_novo_designed'
