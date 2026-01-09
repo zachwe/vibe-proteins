@@ -7,7 +7,6 @@ const testChallenge = {
   id: "test-challenge-1",
   name: "Test Challenge",
   description: "A test challenge for unit tests",
-  difficulty: 1,
   level: 1,
   taskType: "binder",
   createdAt: new Date(),

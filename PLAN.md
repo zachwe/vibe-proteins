@@ -270,10 +270,10 @@ class LocalGPUProvider implements InferenceProvider { ... }   // Future
    - Users have a USD balance for GPU usage
 
 2. **Browse Challenges**
-   - View list of protein design challenges organized by difficulty level
+   - View list of protein design challenges organized by level (1-4)
    - Read educational content about each target (biology, disease relevance, why it matters)
    - See challenge requirements (design a binder, block a PPI, etc.)
-   - View difficulty rating and estimated GPU cost
+   - View level indicator and estimated GPU cost
 
 3. **Work on a Challenge** (Guided workflow)
 

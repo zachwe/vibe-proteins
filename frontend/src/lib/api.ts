@@ -22,7 +22,6 @@ export interface Challenge {
   name: string;
   description: string | null;
   mission: string | null;
-  difficulty: number;
   level: number;
   taskType: string;
   targetPdbId: string | null;

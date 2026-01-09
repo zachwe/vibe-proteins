@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import Markdown from "react-markdown";
@@ -395,21 +395,18 @@ export default function ChallengeDetail() {
 
       {/* Horizontal Progress Bar */}
       <div className="bg-slate-800 rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
+        <div className="flex items-center max-w-2xl mx-auto">
           {workflowSteps.map((step, index) => (
-            <div key={step.id} className="flex items-center flex-1">
+            <React.Fragment key={step.id}>
               {/* Step dot and label */}
-              <button
-                onClick={() => setCurrentStep(step.id)}
-                className="flex flex-col items-center group"
-              >
+              <div className="flex flex-col items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
                     step.id === currentStep
                       ? "bg-blue-600 text-white ring-4 ring-blue-600/30"
                       : step.id < currentStep
                         ? "bg-green-600 text-white"
-                        : "bg-slate-600 text-slate-400 group-hover:bg-slate-500"
+                        : "bg-slate-600 text-slate-400"
                   }`}
                 >
                   {step.id < currentStep ? "✓" : step.id}
@@ -425,19 +422,19 @@ export default function ChallengeDetail() {
                 >
                   {step.name}
                 </span>
-              </button>
+              </div>
 
               {/* Connector line (not after last step) */}
               {index < workflowSteps.length - 1 && (
-                <div className="flex-1 mx-2">
+                <div className="flex-1 h-1 mx-4 -mt-6">
                   <div
-                    className={`h-1 rounded-full ${
+                    className={`h-full rounded-full ${
                       step.id < currentStep ? "bg-green-600" : "bg-slate-600"
                     }`}
                   />
                 </div>
               )}
-            </div>
+            </React.Fragment>
           ))}
         </div>
       </div>
@@ -530,10 +527,6 @@ export default function ChallengeDetail() {
                     </span>
                     <span className="bg-slate-600 text-white text-xs font-semibold px-2 py-1 rounded">
                       {challenge.taskType}
-                    </span>
-                    <span className="text-yellow-400 text-sm">
-                      {"★".repeat(challenge.difficulty)}
-                      {"☆".repeat(Math.max(0, 5 - challenge.difficulty))}
                     </span>
                   </div>
 

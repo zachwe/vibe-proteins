@@ -8,7 +8,7 @@ The project specification and design document. Contains:
 
 - **Core Mental Model**: Target/drug terminology and design modalities
 - **Design Task Types**: Binders, blockers, decoys, stabilizers
-- **Starter Targets**: 10 protein targets organized by difficulty level (1-4)
+- **Starter Targets**: 10 protein targets organized by level (1-4, easiest to hardest)
 - **Scoring Metrics**: pLDDT, pTM, ipSAE, interface quality metrics
 - **Platform Design**: Target pack format, user submission flow, visual feedback
 - **Technology Stack**: React frontend, Node.js API, Modal Python inference, SQLite + S3

@@ -28,7 +28,6 @@ interface ChallengeInput {
   name: string;
   description: string;
   mission: string;
-  difficulty: number;
   level: number;
   taskType: string;
   targetPdbId: string;
@@ -110,7 +109,6 @@ async function seed() {
           name: challenge.name,
           description: challenge.description,
           mission: challenge.mission,
-          difficulty: challenge.difficulty,
           level: challenge.level,
           taskType: challenge.taskType,
           targetPdbId: challenge.targetPdbId,

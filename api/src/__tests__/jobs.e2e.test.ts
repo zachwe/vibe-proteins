@@ -189,7 +189,6 @@ describeIf("Jobs API e2e (Modal)", () => {
         id: challengeId,
         name: "Modal E2E Challenge",
         description: "E2E job submission test",
-        difficulty: 1,
         level: 1,
         taskType: "binder",
         targetStructureUrl: targetPdb,

@@ -82,10 +82,6 @@ export default function Challenges() {
                     </h2>
                     <p className="text-slate-400">{challenge.mission || challenge.description}</p>
                   </div>
-                  <div className="text-slate-500">
-                    {"★".repeat(challenge.difficulty)}
-                    {"☆".repeat(Math.max(0, 5 - challenge.difficulty))}
-                  </div>
                 </div>
               </Link>
             ))}

@@ -10,7 +10,6 @@ export const challenges = sqliteTable("challenges", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   mission: text("mission"), // Simple, inspiring mission statement for non-experts
-  difficulty: integer("difficulty").notNull(), // 1-5
   level: integer("level").notNull(), // 1-4 (curriculum level)
   targetPdbId: text("target_pdb_id"), // PDB ID if available
   targetUniprotId: text("target_uniprot_id"), // UniProt ID if available

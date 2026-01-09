@@ -8,7 +8,6 @@ const testChallenge = {
   id: "test-submissions-challenge",
   name: "Test Submissions Challenge",
   description: "A test challenge for submission tests",
-  difficulty: 1,
   level: 1,
   taskType: "binder",
   targetStructureUrl: "https://files.rcsb.org/download/1LYZ.pdb",

@@ -70,7 +70,7 @@
 - [x] Custom 404 page for unknown routes
 - [x] Auth pages (login, signup)
 - [x] Challenge browser
-  - [x] Challenge list with difficulty levels
+  - [x] Challenge list with level indicators
   - [x] Challenge detail page with educational content
 - [x] Mol* integration
   - [x] Basic viewer component
@@ -299,7 +299,7 @@ Recently completed:
 - **Leaderboards page** with nav link, per-challenge rankings with metric sorting
 - **New user credits**: $1 starting balance for free trial
 - **Challenge levels fixed**: Correct Level 1/2/3 assignments per PLAN.md
-- **Insulin difficulty**: Updated from 1→2 (small + disulfide-constrained)
+- **Insulin level**: Updated from 1→2 (small + disulfide-constrained)
 - **Molstar hero zoom disabled**: Prevents scroll/pinch zoom on landing page
 - **Phase 8 content**: 13 targets with educational content across Levels 1-3
 - **Datasette dashboard**: Production observability with Litestream backup
