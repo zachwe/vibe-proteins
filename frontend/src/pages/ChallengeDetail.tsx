@@ -10,6 +10,7 @@ import Leaderboard from "../components/Leaderboard";
 import HotspotIndicator from "../components/HotspotIndicator";
 import SequenceSelector from "../components/SequenceSelector";
 import type { ChainAnnotation, SuggestedHotspot } from "../lib/api";
+import { trackEvent } from "../lib/analytics";
 
 const workflowSteps = [
   { id: 1, name: "Explore", description: "View target structure" },
@@ -298,6 +299,18 @@ export default function ChallengeDetail() {
   useEffect(() => {
     updateHash({ tab: activeTab, design: showDesignPanel, step: currentStep, hotspots: selectedHotspots });
   }, [activeTab, showDesignPanel, currentStep, selectedHotspots, updateHash]);
+
+  // Track challenge viewed
+  useEffect(() => {
+    if (challenge) {
+      trackEvent("challenge_viewed", {
+        challengeId: challenge.id,
+        challengeName: challenge.name,
+        level: challenge.level,
+        taskType: challenge.taskType,
+      });
+    }
+  }, [challenge?.id]);
 
   // Parse chain annotations from JSON string
   const chainAnnotations = useMemo(() => {
@@ -696,6 +709,7 @@ export default function ChallengeDetail() {
                   </button>
                   <button
                     onClick={() => {
+                      trackEvent("design_started", { challengeId: challenge.id });
                       setShowDesignPanel(true);
                       setCurrentStep(2);
                     }}
@@ -718,6 +732,7 @@ export default function ChallengeDetail() {
                   </button>
                   <button
                     onClick={() => {
+                      trackEvent("design_started", { challengeId: challenge.id });
                       setShowDesignPanel(true);
                       setCurrentStep(2);
                     }}
@@ -731,6 +746,7 @@ export default function ChallengeDetail() {
                 <>
                   <button
                     onClick={() => {
+                      trackEvent("design_started", { challengeId: challenge.id });
                       setShowDesignPanel(true);
                       setCurrentStep(2);
                     }}
@@ -751,6 +767,7 @@ export default function ChallengeDetail() {
                 <>
                   <button
                     onClick={() => {
+                      trackEvent("design_started", { challengeId: challenge.id });
                       setShowDesignPanel(true);
                       setCurrentStep(2);
                     }}

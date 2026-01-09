@@ -5,6 +5,7 @@ import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider, type JobType } from "../inference";
 import { getSignedUrl } from "../storage/r2";
+import { analytics } from "../services/analytics";
 
 const app = new Hono();
 
@@ -241,6 +242,13 @@ app.post("/", async (c) => {
       })
       .where(eq(jobs.id, jobId));
 
+    // Track job creation
+    analytics.track(session.user.id, "job_created", {
+      jobId,
+      challengeId,
+      jobType: type,
+    });
+
     return c.json({
       job: {
         id: jobId,
@@ -410,6 +418,17 @@ app.post("/:id/complete", async (c) => {
   }
 
   await db.update(jobs).set(updatePayload).where(eq(jobs.id, id));
+
+  // Track job completion
+  analytics.track(job.userId, "job_completed", {
+    jobId: id,
+    challengeId: job.challengeId,
+    jobType: job.type,
+    status,
+    gpuType: updatePayload.gpuType ?? null,
+    executionSeconds: updatePayload.executionSeconds ?? null,
+    costCents: updatePayload.costUsdCents ?? null,
+  });
 
   return c.json({ success: true });
 });

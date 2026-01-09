@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { db, user, depositPresets, transactions, gpuPricing } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
+import { analytics } from "../services/analytics";
 
 const app = new Hono();
 
@@ -216,6 +217,13 @@ app.post("/webhook", async (c) => {
       });
 
       console.log(`Added $${depositDollars} to user ${userId} (new balance: $${(newBalance / 100).toFixed(2)})`);
+
+      // Track deposit completed
+      analytics.track(userId, "deposit_completed", {
+        amountCents: depositCents,
+        newBalanceCents: newBalance,
+        stripeSessionId: checkoutSession.id,
+      });
     }
   }
 

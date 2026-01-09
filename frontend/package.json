@@ -15,6 +15,7 @@
     "better-auth": "^1.4.7",
     "dotenv": "^17.2.3",
     "molstar": "^5.4.2",
+    "posthog-js": "^1.317.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-helmet-async": "^2.0.5",

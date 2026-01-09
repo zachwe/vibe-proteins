@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { Resend } from "resend";
 import * as authSchema from "./db/auth-schema";
+import { analytics } from "./services/analytics";
 
 const DATABASE_PATH = process.env.DATABASE_URL || "vibeproteins.db";
 
@@ -117,4 +118,26 @@ export const auth = betterAuth({
   trustedOrigins,
   // Secret is read from BETTER_AUTH_SECRET env var automatically
   // You can add more providers here later (Google, GitHub, etc.)
+
+  // Database hooks for analytics
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          // Track new signups and send alert email
+          analytics.track(user.id, "user_signed_up", {
+            email: user.email,
+            name: user.name,
+          });
+          analytics.identify(user.id, {
+            email: user.email,
+            name: user.name,
+            createdAt: new Date().toISOString(),
+          });
+          // Send email alert
+          await analytics.alertSignup({ id: user.id, email: user.email, name: user.name || "" });
+        },
+      },
+    },
+  },
 });

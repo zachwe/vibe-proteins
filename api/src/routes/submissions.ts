@@ -4,6 +4,7 @@ import { db, submissions, challenges, jobs, user, transactions, gpuPricing } fro
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider } from "../inference/modal";
+import { analytics } from "../services/analytics";
 
 const app = new Hono();
 
@@ -97,7 +98,8 @@ async function runScoringInBackground(
   designStructureUrl: string,
   targetStructureUrl: string,
   binderSequence?: string,
-  targetChainIds?: string[]
+  targetChainIds?: string[],
+  userId?: string
 ) {
   const provider = getInferenceProvider();
 
@@ -217,6 +219,19 @@ async function runScoringInBackground(
         compositeScore: compositeScore,
       })
       .where(eq(submissions.id, submissionId));
+
+    // Track submission scored
+    if (userId) {
+      analytics.track(userId, "submission_scored", {
+        submissionId,
+        compositeScore,
+        plddt,
+        ptm,
+        iptm,
+        ipSae,
+        interfaceArea,
+      });
+    }
   } catch (error) {
     console.error("Scoring failed for submission", submissionId, error);
     await db
@@ -489,7 +504,8 @@ async function runCustomSubmissionPipeline(
       structureUrl,
       targetStructureUrl,
       binderSequence,
-      targetChainIds
+      targetChainIds,
+      userId
     );
   } catch (error) {
     console.error("Custom submission pipeline failed:", error);
@@ -605,6 +621,14 @@ app.post("/custom", async (c) => {
   // Get target chain IDs
   const targetChainIds = challenge.targetChainId ? [challenge.targetChainId] : [];
 
+  // Track custom submission created
+  analytics.track(session.user.id, "submission_created", {
+    submissionId,
+    challengeId,
+    isCustomSequence: true,
+    sequenceLength: validation.cleaned.length,
+  });
+
   // Fire and forget - run pipeline in background
   runCustomSubmissionPipeline(
     submissionId,
@@ -684,6 +708,14 @@ app.post("/", async (c) => {
     createdAt: now,
   });
 
+  // Track submission created
+  analytics.track(session.user.id, "submission_created", {
+    submissionId,
+    challengeId,
+    isCustomSequence: false,
+    hasStructure: !!designStructureUrl,
+  });
+
   // Start scoring in background if we have both structures
   if (designStructureUrl && challenge.targetStructureUrl) {
     // Fire and forget - don't await
@@ -692,7 +724,8 @@ app.post("/", async (c) => {
       designStructureUrl,
       challenge.targetStructureUrl,
       designSequence,
-      challenge.targetChainId ? [challenge.targetChainId] : undefined
+      challenge.targetChainId ? [challenge.targetChainId] : undefined,
+      session.user.id
     ).catch((err) => {
       console.error("Background scoring error:", err);
     });
@@ -858,7 +891,8 @@ app.post("/:id/retry", async (c) => {
       submission.designStructureUrl,
       challenge.targetStructureUrl,
       submission.designSequence,
-      challenge.targetChainId ? [challenge.targetChainId] : undefined
+      challenge.targetChainId ? [challenge.targetChainId] : undefined,
+      session.user.id
     ).catch((err) => {
       console.error("Background scoring error on retry:", err);
     });
