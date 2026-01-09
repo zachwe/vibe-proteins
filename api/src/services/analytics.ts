@@ -52,8 +52,8 @@ export const analytics = {
    * Send an email alert for new signups
    */
   async alertSignup(user: { id: string; email: string; name: string }) {
-    if (!resend) {
-      console.log("[Analytics] Signup alert (Resend not configured):", user.email);
+    if (!resend || !ALERT_EMAIL) {
+      console.log("[Analytics] Signup alert (Resend or ALERT_EMAIL not configured):", user.email);
       return;
     }
 
