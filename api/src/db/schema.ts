@@ -20,6 +20,7 @@ export const challenges = sqliteTable("challenges", {
   pdbDescription: text("pdb_description"), // What this PDB structure shows
   chainAnnotations: text("chain_annotations"), // JSON: { "E": { "name": "Spike RBD", "role": "target" }, ... }
   suggestedHotspots: text("suggested_hotspots"), // JSON: [{ "residues": ["E:417", "E:453"], "label": "ACE2 binding site", "description": "..." }]
+  structureNote: text("structure_note"), // Note explaining PDB-specific details (assemblies, oligomeric state, etc.)
   taskType: text("task_type").notNull(), // 'binder', 'blocker', 'decoy', 'stabilizer'
   educationalContent: text("educational_content"), // Markdown content
   hints: text("hints"), // JSON array of hints

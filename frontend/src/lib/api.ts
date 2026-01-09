@@ -33,6 +33,7 @@ export interface Challenge {
   pdbDescription: string | null;
   chainAnnotations: string | null; // JSON string of Record<string, ChainAnnotation>
   suggestedHotspots: string | null; // JSON string of SuggestedHotspot[]
+  structureNote: string | null; // Note explaining PDB-specific details
   educationalContent: string | null;
   hints: string | null;
   createdAt: string;

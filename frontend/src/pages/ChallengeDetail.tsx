@@ -143,9 +143,11 @@ function SequenceDisplay({ sequence }: { sequence: string }) {
 function ChainLegend({
   chainAnnotations,
   pdbDescription,
+  structureNote,
 }: {
   chainAnnotations: Record<string, ChainAnnotation>;
   pdbDescription: string | null;
+  structureNote: string | null;
 }) {
   const chains = Object.entries(chainAnnotations);
   const targetChains = chains.filter(([, ann]) => ann.role === "target");
@@ -198,6 +200,15 @@ function ChainLegend({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Structure note if present */}
+      {structureNote && (
+        <div className="mt-2 pt-2 border-t border-slate-600/30">
+          <p className="text-[10px] text-amber-400/90 leading-relaxed">
+            <span className="font-medium">Note:</span> {structureNote}
+          </p>
         </div>
       )}
 
@@ -447,6 +458,7 @@ export default function ChallengeDetail() {
             <ChainLegend
               chainAnnotations={chainAnnotations}
               pdbDescription={challenge.pdbDescription}
+              structureNote={challenge.structureNote}
             />
           )}
           <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">

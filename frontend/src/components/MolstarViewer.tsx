@@ -76,6 +76,9 @@ export default function MolstarViewer({
   const [initialized, setInitialized] = useState(false);
   const [isSpinning, setIsSpinning] = useState(autoSpin);
   const [showWaters, setShowWaters] = useState(!hideNonPolymers);
+  const [showChainPanel, setShowChainPanel] = useState(false);
+  const [availableChains, setAvailableChains] = useState<string[]>([]);
+  const [chainVisibility, setChainVisibility] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -257,6 +260,14 @@ export default function MolstarViewer({
 
       await applyChainColors(viewer, colors);
 
+      // Extract available chains from the structure
+      const chains = extractChains(viewer);
+      setAvailableChains(chains);
+      // Initialize all chains as visible
+      const visibility: Record<string, boolean> = {};
+      chains.forEach(chain => { visibility[chain] = true; });
+      setChainVisibility(visibility);
+
       // Hide waters/ions if requested (use current state from component)
       // This will be handled by the effect below
 
@@ -310,7 +321,7 @@ export default function MolstarViewer({
         </div>
       )}
 
-      {/* Spin toggle button */}
+      {/* Control buttons */}
       {hasStructure && initialized && (
         <div className="absolute top-3 left-3 flex gap-1 z-10">
           {/* Spin toggle */}
@@ -348,6 +359,86 @@ export default function MolstarViewer({
               <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z" />
             </svg>
           </button>
+
+          {/* Chain visibility toggle */}
+          {availableChains.length > 1 && (
+            <button
+              onClick={() => setShowChainPanel(!showChainPanel)}
+              className={`p-2 rounded-lg transition-colors ${
+                showChainPanel
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700/80"
+              }`}
+              title="Toggle chain visibility panel"
+            >
+              {/* Layers/chains icon */}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Chain visibility panel */}
+      {hasStructure && initialized && showChainPanel && availableChains.length > 1 && (
+        <div className="absolute top-14 left-3 bg-slate-800/95 rounded-lg p-3 z-10 min-w-[140px] shadow-lg">
+          <p className="text-xs font-medium text-slate-300 mb-2">Chains</p>
+          <div className="space-y-1.5">
+            {availableChains.map((chainId) => (
+              <label
+                key={chainId}
+                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-700/50 rounded px-1.5 py-1 -mx-1.5"
+              >
+                <input
+                  type="checkbox"
+                  checked={chainVisibility[chainId] ?? true}
+                  onChange={() => {
+                    const newVisibility = !chainVisibility[chainId];
+                    setChainVisibility(prev => ({ ...prev, [chainId]: newVisibility }));
+                    if (viewerRef.current) {
+                      setChainVisibilityInViewer(viewerRef.current, chainId, newVisibility);
+                    }
+                  }}
+                  className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                />
+                <span className="text-slate-300">Chain {chainId}</span>
+              </label>
+            ))}
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-700 flex gap-2">
+            <button
+              onClick={() => {
+                const newVisibility: Record<string, boolean> = {};
+                availableChains.forEach(id => { newVisibility[id] = true; });
+                setChainVisibility(newVisibility);
+                if (viewerRef.current) {
+                  availableChains.forEach(id => setChainVisibilityInViewer(viewerRef.current!, id, true));
+                }
+              }}
+              className="text-[10px] text-blue-400 hover:text-blue-300"
+            >
+              Show all
+            </button>
+            <button
+              onClick={() => {
+                const newVisibility: Record<string, boolean> = {};
+                availableChains.forEach(id => { newVisibility[id] = false; });
+                setChainVisibility(newVisibility);
+                if (viewerRef.current) {
+                  availableChains.forEach(id => setChainVisibilityInViewer(viewerRef.current!, id, false));
+                }
+              }}
+              className="text-[10px] text-slate-400 hover:text-slate-300"
+            >
+              Hide all
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -654,5 +745,85 @@ async function clearResidueHighlight(
     await applyChainColors(viewer, chainColors);
   } catch (error) {
     console.warn("Unable to clear highlights:", error);
+  }
+}
+
+/**
+ * Extract available chain IDs from the loaded structure
+ */
+function extractChains(viewer: Viewer): string[] {
+  const chains = new Set<string>();
+
+  try {
+    const structures = viewer.plugin.managers.structure.hierarchy.current.structures;
+    for (const structure of structures) {
+      const data = structure.cell.obj?.data;
+      if (!data) continue;
+
+      // Iterate through all units to find chain IDs
+      for (let i = 0; i < data.units.length; i++) {
+        const unit = data.units[i];
+        const chainId = unit.model.atomicHierarchy.chains.auth_asym_id.value(
+          unit.chainGroupId
+        );
+        if (chainId && typeof chainId === 'string') {
+          chains.add(chainId);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("Unable to extract chains:", error);
+  }
+
+  return Array.from(chains).sort();
+}
+
+/**
+ * Set visibility of a specific chain
+ */
+async function setChainVisibilityInViewer(
+  viewer: Viewer,
+  chainId: string,
+  visible: boolean
+) {
+  const plugin = viewer.plugin;
+  const structures = plugin.managers.structure.hierarchy.current.structures;
+
+  if (!structures.length) return;
+
+  try {
+    for (const structure of structures) {
+      for (const component of structure.components) {
+        const cell = component.cell;
+        const obj = cell.obj;
+        if (!obj) continue;
+
+        // Check if this component contains the chain we're looking for
+        const key = (component.key || "").toUpperCase();
+        const label = (obj.label || "").toUpperCase();
+
+        // Match chain ID in component key or label
+        const matchesChain =
+          key.includes(`CHAIN ${chainId}`) ||
+          key.includes(`-${chainId}`) ||
+          label.includes(`CHAIN ${chainId}`) ||
+          label === chainId;
+
+        if (matchesChain) {
+          // Toggle visibility of the component and its representations
+          if (cell.state.isHidden === visible) {
+            await plugin.state.data.updateCellState(cell.transform.ref, { isHidden: !visible });
+          }
+
+          for (const repr of component.representations) {
+            if (repr.cell.state.isHidden === visible) {
+              await plugin.state.data.updateCellState(repr.cell.transform.ref, { isHidden: !visible });
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`Unable to set visibility for chain ${chainId}:`, error);
   }
 }
