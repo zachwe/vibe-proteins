@@ -69,7 +69,7 @@
         "description": "The inflammatory messenger molecule - this is what you're designing a binder for"
       }
     },
-    "structureNote": "This crystal structure shows a single IL-6 molecule. The viewer may show assembly copies (ASM-1, ASM-2) which are crystallographic duplicates - focus on any single copy.",
+    "structureNote": "This structure displays multiple copies (ASM-1, ASM-2) - these are identical IL-6 molecules from the crystal. You only need to focus on one.",
     "suggestedHotspots": [
       {
         "residues": [
