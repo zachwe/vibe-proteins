@@ -24,8 +24,8 @@ export default function Home() {
 
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-radial from-blue-900/20 via-transparent to-transparent animate-pulse-slow" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-radial from-emerald-900/15 via-transparent to-transparent animate-pulse-slower" />
+        <div className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-gradient-radial from-blue-900/20 via-transparent to-transparent animate-pulse-slow" />
+        <div className="absolute -bottom-1/2 -right-1/2 w-[200%] h-[200%] bg-gradient-radial from-emerald-900/15 via-transparent to-transparent animate-pulse-slower" />
         {/* Subtle grid pattern */}
         <div
           className="absolute inset-0 opacity-[0.02]"
