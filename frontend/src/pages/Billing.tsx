@@ -189,7 +189,7 @@ export default function Billing() {
               </tbody>
             </table>
             <div className="px-4 py-3 bg-slate-700/50 text-slate-400 text-sm">
-              Currently using NVIDIA A10G for all jobs (~$0.024/minute)
+              Currently using A10G (~$0.024/min) for most jobs, A100 (~$0.045/min) for structure prediction
             </div>
           </div>
         )}
