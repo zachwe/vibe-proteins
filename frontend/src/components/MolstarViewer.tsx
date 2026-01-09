@@ -413,12 +413,15 @@ export default function MolstarViewer({
           </div>
           <div className="mt-2 pt-2 border-t border-slate-700 flex gap-2">
             <button
-              onClick={() => {
+              onClick={async () => {
                 const newVisibility: Record<string, boolean> = {};
                 availableChains.forEach(id => { newVisibility[id] = true; });
                 setChainVisibility(newVisibility);
                 if (viewerRef.current) {
-                  availableChains.forEach(id => setChainVisibilityInViewer(viewerRef.current!, id, true));
+                  // Run sequentially to avoid race conditions
+                  for (const id of availableChains) {
+                    await setChainVisibilityInViewer(viewerRef.current, id, true);
+                  }
                 }
               }}
               className="text-[10px] text-blue-400 hover:text-blue-300"
@@ -426,12 +429,15 @@ export default function MolstarViewer({
               Show all
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const newVisibility: Record<string, boolean> = {};
                 availableChains.forEach(id => { newVisibility[id] = false; });
                 setChainVisibility(newVisibility);
                 if (viewerRef.current) {
-                  availableChains.forEach(id => setChainVisibilityInViewer(viewerRef.current!, id, false));
+                  // Run sequentially to avoid race conditions
+                  for (const id of availableChains) {
+                    await setChainVisibilityInViewer(viewerRef.current, id, false);
+                  }
                 }
               }}
               className="text-[10px] text-slate-400 hover:text-slate-300"
