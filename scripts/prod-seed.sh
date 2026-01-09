@@ -22,21 +22,20 @@ console.log('Seeding challenges...');
 
 const upsert = db.prepare(`
   INSERT INTO challenges (
-    id, name, description, mission, difficulty, level, task_type,
+    id, name, description, mission, level, task_type,
     target_pdb_id, target_uniprot_id, target_structure_url, target_sequence,
     target_chain_id, pdb_start_residue, pdb_description, chain_annotations,
-    suggested_hotspots, educational_content, created_at
+    suggested_hotspots, structure_note, educational_content, created_at
   ) VALUES (
-    @id, @name, @description, @mission, @difficulty, @level, @taskType,
+    @id, @name, @description, @mission, @level, @taskType,
     @targetPdbId, @targetUniprotId, @targetStructureUrl, @targetSequence,
     @targetChainId, @pdbStartResidue, @pdbDescription, @chainAnnotations,
-    @suggestedHotspots, @educationalContent, datetime('now')
+    @suggestedHotspots, @structureNote, @educationalContent, datetime('now')
   )
   ON CONFLICT(id) DO UPDATE SET
     name = @name,
     description = @description,
     mission = @mission,
-    difficulty = @difficulty,
     level = @level,
     task_type = @taskType,
     target_pdb_id = @targetPdbId,
@@ -48,6 +47,7 @@ const upsert = db.prepare(`
     pdb_description = @pdbDescription,
     chain_annotations = @chainAnnotations,
     suggested_hotspots = @suggestedHotspots,
+    structure_note = @structureNote,
     educational_content = @educationalContent
 `);
 
@@ -55,7 +55,8 @@ for (const c of challenges) {
   upsert.run({
     ...c,
     chainAnnotations: JSON.stringify(c.chainAnnotations),
-    suggestedHotspots: c.suggestedHotspots ? JSON.stringify(c.suggestedHotspots) : null
+    suggestedHotspots: c.suggestedHotspots ? JSON.stringify(c.suggestedHotspots) : null,
+    structureNote: c.structureNote || null
   });
   console.log('  -', c.name);
 }
