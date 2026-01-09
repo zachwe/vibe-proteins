@@ -59,6 +59,17 @@
   }
 }
 
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Animation utilities */
 .animate-float {
   animation: float 4s ease-in-out infinite;
@@ -92,6 +103,10 @@
 
 .animate-rise-delay-2 {
   animation: rise 0.8s ease-out 0.24s both;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1s ease-in-out infinite;
 }
 
 /* Radial gradient utility */

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useChallenges, useLeaderboard, useReferenceBinders } from "../lib/hooks";
 import type { Challenge, LeaderboardSortBy, ReferenceBinder } from "../lib/api";
+import Spinner from "../components/Spinner";
 
 const sortOptions: { value: LeaderboardSortBy; label: string }[] = [
   { value: "compositeScore", label: "Composite Score" },
@@ -145,7 +146,7 @@ function ChallengeLeaderboard({ challenge }: { challenge: Challenge }) {
 
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <Spinner size="md" />
             </div>
           )}
 
@@ -287,7 +288,7 @@ export default function Leaderboards() {
 
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <Spinner size="lg" />
             <span className="ml-3 text-slate-400">Loading challenges...</span>
           </div>
         )}

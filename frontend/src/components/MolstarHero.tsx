@@ -8,6 +8,7 @@ import { Viewer } from "molstar/lib/apps/viewer/app";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import { Color } from "molstar/lib/mol-util/color";
 import { Binding } from "molstar/lib/mol-util/binding";
+import Spinner from "./Spinner";
 
 interface MolstarHeroProps {
   pdbId: string;
@@ -183,7 +184,7 @@ export default function MolstarHero({ pdbId, className = "" }: MolstarHeroProps)
       {/* Loading state */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+          <Spinner size="lg" />
         </div>
       )}
     </div>

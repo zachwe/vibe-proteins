@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useChallenges } from "../lib/hooks";
+import Spinner from "../components/Spinner";
 
 const levelColors: Record<number, string> = {
   1: "bg-green-600",
@@ -40,7 +41,7 @@ export default function Challenges() {
 
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <Spinner size="lg" />
             <span className="ml-3 text-slate-400">Loading challenges...</span>
           </div>
         )}

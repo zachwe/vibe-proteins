@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useJobs, useChallenges } from "../lib/hooks";
 import { useSession } from "../lib/auth";
 import type { Job, Challenge } from "../lib/api";
+import Spinner from "../components/Spinner";
 
 const statusStyles: Record<Job["status"], string> = {
   pending: "bg-slate-500",
@@ -116,7 +117,7 @@ export default function Jobs() {
   if (sessionLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <Spinner size="lg" />
         <span className="ml-3 text-slate-400">Loading jobs...</span>
       </div>
     );
@@ -144,7 +145,7 @@ export default function Jobs() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <Spinner size="lg" />
         <span className="ml-3 text-slate-400">Loading jobs...</span>
       </div>
     );

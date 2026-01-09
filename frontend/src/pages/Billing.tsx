@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useCurrentUser, useDepositPresets, useGpuPricing, useTransactions, useCreateDeposit, queryKeys } from "../lib/hooks";
 import { useQueryClient } from "@tanstack/react-query";
+import Spinner from "../components/Spinner";
 
 export default function Billing() {
   const [searchParams] = useSearchParams();
@@ -114,7 +115,7 @@ export default function Billing() {
 
         {presetsLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <Spinner size="lg" />
           </div>
         ) : (
           <div className="bg-slate-800 rounded-lg p-6 mb-8">
@@ -162,7 +163,7 @@ export default function Billing() {
 
         {pricingLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <Spinner size="lg" />
           </div>
         ) : (
           <div className="bg-slate-800 rounded-lg overflow-hidden mb-8">
@@ -199,7 +200,7 @@ export default function Billing() {
 
         {transactionsLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <Spinner size="lg" />
           </div>
         ) : transactions && transactions.length > 0 ? (
           <div className="bg-slate-800 rounded-lg overflow-hidden">

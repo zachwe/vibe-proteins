@@ -5,6 +5,7 @@ import { useSession, signOut } from "../lib/auth";
 import { useCurrentUser, useSubmissions, useJobs, useChallenges } from "../lib/hooks";
 import { usersApi } from "../lib/api";
 import type { Submission, Job } from "../lib/api";
+import Spinner from "../components/Spinner";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -257,7 +258,7 @@ export default function Dashboard() {
   if (sessionLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <Spinner size="lg" />
         <span className="ml-3 text-slate-400">Loading...</span>
       </div>
     );
@@ -299,7 +300,7 @@ export default function Dashboard() {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+            <Spinner size="lg" />
             <span className="ml-3 text-slate-400">Loading dashboard...</span>
           </div>
         ) : (

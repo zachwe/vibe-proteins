@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useJob } from "../lib/hooks";
 import ResultsPanel from "../components/ResultsPanel";
+import Spinner from "../components/Spinner";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -10,7 +11,7 @@ export default function JobDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <Spinner size="lg" />
         <span className="ml-3 text-slate-400">Loading job...</span>
       </div>
     );

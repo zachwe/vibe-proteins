@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useChallenges, useCreateCustomSubmission, useCurrentUser } from "../lib/hooks";
 import { useSession } from "../lib/auth";
+import Spinner from "../components/Spinner";
 
 // Valid amino acid characters
 const VALID_AA = /^[ACDEFGHIKLMNPQRSTVWY]+$/i;
@@ -109,7 +110,7 @@ export default function Submit() {
   if (sessionLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <Spinner size="lg" />
         <span className="ml-3 text-slate-400">Loading...</span>
       </div>
     );
@@ -275,7 +276,7 @@ export default function Submit() {
           >
             {createSubmission.isPending ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                <Spinner size="sm" color="white" />
                 Submitting...
               </>
             ) : (

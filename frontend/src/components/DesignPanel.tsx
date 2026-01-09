@@ -10,6 +10,7 @@ import { useCreateJob, useJob } from "../lib/hooks";
 import { useSession } from "../lib/auth";
 import { ApiError, type SuggestedHotspot } from "../lib/api";
 import ResultsPanel from "./ResultsPanel";
+import Spinner from "./Spinner";
 
 interface DesignPanelProps {
   challengeId: string;
@@ -219,7 +220,7 @@ export default function DesignPanel({
             <div className="space-y-3">
               {/* Current status banner */}
               <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                <Spinner size="sm" />
                 <span className="text-blue-400 text-sm">
                   {isLoading ? "Submitting job..." :
                    latestProgress ? latestProgress.message : "Starting job..."}
@@ -509,7 +510,7 @@ export default function DesignPanel({
         >
           {createJob.isPending ? (
             <span className="flex items-center justify-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <Spinner size="sm" color="white" />
               Submitting...
             </span>
           ) : (

@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { Job, Suggestion, SuggestionRequest } from "../lib/api";
 import { useCreateSubmission, useSuggestions } from "../lib/hooks";
 import MolstarViewer from "./MolstarViewer";
+import Spinner from "./Spinner";
 
 // LocalStorage key for cached suggestions
 const SUGGESTIONS_CACHE_KEY = "proteindojo_suggestions_cache";
@@ -716,7 +717,7 @@ export default function ResultsPanel({
         <div className="space-y-4">
           {/* Current status indicator */}
           <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+            <Spinner size="sm" />
             <div>
               <p className="text-blue-400 font-medium">
                 {progressEvents && progressEvents.length > 0
@@ -1018,7 +1019,7 @@ export default function ResultsPanel({
                 </div>
                 {isLoadingSuggestions ? (
                   <div className="bg-slate-700/50 rounded-lg p-3 flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
+                    <Spinner size="sm" color="purple" />
                     <span className="text-sm text-slate-400">Analyzing your results...</span>
                   </div>
                 ) : (
@@ -1175,7 +1176,7 @@ export default function ResultsPanel({
             >
               {createSubmission.isPending ? (
                 <span className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <Spinner size="sm" color="white" />
                   Submitting...
                 </span>
               ) : submissionSuccess ? (

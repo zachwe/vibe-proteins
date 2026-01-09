@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { useCurrentUser, useChallenge, useJob } from "../lib/hooks";
 import { jobsApi, type ChainAnnotation } from "../lib/api";
 import MolstarViewer from "../components/MolstarViewer";
+import Spinner from "../components/Spinner";
 
 interface JobResult {
   id: string;
@@ -878,7 +879,7 @@ function JobStatusPanel({
 
       {/* Current status banner */}
       <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
-        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+        <Spinner size="sm" />
         <span className="text-blue-400 text-sm">
           {isLoading ? "Submitting job..." :
            latestProgress ? latestProgress.message : "Starting BoltzGen pipeline..."}

@@ -14,6 +14,7 @@ import {
   StructureSelectionQuery,
 } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
 import { Color } from "molstar/lib/mol-util/color";
+import Spinner from "./Spinner";
 
 // Import Mol* styles
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
@@ -298,7 +299,7 @@ export default function MolstarViewer({
       {isLoading && (
         <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10 pointer-events-none">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+            <Spinner size="lg" className="mx-auto mb-2" />
             <p className="text-slate-300">Loading structure...</p>
           </div>
         </div>

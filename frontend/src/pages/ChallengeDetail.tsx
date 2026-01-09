@@ -9,6 +9,7 @@ import DesignPanel from "../components/DesignPanel";
 import Leaderboard from "../components/Leaderboard";
 import HotspotIndicator from "../components/HotspotIndicator";
 import SequenceSelector from "../components/SequenceSelector";
+import Spinner from "../components/Spinner";
 import type { ChainAnnotation, SuggestedHotspot } from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 
@@ -368,7 +369,7 @@ export default function ChallengeDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <Spinner size="lg" />
         <span className="ml-3 text-slate-400">Loading challenge...</span>
       </div>
     );
