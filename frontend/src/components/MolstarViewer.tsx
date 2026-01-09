@@ -361,7 +361,7 @@ export default function MolstarViewer({
           </button>
 
           {/* Chain visibility toggle */}
-          {availableChains.length > 1 && (
+          {availableChains.length > 0 && (
             <button
               onClick={() => setShowChainPanel(!showChainPanel)}
               className={`p-2 rounded-lg transition-colors ${
@@ -386,7 +386,7 @@ export default function MolstarViewer({
       )}
 
       {/* Chain visibility panel */}
-      {hasStructure && initialized && showChainPanel && availableChains.length > 1 && (
+      {hasStructure && initialized && showChainPanel && availableChains.length > 0 && (
         <div className="absolute top-14 left-3 bg-slate-800/95 rounded-lg p-3 z-10 min-w-[140px] shadow-lg">
           <p className="text-xs font-medium text-slate-300 mb-2">Chains</p>
           <div className="space-y-1.5">
