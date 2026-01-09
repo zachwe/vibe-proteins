@@ -125,7 +125,7 @@ app.post("/deposit", async (c) => {
           currency: "usd",
           unit_amount: amount,
           product_data: {
-            name: "VibeProteins Balance",
+            name: "ProteinDojo Balance",
             description: `Add $${amountDollars} to your account`,
           },
         },
