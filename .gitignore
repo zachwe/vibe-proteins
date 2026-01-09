@@ -57,3 +57,4 @@ coverage/
 
 # Local Fly configs (contain app names/URLs)
 *.toml.local
+.playwright-mcp/
