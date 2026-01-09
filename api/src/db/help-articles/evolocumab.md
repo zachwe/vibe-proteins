@@ -1,9 +1,9 @@
 # Evolocumab (Repatha)
 
-**Type:** Fully human [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG2)
-**Target:** PCSK9 (Proprotein Convertase Subtilisin/Kexin type 9)
-**PDB:** [3H42](https://www.rcsb.org/structure/3H42) (precursor antibody structure)
-**FDA Approved:** 2015
+**Type:** Fully human [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG2)  
+**Target:** PCSK9 (Proprotein Convertase Subtilisin/Kexin type 9)  
+**PDB:** [3H42](https://www.rcsb.org/structure/3H42) (precursor antibody structure)  
+**FDA Approved:** 2015  
 **Developer:** [Amgen](https://www.amgen.com/)
 
 ## What is it?
