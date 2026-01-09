@@ -1,0 +1,37 @@
+# Test Sequences for Custom Submission
+
+These sequences can be used to test the /submit page (custom sequence submission flow).
+
+## Usage
+
+1. Go to http://localhost:5173/submit
+2. Select a challenge (e.g., IL-6)
+3. Paste one of the sequences below
+4. Click "Submit for Scoring"
+
+The submission will run Boltz-2 folding followed by scoring (~1-2 min).
+
+---
+
+## Humanized Nanobody (124 residues)
+
+Standard humanized VHH scaffold with typical CDR loops:
+
+QVQLVESGGGLVQPGGSLRLSCAASGFTFSSYAMSWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAKDRLSITIRPRYYGLDVWGQGTLVTVSS
+
+---
+
+## Minimal Nanobody (114 residues)
+
+Shorter VHH format:
+
+EVQLVESGGGLVQAGGSLRLSCAASGRTFSSYAMGWFRQAPGKEREFVAGINRSGGSTYYADSVKGRFTISRDNAKNTVYLQMNSLKPEDTAVYYCAADSTIYASYYQGQGTQVTVSS
+
+---
+
+## Notes
+
+- Both sequences are valid amino acid sequences (20-500 residues)
+- They use standard nanobody framework regions (FR1-FR4)
+- These are generic test scaffolds, not optimized for any specific target
+- Expect modest scores since these aren't designed for IL-6 specifically

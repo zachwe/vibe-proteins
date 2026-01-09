@@ -17,6 +17,7 @@
     "prod:db": "./scripts/prod-db.sh",
     "prod:seed": "./scripts/prod-seed.sh",
     "prod:seed-binders": "./scripts/prod-seed-reference-binders.sh",
+    "prod:seed-help": "./scripts/prod-seed-help-articles.sh",
     "prod:migrate": "./scripts/prod-migrate.sh",
     "prod:reset-db": "./scripts/prod-reset-db.sh",
     "prod:deploy-dashboard": "./scripts/deploy-datasette.sh"
