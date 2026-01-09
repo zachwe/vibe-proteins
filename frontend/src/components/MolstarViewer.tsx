@@ -20,18 +20,18 @@ import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
 /**
  * Convert RCSB PDB URLs to PDBe mirror URLs.
- * RCSB's SSL certificate expired, so we use the European mirror as fallback.
+ * Used as fallback when RCSB fails (e.g., SSL cert issues).
  *
  * RCSB: https://files.rcsb.org/download/1VPF.pdb
  * PDBe: https://www.ebi.ac.uk/pdbe/entry-files/download/pdb1vpf.ent
  */
-function convertToPDBeMirror(url: string): string {
+function convertToPDBeMirror(url: string): string | null {
   const rcsbMatch = url.match(/files\.rcsb\.org\/download\/(\w+)\.pdb/i);
   if (rcsbMatch) {
     const pdbId = rcsbMatch[1].toLowerCase();
     return `https://www.ebi.ac.uk/pdbe/entry-files/download/pdb${pdbId}.ent`;
   }
-  return url;
+  return null;
 }
 
 interface MolstarViewerProps {
@@ -228,22 +228,30 @@ export default function MolstarViewer({
 
       let structureUrl = url;
 
-      // If PDB ID provided, construct PDBe URL (RCSB cert expired)
+      // If PDB ID provided, construct RCSB URL
       if (id && !url) {
-        structureUrl = `https://www.ebi.ac.uk/pdbe/entry-files/download/pdb${id.toLowerCase()}.ent`;
+        structureUrl = `https://files.rcsb.org/download/${id}.pdb`;
       }
 
       if (!structureUrl) {
         throw new Error("No structure URL provided");
       }
 
-      // Convert any RCSB URLs to PDBe mirror (RCSB SSL cert expired)
-      structureUrl = convertToPDBeMirror(structureUrl);
-
       const { format, isBinary } = inferStructureFormat(structureUrl);
 
-      // Load the structure
-      await viewer.loadStructureFromUrl(structureUrl, format, isBinary);
+      // Try to load the structure, fall back to PDBe mirror if RCSB fails
+      try {
+        await viewer.loadStructureFromUrl(structureUrl, format, isBinary);
+      } catch (primaryError) {
+        const mirrorUrl = convertToPDBeMirror(structureUrl);
+        if (mirrorUrl) {
+          console.warn(`Primary source failed, trying PDBe mirror: ${mirrorUrl}`);
+          const mirrorFormat = inferStructureFormat(mirrorUrl);
+          await viewer.loadStructureFromUrl(mirrorUrl, mirrorFormat.format, mirrorFormat.isBinary);
+        } else {
+          throw primaryError;
+        }
+      }
       if (loadId !== loadCounterRef.current) return;
       if (viewerRef.current !== viewer) return;
 
