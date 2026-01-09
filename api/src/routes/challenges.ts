@@ -1,12 +1,16 @@
 import { Hono } from "hono";
-import { eq, desc, sql, and, isNotNull } from "drizzle-orm";
+import { eq, desc, asc, sql, and, isNotNull } from "drizzle-orm";
 import { db, challenges, submissions, user, referenceBinders } from "../db";
 
 const app = new Hono();
 
-// GET /api/challenges - List all challenges
+// GET /api/challenges - List all challenges (sorted by level ascending)
 app.get("/", async (c) => {
-  const allChallenges = await db.select().from(challenges).all();
+  const allChallenges = await db
+    .select()
+    .from(challenges)
+    .orderBy(asc(challenges.level))
+    .all();
   return c.json({ challenges: allChallenges });
 });
 
