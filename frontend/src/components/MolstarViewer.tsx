@@ -760,14 +760,18 @@ function extractChains(viewer: Viewer): string[] {
       const data = structure.cell.obj?.data;
       if (!data) continue;
 
-      // Iterate through all units to find chain IDs
-      for (let i = 0; i < data.units.length; i++) {
-        const unit = data.units[i];
-        const chainId = unit.model.atomicHierarchy.chains.auth_asym_id.value(
-          unit.chainGroupId
-        );
-        if (chainId && typeof chainId === 'string') {
-          chains.add(chainId);
+      // Get chains from the model's hierarchy
+      const model = data.models?.[0];
+      if (model) {
+        const authAsymId = model.atomicHierarchy?.chains?.auth_asym_id;
+        if (authAsymId) {
+          // Iterate over all chain indices
+          for (let i = 0; i < authAsymId.rowCount; i++) {
+            const chainId = authAsymId.value(i);
+            if (chainId && typeof chainId === 'string') {
+              chains.add(chainId);
+            }
+          }
         }
       }
     }
@@ -779,7 +783,7 @@ function extractChains(viewer: Viewer): string[] {
 }
 
 /**
- * Set visibility of a specific chain
+ * Set visibility of a specific chain using transparency/overpaint
  */
 async function setChainVisibilityInViewer(
   viewer: Viewer,
@@ -787,42 +791,29 @@ async function setChainVisibilityInViewer(
   visible: boolean
 ) {
   const plugin = viewer.plugin;
+  const manager = plugin.managers.structure.component;
   const structures = plugin.managers.structure.hierarchy.current.structures;
 
   if (!structures.length) return;
 
+  // Build a query for this specific chain
+  const chainQuery = buildChainQuery(`Chain ${chainId}`, [chainId]);
+  if (!chainQuery) return;
+
   try {
-    for (const structure of structures) {
-      for (const component of structure.components) {
-        const cell = component.cell;
-        const obj = cell.obj;
-        if (!obj) continue;
-
-        // Check if this component contains the chain we're looking for
-        const key = (component.key || "").toUpperCase();
-        const label = (obj.label || "").toUpperCase();
-
-        // Match chain ID in component key or label
-        const matchesChain =
-          key.includes(`CHAIN ${chainId}`) ||
-          key.includes(`-${chainId}`) ||
-          label.includes(`CHAIN ${chainId}`) ||
-          label === chainId;
-
-        if (matchesChain) {
-          // Toggle visibility of the component and its representations
-          if (cell.state.isHidden === visible) {
-            await plugin.state.data.updateCellState(cell.transform.ref, { isHidden: !visible });
-          }
-
-          for (const repr of component.representations) {
-            if (repr.cell.state.isHidden === visible) {
-              await plugin.state.data.updateCellState(repr.cell.transform.ref, { isHidden: !visible });
-            }
-          }
-        }
-      }
-    }
+    // Use transparency to hide/show the chain
+    // Setting transparency to 1 makes it invisible, 0 makes it fully visible
+    await manager.applyTheme(
+      {
+        selection: chainQuery,
+        action: {
+          name: "transparency",
+          params: { value: visible ? 0 : 1 },
+        },
+        representations: [],
+      },
+      structures
+    );
   } catch (error) {
     console.warn(`Unable to set visibility for chain ${chainId}:`, error);
   }
