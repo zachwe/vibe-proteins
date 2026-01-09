@@ -9,18 +9,18 @@ await esbuild.build({
   format: "esm",
   target: "node20",
   sourcemap: true,
-  // Mark native modules as external (they can't be bundled)
-  external: ["better-sqlite3"],
+  // Mark native modules and problematic packages as external
+  external: ["better-sqlite3", "posthog-node"],
   // Preserve dynamic imports
   splitting: false,
   banner: {
     js: `
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-const require = createRequire(import.meta.url);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { createRequire as _createRequire } from 'module';
+import { fileURLToPath as _fileURLToPath } from 'url';
+import { dirname as _dirname } from 'path';
+const require = _createRequire(import.meta.url);
+const __filename = _fileURLToPath(import.meta.url);
+const __dirname = _dirname(__filename);
 `,
   },
 });
@@ -34,15 +34,15 @@ await esbuild.build({
   format: "esm",
   target: "node20",
   sourcemap: true,
-  external: ["better-sqlite3"],
+  external: ["better-sqlite3", "posthog-node"],
   banner: {
     js: `
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-const require = createRequire(import.meta.url);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { createRequire as _createRequire } from 'module';
+import { fileURLToPath as _fileURLToPath } from 'url';
+import { dirname as _dirname } from 'path';
+const require = _createRequire(import.meta.url);
+const __filename = _fileURLToPath(import.meta.url);
+const __dirname = _dirname(__filename);
 `,
   },
 });
