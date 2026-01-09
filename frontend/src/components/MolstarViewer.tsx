@@ -18,6 +18,22 @@ import { Color } from "molstar/lib/mol-util/color";
 // Import Mol* styles
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
+/**
+ * Convert RCSB PDB URLs to PDBe mirror URLs.
+ * RCSB's SSL certificate expired, so we use the European mirror as fallback.
+ *
+ * RCSB: https://files.rcsb.org/download/1VPF.pdb
+ * PDBe: https://www.ebi.ac.uk/pdbe/entry-files/download/pdb1vpf.ent
+ */
+function convertToPDBeMirror(url: string): string {
+  const rcsbMatch = url.match(/files\.rcsb\.org\/download\/(\w+)\.pdb/i);
+  if (rcsbMatch) {
+    const pdbId = rcsbMatch[1].toLowerCase();
+    return `https://www.ebi.ac.uk/pdbe/entry-files/download/pdb${pdbId}.ent`;
+  }
+  return url;
+}
+
 interface MolstarViewerProps {
   /** URL to a PDB file */
   pdbUrl?: string;
@@ -212,14 +228,17 @@ export default function MolstarViewer({
 
       let structureUrl = url;
 
-      // If PDB ID provided, construct RCSB URL
+      // If PDB ID provided, construct PDBe URL (RCSB cert expired)
       if (id && !url) {
-        structureUrl = `https://files.rcsb.org/download/${id}.pdb`;
+        structureUrl = `https://www.ebi.ac.uk/pdbe/entry-files/download/pdb${id.toLowerCase()}.ent`;
       }
 
       if (!structureUrl) {
         throw new Error("No structure URL provided");
       }
+
+      // Convert any RCSB URLs to PDBe mirror (RCSB SSL cert expired)
+      structureUrl = convertToPDBeMirror(structureUrl);
 
       const { format, isBinary } = inferStructureFormat(structureUrl);
 

@@ -106,8 +106,8 @@ export default function MolstarHero({ pdbId, className = "" }: MolstarHeroProps)
           });
         }
 
-        // Load structure from RCSB
-        const url = `https://files.rcsb.org/download/${pdbId}.pdb`;
+        // Load structure from PDBe (RCSB SSL cert expired)
+        const url = `https://www.ebi.ac.uk/pdbe/entry-files/download/pdb${pdbId.toLowerCase()}.ent`;
         await viewer.loadStructureFromUrl(url, "pdb", false);
 
         if (!mounted) return;
