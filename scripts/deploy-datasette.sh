@@ -32,12 +32,27 @@ echo "  flyctl secrets set -a $APP_NAME R2_ACCOUNT_ID=xxx"
 echo "  flyctl secrets set -a $APP_NAME R2_ACCESS_KEY_ID=xxx"
 echo "  flyctl secrets set -a $APP_NAME R2_SECRET_ACCESS_KEY=xxx"
 echo "  flyctl secrets set -a $APP_NAME R2_BUCKET_NAME=vibeproteins"
+echo "  flyctl secrets set -a $APP_NAME DATASETTE_SECRET='xxx' (auto-generated if missing in interactive mode)"
 echo "  flyctl secrets set -a $APP_NAME DATASETTE_PASSWORD_HASH='xxx'"
 echo ""
 echo "To generate password hash, run:"
 echo "  python -c \"from datasette_auth_passwords import password_hash; print(password_hash('YOUR_PASSWORD'))\""
 echo ""
 read -p "Press Enter to continue with deployment (Ctrl+C to cancel)..."
+
+if ! flyctl secrets list -a "$APP_NAME" | grep -q "^DATASETTE_SECRET"; then
+    if [ -t 0 ] && [ -t 1 ]; then
+        if command -v openssl >/dev/null 2>&1; then
+            echo "Generating DATASETTE_SECRET..."
+            DATASETTE_SECRET=$(openssl rand -hex 32)
+            flyctl secrets set -a "$APP_NAME" DATASETTE_SECRET="$DATASETTE_SECRET"
+        else
+            echo "WARNING: openssl not found; set DATASETTE_SECRET manually."
+        fi
+    else
+        echo "WARNING: DATASETTE_SECRET missing and non-interactive; set it manually before deploy."
+    fi
+fi
 
 flyctl deploy --config "$CONFIG_FILE" --remote-only
 
