@@ -35,6 +35,13 @@ function convertToPDBeMirror(url: string): string | null {
   return null;
 }
 
+/** Information about a chain in the structure */
+export interface ChainInfo {
+  id: string;
+  label: string;
+  entityDescription: string;
+}
+
 interface MolstarViewerProps {
   /** URL to a PDB file */
   pdbUrl?: string;
@@ -56,6 +63,8 @@ interface MolstarViewerProps {
   autoSpin?: boolean;
   /** Hide water molecules and ions by default */
   hideNonPolymers?: boolean;
+  /** Callback when chain info is loaded */
+  onChainsLoaded?: (chains: ChainInfo[]) => void;
 }
 
 export default function MolstarViewer({
@@ -67,6 +76,7 @@ export default function MolstarViewer({
   chainColors,
   autoSpin = true,
   hideNonPolymers = true,
+  onChainsLoaded,
 }: MolstarViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
@@ -78,7 +88,7 @@ export default function MolstarViewer({
   const [isSpinning, setIsSpinning] = useState(autoSpin);
   const [showWaters, setShowWaters] = useState(!hideNonPolymers);
   const [showChainPanel, setShowChainPanel] = useState(false);
-  const [availableChains, setAvailableChains] = useState<string[]>([]);
+  const [availableChains, setAvailableChains] = useState<ChainInfo[]>([]);
   const [chainVisibility, setChainVisibility] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -261,13 +271,15 @@ export default function MolstarViewer({
 
       await applyChainColors(viewer, colors);
 
-      // Extract available chains from the structure
-      const chains = extractChains(viewer);
+      // Extract available chains from the structure with labels
+      const chains = extractChainInfo(viewer);
       setAvailableChains(chains);
       // Initialize all chains as visible
       const visibility: Record<string, boolean> = {};
-      chains.forEach(chain => { visibility[chain] = true; });
+      chains.forEach(chain => { visibility[chain.id] = true; });
       setChainVisibility(visibility);
+      // Notify parent of chain info
+      onChainsLoaded?.(chains);
 
       // Hide waters/ions if requested (use current state from component)
       // This will be handled by the effect below
@@ -388,27 +400,34 @@ export default function MolstarViewer({
 
       {/* Chain visibility panel */}
       {hasStructure && initialized && showChainPanel && availableChains.length > 0 && (
-        <div className="absolute top-14 left-3 bg-slate-800/95 rounded-lg p-3 z-10 min-w-[140px] shadow-lg">
+        <div className="absolute top-14 left-3 bg-slate-800/95 rounded-lg p-3 z-10 min-w-[200px] max-w-[320px] shadow-lg max-h-[400px] overflow-y-auto">
           <p className="text-xs font-medium text-slate-300 mb-2">Chains</p>
           <div className="space-y-1.5">
-            {availableChains.map((chainId) => (
+            {availableChains.map((chain) => (
               <label
-                key={chainId}
-                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-700/50 rounded px-1.5 py-1 -mx-1.5"
+                key={chain.id}
+                className="flex items-start gap-2 text-xs cursor-pointer hover:bg-slate-700/50 rounded px-1.5 py-1.5 -mx-1.5"
               >
                 <input
                   type="checkbox"
-                  checked={chainVisibility[chainId] ?? true}
+                  checked={chainVisibility[chain.id] ?? true}
                   onChange={() => {
-                    const newVisibility = !chainVisibility[chainId];
-                    setChainVisibility(prev => ({ ...prev, [chainId]: newVisibility }));
+                    const newVisibility = !chainVisibility[chain.id];
+                    setChainVisibility(prev => ({ ...prev, [chain.id]: newVisibility }));
                     if (viewerRef.current) {
-                      setChainVisibilityInViewer(viewerRef.current, chainId, newVisibility);
+                      setChainVisibilityInViewer(viewerRef.current, chain.id, newVisibility);
                     }
                   }}
-                  className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                  className="rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 mt-0.5"
                 />
-                <span className="text-slate-300">Chain {chainId}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-slate-200 font-medium">Chain {chain.id}</span>
+                  {chain.entityDescription && (
+                    <p className="text-slate-400 text-[10px] truncate" title={chain.entityDescription}>
+                      {chain.entityDescription}
+                    </p>
+                  )}
+                </div>
               </label>
             ))}
           </div>
@@ -416,12 +435,12 @@ export default function MolstarViewer({
             <button
               onClick={async () => {
                 const newVisibility: Record<string, boolean> = {};
-                availableChains.forEach(id => { newVisibility[id] = true; });
+                availableChains.forEach(chain => { newVisibility[chain.id] = true; });
                 setChainVisibility(newVisibility);
                 if (viewerRef.current) {
                   // Run sequentially to avoid race conditions
-                  for (const id of availableChains) {
-                    await setChainVisibilityInViewer(viewerRef.current, id, true);
+                  for (const chain of availableChains) {
+                    await setChainVisibilityInViewer(viewerRef.current, chain.id, true);
                   }
                 }
               }}
@@ -432,12 +451,12 @@ export default function MolstarViewer({
             <button
               onClick={async () => {
                 const newVisibility: Record<string, boolean> = {};
-                availableChains.forEach(id => { newVisibility[id] = false; });
+                availableChains.forEach(chain => { newVisibility[chain.id] = false; });
                 setChainVisibility(newVisibility);
                 if (viewerRef.current) {
                   // Run sequentially to avoid race conditions
-                  for (const id of availableChains) {
-                    await setChainVisibilityInViewer(viewerRef.current, id, false);
+                  for (const chain of availableChains) {
+                    await setChainVisibilityInViewer(viewerRef.current, chain.id, false);
                   }
                 }
               }}
@@ -756,37 +775,113 @@ async function clearResidueHighlight(
 }
 
 /**
- * Extract available chain IDs from the loaded structure
+ * Extract chain information including entity descriptions from the loaded structure
  */
-function extractChains(viewer: Viewer): string[] {
-  const chains = new Set<string>();
+function extractChainInfo(viewer: Viewer): ChainInfo[] {
+  const chainMap = new Map<string, ChainInfo>();
 
   try {
     const structures = viewer.plugin.managers.structure.hierarchy.current.structures;
     for (const structure of structures) {
-      const data = structure.cell.obj?.data;
-      if (!data) continue;
+      // First, try to extract from components which Mol* has already parsed
+      for (const component of structure.components) {
+        const cell = component.cell;
+        const obj = cell.obj;
+        if (!obj) continue;
 
-      // Get chains from the model's hierarchy
-      const model = data.models?.[0];
-      if (model) {
+        // Get the label which often contains the entity description
+        const label = obj.label || '';
+        const key = component.key || '';
+
+        // Skip water and ions
+        const lowerLabel = label.toLowerCase();
+        const lowerKey = key.toLowerCase();
+        if (lowerLabel.includes('water') || lowerLabel.includes('ion') ||
+            lowerKey.includes('water') || lowerKey.includes('ion')) {
+          continue;
+        }
+
+        // Try to extract chain ID from the key (e.g., "polymer-A" -> "A")
+        const chainMatch = key.match(/polymer-([A-Za-z0-9]+)/i);
+        if (chainMatch) {
+          const chainId = chainMatch[1];
+          if (!chainMap.has(chainId)) {
+            chainMap.set(chainId, {
+              id: chainId,
+              label: `Chain ${chainId}`,
+              entityDescription: label,
+            });
+          }
+        }
+      }
+
+      // If no components found, fall back to atomic hierarchy
+      if (chainMap.size === 0) {
+        const data = structure.cell.obj?.data;
+        if (!data) continue;
+
+        const model = data.models?.[0];
+        if (!model) continue;
+
+        // Get entity descriptions from entities
+        const entityDescriptions = new Map<string, string>();
+        const entities = model.entities;
+        if (entities) {
+          for (let i = 0; i < entities.data._rowCount; i++) {
+            try {
+              const entityId = entities.data.id.value(i);
+              const description = entities.data.pdbx_description.value(i);
+              if (entityId !== undefined && description) {
+                entityDescriptions.set(String(entityId), String(description));
+              }
+            } catch {
+              // Skip if unable to access
+            }
+          }
+        }
+
+        // Get chains from the model's hierarchy
         const authAsymId = model.atomicHierarchy?.chains?.auth_asym_id;
+        const labelEntityId = model.atomicHierarchy?.chains?.label_entity_id;
         if (authAsymId) {
-          // Iterate over all chain indices
           for (let i = 0; i < authAsymId.rowCount; i++) {
             const chainId = authAsymId.value(i);
-            if (chainId && typeof chainId === 'string') {
-              chains.add(chainId);
+            if (chainId && typeof chainId === 'string' && !chainMap.has(chainId)) {
+              // Get entity ID directly from the chain
+              let description = '';
+              if (labelEntityId) {
+                const entityId = labelEntityId.value(i);
+                if (entityId !== undefined) {
+                  description = entityDescriptions.get(String(entityId)) || '';
+                }
+              }
+
+              // Skip water/ions
+              const isWaterOrIon = description.toLowerCase().includes('water') ||
+                                   description.toLowerCase().includes('ion');
+
+              chainMap.set(chainId, {
+                id: chainId,
+                label: `Chain ${chainId}`,
+                entityDescription: isWaterOrIon ? '' : description,
+              });
             }
           }
         }
       }
     }
   } catch (error) {
-    console.warn("Unable to extract chains:", error);
+    console.warn("Unable to extract chain info:", error);
   }
 
-  return Array.from(chains).sort();
+  // Sort chains: protein chains first (those with descriptions), then others
+  return Array.from(chainMap.values()).sort((a, b) => {
+    // Chains with descriptions come first
+    if (a.entityDescription && !b.entityDescription) return -1;
+    if (!a.entityDescription && b.entityDescription) return 1;
+    // Then sort alphabetically
+    return a.id.localeCompare(b.id);
+  });
 }
 
 /**

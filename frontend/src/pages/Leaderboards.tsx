@@ -34,6 +34,7 @@ function ReferenceBinderRow({ binder, sortBy }: { binder: ReferenceBinder; sortB
 
   const score = getScore();
   const badge = BINDER_TYPE_BADGES[binder.binderType] || BINDER_TYPE_BADGES.antibody;
+  const hasStructure = binder.complexStructureUrl || binder.pdbUrl;
 
   return (
     <tr className="border-b border-amber-500/20 bg-amber-900/10">
@@ -51,6 +52,15 @@ function ReferenceBinderRow({ binder, sortBy }: { binder: ReferenceBinder; sortB
               className="text-xs text-blue-400 hover:text-blue-300"
             >
               info
+            </Link>
+          )}
+          {hasStructure && (
+            <Link
+              to={`/view/reference/${binder.id}`}
+              className="text-xs text-emerald-400 hover:text-emerald-300"
+              title="View 3D structure"
+            >
+              3D
             </Link>
           )}
         </div>
@@ -223,8 +233,17 @@ function ChallengeLeaderboard({ challenge }: { challenge: Challenge }) {
                           <span className="text-slate-400">{entry.rank}</span>
                         )}
                       </td>
-                      <td className="py-2 px-2 text-white">
-                        {entry.userName || "Anonymous"}
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white">{entry.userName || "Anonymous"}</span>
+                          <Link
+                            to={`/view/submission/${entry.id}`}
+                            className="text-xs text-emerald-400 hover:text-emerald-300"
+                            title="View 3D structure"
+                          >
+                            3D
+                          </Link>
+                        </div>
                       </td>
                       <td className="py-2 px-2 text-right font-mono text-white">
                         {formatScore(entry.compositeScore)}

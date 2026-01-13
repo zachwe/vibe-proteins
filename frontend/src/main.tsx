@@ -34,6 +34,7 @@ import NotFound from "./pages/NotFound";
 import Submit from "./pages/Submit";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import StructureViewer from "./pages/StructureViewer";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +72,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/design/boltzgen" element={<BoltzGenPlayground />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/view/:type/:id" element={<StructureViewer />} />
           <Route path="*" element={<NotFound />} />
         </Route>
           <Route path="/login" element={<Login />} />
