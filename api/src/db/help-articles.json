@@ -169,5 +169,32 @@
       "pcsk9"
     ],
     "contentFile": "help-articles/evolocumab.md"
+  },
+  {
+    "slug": "tocilizumab",
+    "title": "Tocilizumab: IL-6 Receptor Blocker",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "il-6"
+    ],
+    "contentFile": "help-articles/tocilizumab.md"
+  },
+  {
+    "slug": "sarilumab",
+    "title": "Sarilumab: High-Affinity IL-6R Blocker",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "il-6"
+    ],
+    "contentFile": "help-articles/sarilumab.md"
+  },
+  {
+    "slug": "ranibizumab",
+    "title": "Ranibizumab: The Eye-Specific VEGF Blocker",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "vegf-a"
+    ],
+    "contentFile": "help-articles/ranibizumab.md"
   }
 ]
