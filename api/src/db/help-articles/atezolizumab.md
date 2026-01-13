@@ -4,7 +4,7 @@
 **Target:** [PD-L1](https://en.wikipedia.org/wiki/PD-L1)  
 **PDB:** [5X8L](https://www.rcsb.org/structure/5X8L)  
 **Developer:** [Genentech](https://www.gene.com/)/[Roche](https://www.roche.com/)  
-**FDA Approved:** 2016
+**FDA Approved:** 2016  
 
 ## Unmasking Cancer
 

@@ -1,10 +1,10 @@
 # Trastuzumab (Herceptin)
 
-**Type:** Humanized [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)
-**Target:** HER2 (Human Epidermal Growth Factor Receptor 2)
-**PDB:** [1N8Z](https://www.rcsb.org/structure/1N8Z)
-**FDA Approved:** 1998
-**Developer:** [Genentech](https://www.gene.com/)
+**Type:** Humanized [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)  
+**Target:** HER2 (Human Epidermal Growth Factor Receptor 2)  
+**PDB:** [1N8Z](https://www.rcsb.org/structure/1N8Z)  
+**FDA Approved:** 1998  
+**Developer:** [Genentech](https://www.gene.com/)  
 
 ## What is it?
 

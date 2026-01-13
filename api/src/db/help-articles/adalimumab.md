@@ -4,7 +4,7 @@
 **Target:** [TNF-alpha](https://www.ncbi.nlm.nih.gov/gene/7124)  
 **PDB:** [3WD5](https://www.rcsb.org/structure/3WD5)  
 **Developer:** [Cambridge Antibody Technology](https://en.wikipedia.org/wiki/Cambridge_Antibody_Technology) & [BASF/Knoll](https://en.wikipedia.org/wiki/Abbott_Laboratories)  
-**FDA Approved:** 2002
+**FDA Approved:** 2002  
 
 ## The $200 Billion Drug
 

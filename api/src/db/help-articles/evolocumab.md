@@ -4,7 +4,7 @@
 **Target:** PCSK9 (Proprotein Convertase Subtilisin/Kexin type 9)  
 **PDB:** [3H42](https://www.rcsb.org/structure/3H42) (precursor antibody structure)  
 **FDA Approved:** 2015  
-**Developer:** [Amgen](https://www.amgen.com/)
+**Developer:** [Amgen](https://www.amgen.com/)  
 
 ## What is it?
 

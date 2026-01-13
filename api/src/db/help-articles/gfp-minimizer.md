@@ -4,7 +4,7 @@
 **Target:** [Green Fluorescent Protein](https://en.wikipedia.org/wiki/Green_fluorescent_protein)  
 **PDB:** [3G9A](https://www.rcsb.org/structure/3G9A)  
 **Lab:** [Ulrich Bhler lab](https://www.embl.org/people/person/ulrich-bhler/), EMBL Heidelberg  
-**Published:** 2009
+**Published:** 2009  
 
 ## The Opposite of Enhancement
 

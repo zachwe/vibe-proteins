@@ -3,7 +3,7 @@
 **Type:** [Llama](https://en.wikipedia.org/wiki/Llama)-derived single-domain antibody (VHH)  
 **Target:** [Green Fluorescent Protein](https://en.wikipedia.org/wiki/Green_fluorescent_protein)  
 **PDB:** [6LR7](https://www.rcsb.org/structure/6LR7)  
-**Published:** 2020
+**Published:** 2020  
 
 ## Sub-Nanomolar Affinity
 

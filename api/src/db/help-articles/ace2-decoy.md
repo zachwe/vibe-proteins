@@ -3,7 +3,7 @@
 **Type:** Natural human protein / Engineered decoy  
 **Target:** [SARS-CoV-2 Spike RBD](https://www.ncbi.nlm.nih.gov/gene/43740568)  
 **PDB:** [6M0J](https://www.rcsb.org/structure/6M0J)  
-**Concept:** Use the virus's own target against it
+**Concept:** Use the virus's own target against it  
 
 ## The Elegant Idea
 

@@ -4,7 +4,7 @@
 **Target:** [TNF-alpha](https://www.ncbi.nlm.nih.gov/gene/7124)  
 **PDB:** [4G3Y](https://www.rcsb.org/structure/4G3Y)  
 **Developer:** [Centocor](https://en.wikipedia.org/wiki/Janssen_Biotech) (now Janssen/J&J)  
-**FDA Approved:** 1998
+**FDA Approved:** 1998  
 
 ## The First of Its Kind
 

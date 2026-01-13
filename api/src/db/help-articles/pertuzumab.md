@@ -1,10 +1,10 @@
 # Pertuzumab (Perjeta)
 
-**Type:** Humanized [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)
-**Target:** HER2 (Human Epidermal Growth Factor Receptor 2)
-**PDB:** [1S78](https://www.rcsb.org/structure/1S78)
-**FDA Approved:** 2012
-**Developer:** [Genentech](https://www.gene.com/)
+**Type:** Humanized [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)  
+**Target:** HER2 (Human Epidermal Growth Factor Receptor 2)  
+**PDB:** [1S78](https://www.rcsb.org/structure/1S78)  
+**FDA Approved:** 2012  
+**Developer:** [Genentech](https://www.gene.com/)  
 
 ## What is it?
 

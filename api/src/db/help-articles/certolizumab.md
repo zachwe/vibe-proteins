@@ -4,7 +4,7 @@
 **Target:** [TNF-alpha](https://www.ncbi.nlm.nih.gov/gene/7124)  
 **PDB:** [5WUX](https://www.rcsb.org/structure/5WUX)  
 **Developer:** [UCB](https://www.ucb.com/) (Brussels, Belgium)  
-**FDA Approved:** 2008
+**FDA Approved:** 2008  
 
 ## A Different Kind of Antibody Drug
 

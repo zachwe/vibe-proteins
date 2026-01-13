@@ -4,7 +4,7 @@
 **Target:** [Green Fluorescent Protein](https://en.wikipedia.org/wiki/Green_fluorescent_protein)  
 **PDB:** [3K1K](https://www.rcsb.org/structure/3K1K)  
 **Lab:** [Ulrich Bhler lab](https://www.embl.org/people/person/ulrich-bhler/), EMBL Heidelberg  
-**Published:** 2009
+**Published:** 2009  
 
 ## A Surprising Discovery
 

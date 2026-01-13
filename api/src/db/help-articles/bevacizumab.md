@@ -1,10 +1,10 @@
 # Bevacizumab (Avastin)
 
-**Type:** Humanized [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)
-**Target:** VEGF-A (Vascular Endothelial Growth Factor A)
-**PDB:** [1BJ1](https://www.rcsb.org/structure/1BJ1)
-**FDA Approved:** 2004
-**Developer:** [Genentech](https://www.gene.com/)
+**Type:** Humanized [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)  
+**Target:** VEGF-A (Vascular Endothelial Growth Factor A)  
+**PDB:** [1BJ1](https://www.rcsb.org/structure/1BJ1)  
+**FDA Approved:** 2004  
+**Developer:** [Genentech](https://www.gene.com/)  
 
 ## What is it?
 

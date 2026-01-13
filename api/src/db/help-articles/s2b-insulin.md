@@ -4,7 +4,7 @@
 **Target:** [Insulin receptor](https://www.uniprot.org/uniprotkb/P06213) (Site 2)  
 **PDB:** [9DNN](https://www.rcsb.org/structure/9DNN)  
 **Designer:** [David Baker Lab](https://www.bakerlab.org/), University of Washington  
-**Published:** 2024
+**Published:** 2024  
 
 ## Why This Matters For You
 

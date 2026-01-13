@@ -4,7 +4,7 @@
 **Target:** [SARS-CoV-2 Spike RBD](https://www.ncbi.nlm.nih.gov/gene/43740568)  
 **PDB:** [7KMG](https://www.rcsb.org/structure/7KMG)  
 **Developers:** [AbCellera](https://www.abcellera.com/) & [Eli Lilly](https://www.lilly.com/)  
-**FDA EUA:** November 2020
+**FDA EUA:** November 2020  
 
 ## The Fastest Drug Ever
 

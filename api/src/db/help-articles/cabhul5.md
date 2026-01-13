@@ -4,7 +4,7 @@
 **Target:** Human [lysozyme](https://www.uniprot.org/uniprotkb/P61626)  
 **PDB:** [4I0C](https://www.rcsb.org/structure/4I0C)  
 **Lab:** [Christoph Bhler lab](https://www.biozentrum.unibas.ch/), University of Basel  
-**Published:** 2013
+**Published:** 2013  
 
 ## Beyond Simple Binding
 

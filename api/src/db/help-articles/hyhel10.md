@@ -4,7 +4,7 @@
 **Target:** Hen egg-white [lysozyme](https://www.uniprot.org/uniprotkb/P00698)  
 **PDB:** [3HFM](https://www.rcsb.org/structure/3HFM)  
 **Lab:** [NIH/NIAID](https://www.niaid.nih.gov/)  
-**First characterized:** 1984
+**First characterized:** 1984  
 
 ## A Textbook Example
 

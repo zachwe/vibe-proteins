@@ -1,10 +1,10 @@
 # Rituximab (Rituxan)
 
-**Type:** Chimeric [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)
-**Target:** CD20 (B-lymphocyte antigen)
-**PDB:** [6Y90](https://www.rcsb.org/structure/6Y90)
-**FDA Approved:** 1997
-**Developer:** [IDEC Pharmaceuticals](https://en.wikipedia.org/wiki/Biogen) (now Biogen) & [Genentech](https://www.gene.com/)
+**Type:** Chimeric [monoclonal antibody](https://www.cancer.gov/publications/dictionaries/cancer-terms/def/monoclonal-antibody) (IgG1)  
+**Target:** CD20 (B-lymphocyte antigen)  
+**PDB:** [6Y90](https://www.rcsb.org/structure/6Y90)  
+**FDA Approved:** 1997  
+**Developer:** [IDEC Pharmaceuticals](https://en.wikipedia.org/wiki/Biogen) (now Biogen) & [Genentech](https://www.gene.com/)  
 
 ## What is it?
 
