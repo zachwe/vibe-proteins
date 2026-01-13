@@ -336,8 +336,9 @@ export default function MolstarViewer({
       let structureUrl = url;
 
       // If PDB ID provided, construct RCSB URL
+      // Use .cif (mmCIF) format as default since newer structures may not have .pdb files
       if (id && !url) {
-        structureUrl = `https://files.rcsb.org/download/${id}.pdb`;
+        structureUrl = `https://files.rcsb.org/download/${id}.cif`;
       }
 
       if (!structureUrl) {
@@ -346,24 +347,55 @@ export default function MolstarViewer({
 
       const { format, isBinary } = inferStructureFormat(structureUrl);
 
-      // Try to load the structure with caching, fall back to PDBe mirror if RCSB fails
+      // Try to load the structure with caching and multiple fallbacks
+      let loaded = false;
+      let lastError: unknown = null;
+
+      // Attempt 1: Primary URL (mmCIF for PDB IDs)
       try {
-        // Fetch and cache the structure, returns a blob URL for instant loading
         const cachedUrl = await fetchAndCacheStructure(structureUrl);
         if (loadId !== loadCounterRef.current) return;
         await viewer.loadStructureFromUrl(cachedUrl, format, isBinary);
-      } catch (primaryError) {
+        loaded = true;
+      } catch (err) {
+        lastError = err;
+        console.warn(`Primary source failed: ${structureUrl}`, err);
+      }
+
+      // Attempt 2: If we tried .cif and it failed, try .pdb format for legacy structures
+      if (!loaded && id && structureUrl.endsWith('.cif')) {
+        const pdbUrl = `https://files.rcsb.org/download/${id}.pdb`;
+        try {
+          console.warn(`Trying legacy PDB format: ${pdbUrl}`);
+          const cachedPdbUrl = await fetchAndCacheStructure(pdbUrl);
+          if (loadId !== loadCounterRef.current) return;
+          await viewer.loadStructureFromUrl(cachedPdbUrl, "pdb", false);
+          loaded = true;
+        } catch (err) {
+          console.warn(`Legacy PDB format also failed: ${pdbUrl}`, err);
+        }
+      }
+
+      // Attempt 3: Try PDBe mirror as final fallback
+      if (!loaded) {
         const mirrorUrl = convertToPDBeMirror(structureUrl);
         if (mirrorUrl) {
-          console.warn(`Primary source failed, trying PDBe mirror: ${mirrorUrl}`);
-          const mirrorFormat = inferStructureFormat(mirrorUrl);
-          // Also cache the mirror URL
-          const cachedMirrorUrl = await fetchAndCacheStructure(mirrorUrl);
-          if (loadId !== loadCounterRef.current) return;
-          await viewer.loadStructureFromUrl(cachedMirrorUrl, mirrorFormat.format, mirrorFormat.isBinary);
-        } else {
-          throw primaryError;
+          try {
+            console.warn(`Trying PDBe mirror: ${mirrorUrl}`);
+            const mirrorFormat = inferStructureFormat(mirrorUrl);
+            const cachedMirrorUrl = await fetchAndCacheStructure(mirrorUrl);
+            if (loadId !== loadCounterRef.current) return;
+            await viewer.loadStructureFromUrl(cachedMirrorUrl, mirrorFormat.format, mirrorFormat.isBinary);
+            loaded = true;
+          } catch (err) {
+            console.warn(`PDBe mirror also failed: ${mirrorUrl}`, err);
+          }
         }
+      }
+
+      // If all attempts failed, throw the original error
+      if (!loaded) {
+        throw lastError || new Error("Failed to load structure from all sources");
       }
       if (loadId !== loadCounterRef.current) return;
       if (viewerRef.current !== viewer) return;
