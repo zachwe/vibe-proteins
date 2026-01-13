@@ -135,6 +135,15 @@
     "contentFile": "help-articles/trastuzumab.md"
   },
   {
+    "slug": "pertuzumab",
+    "title": "Pertuzumab: The HER2 Dimerization Blocker",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "her2"
+    ],
+    "contentFile": "help-articles/pertuzumab.md"
+  },
+  {
     "slug": "rituximab",
     "title": "Rituximab: The First Cancer Antibody",
     "category": "reference-binder",
