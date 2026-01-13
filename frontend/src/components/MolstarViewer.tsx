@@ -815,22 +815,19 @@ function extractChainInfo(viewer: Viewer): ChainInfo[] {
         }
       }
 
-      // If no components found, fall back to atomic hierarchy
+      // If no components found, fall back to extracting from the actual rendered structure
       if (chainMap.size === 0) {
-        const data = structure.cell.obj?.data;
-        if (!data) continue;
+        const structureData = structure.cell.obj?.data;
+        if (!structureData) continue;
 
-        const model = data.models?.[0];
-        if (!model) continue;
-
-        // Get entity descriptions from entities
+        // Get entity descriptions from the model
         const entityDescriptions = new Map<string, string>();
-        const entities = model.entities;
-        if (entities) {
-          for (let i = 0; i < entities.data._rowCount; i++) {
+        const model = structureData.models?.[0];
+        if (model?.entities) {
+          for (let i = 0; i < model.entities.data._rowCount; i++) {
             try {
-              const entityId = entities.data.id.value(i);
-              const description = entities.data.pdbx_description.value(i);
+              const entityId = model.entities.data.id.value(i);
+              const description = model.entities.data.pdbx_description.value(i);
               if (entityId !== undefined && description) {
                 entityDescriptions.set(String(entityId), String(description));
               }
@@ -840,31 +837,84 @@ function extractChainInfo(viewer: Viewer): ChainInfo[] {
           }
         }
 
-        // Get chains from the model's hierarchy
-        const authAsymId = model.atomicHierarchy?.chains?.auth_asym_id;
-        const labelEntityId = model.atomicHierarchy?.chains?.label_entity_id;
-        if (authAsymId) {
-          for (let i = 0; i < authAsymId.rowCount; i++) {
-            const chainId = authAsymId.value(i);
-            if (chainId && typeof chainId === 'string' && !chainMap.has(chainId)) {
-              // Get entity ID directly from the chain
-              let description = '';
-              if (labelEntityId) {
-                const entityId = labelEntityId.value(i);
-                if (entityId !== undefined) {
-                  description = entityDescriptions.get(String(entityId)) || '';
+        // Extract chains from the ACTUAL rendered structure (respects biological assembly)
+        // This ensures we only show chains that are actually displayed, not all chains in the model
+        try {
+          const units = structureData.units;
+          for (const unit of units) {
+            // Unit.Kind.Atomic = 0, Unit.Kind.Spheres = 1, Unit.Kind.Gaussians = 2
+            if (unit.kind !== 0) continue;
+
+            const chainIndex = unit.model.atomicHierarchy.chainAtomSegments;
+            const authAsymId = unit.model.atomicHierarchy.chains.auth_asym_id;
+            const labelEntityId = unit.model.atomicHierarchy.chains.label_entity_id;
+
+            // Get the chains that are actually in this unit's elements
+            const elements = unit.elements;
+            const chainsInUnit = new Set<number>();
+
+            for (let i = 0; i < elements.length; i++) {
+              const atomIndex = elements[i];
+              // Find which chain this atom belongs to
+              for (let ci = 0; ci < chainIndex.count; ci++) {
+                if (atomIndex >= chainIndex.offsets[ci] && atomIndex < chainIndex.offsets[ci + 1]) {
+                  chainsInUnit.add(ci);
+                  break;
                 }
               }
+            }
 
-              // Skip water/ions
-              const isWaterOrIon = description.toLowerCase().includes('water') ||
-                                   description.toLowerCase().includes('ion');
+            // Add chains that are actually rendered
+            for (const ci of chainsInUnit) {
+              const chainId = authAsymId.value(ci);
+              if (chainId && typeof chainId === 'string' && !chainMap.has(chainId)) {
+                let description = '';
+                if (labelEntityId) {
+                  const entityId = labelEntityId.value(ci);
+                  if (entityId !== undefined) {
+                    description = entityDescriptions.get(String(entityId)) || '';
+                  }
+                }
 
-              chainMap.set(chainId, {
-                id: chainId,
-                label: `Chain ${chainId}`,
-                entityDescription: isWaterOrIon ? '' : description,
-              });
+                // Skip water/ions
+                const isWaterOrIon = description.toLowerCase().includes('water') ||
+                                     description.toLowerCase().includes('ion');
+
+                chainMap.set(chainId, {
+                  id: chainId,
+                  label: `Chain ${chainId}`,
+                  entityDescription: isWaterOrIon ? '' : description,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[MolstarViewer] Failed to extract chains from structure units:', e);
+
+          // Final fallback: just use model hierarchy (may include non-rendered chains)
+          const authAsymId = model?.atomicHierarchy?.chains?.auth_asym_id;
+          const labelEntityId = model?.atomicHierarchy?.chains?.label_entity_id;
+          if (authAsymId) {
+            for (let i = 0; i < authAsymId.rowCount; i++) {
+              const chainId = authAsymId.value(i);
+              if (chainId && typeof chainId === 'string' && !chainMap.has(chainId)) {
+                let description = '';
+                if (labelEntityId) {
+                  const entityId = labelEntityId.value(i);
+                  if (entityId !== undefined) {
+                    description = entityDescriptions.get(String(entityId)) || '';
+                  }
+                }
+
+                const isWaterOrIon = description.toLowerCase().includes('water') ||
+                                     description.toLowerCase().includes('ion');
+
+                chainMap.set(chainId, {
+                  id: chainId,
+                  label: `Chain ${chainId}`,
+                  entityDescription: isWaterOrIon ? '' : description,
+                });
+              }
             }
           }
         }
