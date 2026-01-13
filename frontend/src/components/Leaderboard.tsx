@@ -183,14 +183,25 @@ function ReferenceBinderRow({
         ) : (
           <div className="text-sm text-slate-500">—</div>
         )}
-        {binder.helpArticleSlug && (
-          <Link
-            to={`/help/${binder.helpArticleSlug}`}
-            className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
-          >
-            Learn more →
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {(binder.complexStructureUrl || binder.pdbUrl) && (
+            <Link
+              to={`/view/reference/${binder.id}`}
+              className="text-xs text-emerald-400 hover:text-emerald-300"
+              title="View 3D structure"
+            >
+              3D
+            </Link>
+          )}
+          {binder.helpArticleSlug && (
+            <Link
+              to={`/help/${binder.helpArticleSlug}`}
+              className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+            >
+              Learn more →
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -249,12 +260,21 @@ function LeaderboardRow({
         </div>
       </div>
 
-      <div className="text-right">
+      <div className="text-right flex flex-col items-end">
         <div className="text-lg font-bold text-emerald-400">
           {formatScore(getPrimaryScore(), sortBy)}
         </div>
-        <div className="text-xs text-slate-500 capitalize">
-          {sortBy === "compositeScore" ? "Score" : sortBy}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 capitalize">
+            {sortBy === "compositeScore" ? "Score" : sortBy}
+          </span>
+          <Link
+            to={`/view/submission/${entry.id}`}
+            className="text-xs text-emerald-400 hover:text-emerald-300"
+            title="View 3D structure"
+          >
+            3D
+          </Link>
         </div>
       </div>
     </div>
