@@ -324,6 +324,109 @@ function buildSequenceEntries(
   });
 }
 
+// Input parameter display configuration
+type InputParamConfig = {
+  key: string;
+  label: string;
+  format?: (value: unknown) => string;
+};
+
+const INPUT_PARAM_CONFIGS: InputParamConfig[] = [
+  { key: "binderLength", label: "Binder Length" },
+  { key: "hotspotResidues", label: "Hotspot Residues", format: (v) => Array.isArray(v) ? v.join(", ") : String(v) },
+  { key: "binderSequence", label: "Starting Sequence" },
+  { key: "sequence", label: "Sequence" },
+  { key: "targetSequence", label: "Target Sequence" },
+  { key: "targetPdb", label: "Target PDB" },
+  { key: "targetStructureUrl", label: "Target Structure URL" },
+  { key: "numDesigns", label: "Number of Designs" },
+  { key: "numSequences", label: "Sequences per Design" },
+  { key: "diffusionSamples", label: "Diffusion Samples" },
+  { key: "recyclingSteps", label: "Recycling Steps" },
+  { key: "samplingSteps", label: "Sampling Steps" },
+];
+
+// Keys to hide from friendly view (application data not used in inference)
+const HIDDEN_INPUT_KEYS = new Set([
+  "challengeId",
+  "jobId",
+]);
+
+function formatInputParams(input: Record<string, unknown> | null): { label: string; value: string }[] {
+  if (!input) return [];
+
+  const result: { label: string; value: string }[] = [];
+  const handledKeys = new Set<string>();
+
+  // First, handle configured params in order
+  for (const config of INPUT_PARAM_CONFIGS) {
+    if (config.key in input && input[config.key] !== undefined && input[config.key] !== null) {
+      const value = input[config.key];
+      // Skip empty strings and empty arrays
+      if (value === "" || (Array.isArray(value) && value.length === 0)) continue;
+
+      result.push({
+        label: config.label,
+        value: config.format ? config.format(value) : String(value),
+      });
+      handledKeys.add(config.key);
+    }
+  }
+
+  // Then, handle any remaining non-hidden keys
+  for (const [key, value] of Object.entries(input)) {
+    if (handledKeys.has(key) || HIDDEN_INPUT_KEYS.has(key)) continue;
+    if (value === undefined || value === null || value === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+
+    // Convert camelCase to Title Case
+    const label = key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+    const formatted = Array.isArray(value) ? value.join(", ") : String(value);
+
+    result.push({ label, value: formatted });
+  }
+
+  return result;
+}
+
+// Reusable component to display input parameters
+function InputParamsSection({ input }: { input: Record<string, unknown> | null }) {
+  const [showRawJson, setShowRawJson] = useState(false);
+  const params = formatInputParams(input);
+
+  if (!input || (params.length === 0 && Object.keys(input).length === 0)) return null;
+
+  return (
+    <div className="border border-slate-700 rounded-lg overflow-hidden">
+      <div className="bg-slate-700/50 px-4 py-2 border-b border-slate-700 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-slate-300">Input Parameters</h3>
+        <button
+          onClick={() => setShowRawJson(!showRawJson)}
+          className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+        >
+          {showRawJson ? "Friendly" : "Raw JSON"}
+        </button>
+      </div>
+      <div className="px-4 py-3">
+        {showRawJson ? (
+          <pre className="text-xs font-mono text-slate-300 overflow-auto max-h-64 whitespace-pre-wrap break-all">
+            {JSON.stringify(input, null, 2)}
+          </pre>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            {params.map(({ label, value }) => (
+              <div key={label} className="contents">
+                <span className="text-slate-400">{label}</span>
+                <span className="text-slate-200 font-mono text-xs break-all">{value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Score display configuration
 type ScoreConfig = {
   key: string;
@@ -653,6 +756,10 @@ export default function ResultsPanel({
           )}
         </div>
 
+        <div className="mb-4">
+          <InputParamsSection input={job.input} />
+        </div>
+
         <button
           onClick={onNewDesign}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
@@ -776,6 +883,9 @@ export default function ResultsPanel({
               <p className="text-xs mt-1">This may take a few moments to start.</p>
             </div>
           )}
+
+          {/* Input parameters */}
+          <InputParamsSection input={job.input} />
         </div>
       </div>
     );
@@ -1098,6 +1208,9 @@ export default function ResultsPanel({
             </p>
           </div>
         )}
+
+        {/* Input parameters */}
+        <InputParamsSection input={job.input} />
 
         {/* Actions */}
         <div className="flex flex-col gap-3">
