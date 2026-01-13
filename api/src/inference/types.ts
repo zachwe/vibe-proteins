@@ -2,15 +2,29 @@
  * Inference job types and interfaces
  */
 
-export type JobType = "rfdiffusion3" | "boltz2" | "boltzgen" | "proteinmpnn" | "predict" | "score";
+export type JobType =
+  | "rfdiffusion3"
+  | "boltz2"
+  | "boltzgen"
+  | "proteinmpnn"
+  | "predict"
+  | "score";
 
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 
-export interface JobInput {
-  // RFDiffusion3 binder pipeline
+export interface JobInputBase {
+  // Meta
+  jobId?: string;
+  challengeId?: string;
+}
+
+// RFDiffusion3 binder pipeline
+export interface RfDiffusion3JobInput extends JobInputBase {
   targetPdb?: string;
   targetStructureUrl?: string | null;
   targetSequence?: string | null;
+  targetChainId?: string;
+  targetChainIds?: string[];
   hotspotResidues?: string[];
   numDesigns?: number;
   binderLength?: number;
@@ -18,31 +32,57 @@ export interface JobInput {
   sequencesPerBackbone?: number;
   boltzSamples?: number;
   binderSeeds?: number;
+}
 
-  // Boltz-2 sanity check
-  prompt?: string;
-  numSamples?: number;
+// Boltz-2 folding
+export interface Boltz2JobInput extends JobInputBase {
+  targetPdb?: string;
+  targetStructureUrl?: string | null;
   binderSequence?: string;
-  binderPdb?: string;
-  boltzMode?: "complex" | "binder";
-
-  // ProteinMPNN direct design
-  backbonePdb?: string;
-  sequencesPerDesign?: number;
-
-  // Structure prediction
   sequence?: string;
-
-  // Scoring
+  binderPdb?: string;
   designPdb?: string;
-  targetStructureKey?: string;
+  numSamples?: number;
+  boltzMode?: "complex" | "binder";
+  prompt?: string;
+}
 
-  // Chain extraction (for multi-chain PDBs)
+// ProteinMPNN direct design
+export interface ProteinMpnnJobInput extends JobInputBase {
+  backbonePdb?: string;
+  targetPdb?: string;
+  sequencesPerDesign?: number;
+  numSamples?: number;
+}
+
+// Structure prediction
+export interface PredictJobInput extends JobInputBase {
+  sequence?: string;
+  targetSequence?: string | null;
+}
+
+// Scoring
+export interface ScoreJobInput extends JobInputBase {
+  designPdb?: string;
+  targetPdb?: string;
+  targetStructureUrl?: string | null;
+  targetStructureKey?: string;
+  binderSequence?: string;
   targetChainId?: string;
   targetChainIds?: string[];
+}
+
+// BoltzGen
+export interface BoltzgenJobInput extends JobInputBase {
+  targetPdb?: string;
+  targetStructureUrl?: string | null;
+  targetChainIds?: string[];
   binderLengthRange?: string;
+  binderLength?: number;
   bindingResidues?: string[];
+  hotspotResidues?: string[];
   boltzgenProtocol?: string;
+  numDesigns?: number;
   diffusionBatchSize?: number;
   stepScale?: number;
   noiseScale?: number;
@@ -58,11 +98,18 @@ export interface JobInput {
   boltzgenDevices?: number;
   boltzgenSteps?: string[];
   boltzgenReuse?: boolean;
-
-  // Meta
-  jobId?: string;
-  challengeId?: string;
 }
+
+export type JobInputByType = {
+  rfdiffusion3: RfDiffusion3JobInput;
+  boltz2: Boltz2JobInput;
+  proteinmpnn: ProteinMpnnJobInput;
+  predict: PredictJobInput;
+  score: ScoreJobInput;
+  boltzgen: BoltzgenJobInput;
+};
+
+export type JobInput = JobInputByType[JobType];
 
 export interface JobResult {
   status: JobStatus;
@@ -72,11 +119,13 @@ export interface JobResult {
   completedAt?: Date;
 }
 
-export interface SubmitJobRequest {
-  type: JobType;
-  challengeId: string;
-  input: JobInput;
-}
+export type SubmitJobRequest = {
+  [K in JobType]: {
+    type: K;
+    challengeId: string;
+    input: JobInputByType[K];
+  };
+}[JobType];
 
 export interface SubmitJobResponse {
   jobId: string;

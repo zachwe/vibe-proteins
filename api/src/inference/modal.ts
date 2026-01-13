@@ -8,6 +8,12 @@ import type { InferenceProvider } from "./provider";
 import type {
   JobType,
   JobInput,
+  RfDiffusion3JobInput,
+  Boltz2JobInput,
+  ProteinMpnnJobInput,
+  PredictJobInput,
+  ScoreJobInput,
+  BoltzgenJobInput,
   SubmitJobResponse,
   JobStatusResponse,
   JobStatus,
@@ -164,83 +170,89 @@ export class ModalProvider implements InferenceProvider {
     switch (type) {
       case "rfdiffusion3":
         // Convert targetChainId (singular) to targetChainIds (array) if needed
-        const rfd3ChainIds = input.targetChainIds
-          || (input.targetChainId ? [input.targetChainId] : undefined);
+        const rfd3Input = input as RfDiffusion3JobInput;
+        const rfd3ChainIds = rfd3Input.targetChainIds
+          || (rfd3Input.targetChainId ? [rfd3Input.targetChainId] : undefined);
         return {
-          target_pdb: input.targetPdb || input.targetStructureUrl,
-          target_structure_url: input.targetStructureUrl,
-          target_sequence: input.targetSequence,
+          target_pdb: rfd3Input.targetPdb || rfd3Input.targetStructureUrl,
+          target_structure_url: rfd3Input.targetStructureUrl,
+          target_sequence: rfd3Input.targetSequence,
           target_chain_ids: rfd3ChainIds,
-          hotspot_residues: input.hotspotResidues || [],
-          num_designs: input.numDesigns ?? 2,
-          binder_length: input.binderLength ?? 85,
-          diffusion_steps: input.diffusionSteps ?? 30,
-          sequences_per_backbone: input.sequencesPerBackbone ?? 4,
-          boltz_samples: input.boltzSamples ?? 1,
-          binder_seeds: input.binderSeeds ?? input.numDesigns ?? 2,
-          job_id: input.jobId,
-          challenge_id: input.challengeId,
+          hotspot_residues: rfd3Input.hotspotResidues || [],
+          num_designs: rfd3Input.numDesigns ?? 2,
+          binder_length: rfd3Input.binderLength ?? 85,
+          diffusion_steps: rfd3Input.diffusionSteps ?? 30,
+          sequences_per_backbone: rfd3Input.sequencesPerBackbone ?? 4,
+          boltz_samples: rfd3Input.boltzSamples ?? 1,
+          binder_seeds: rfd3Input.binderSeeds ?? rfd3Input.numDesigns ?? 2,
+          job_id: rfd3Input.jobId,
+          challenge_id: rfd3Input.challengeId,
         };
 
       case "boltz2":
+        const boltz2Input = input as Boltz2JobInput;
         return {
-          target_pdb: input.targetPdb || input.targetStructureUrl,
-          binder_sequence: input.binderSequence || input.sequence,
-          binder_pdb: input.binderPdb || input.designPdb,
-          num_samples: input.numSamples ?? 1,
-          boltz_mode: input.boltzMode || "complex",
-          job_id: input.jobId,
+          target_pdb: boltz2Input.targetPdb || boltz2Input.targetStructureUrl,
+          binder_sequence: boltz2Input.binderSequence || boltz2Input.sequence,
+          binder_pdb: boltz2Input.binderPdb || boltz2Input.designPdb,
+          num_samples: boltz2Input.numSamples ?? 1,
+          boltz_mode: boltz2Input.boltzMode || "complex",
+          job_id: boltz2Input.jobId,
         };
 
       case "proteinmpnn":
+        const proteinMpnnInput = input as ProteinMpnnJobInput;
         return {
-          backbone_pdb: input.backbonePdb || input.targetPdb,
-          num_sequences: input.sequencesPerDesign ?? input.numSamples ?? 4,
-          job_id: input.jobId,
+          backbone_pdb: proteinMpnnInput.backbonePdb || proteinMpnnInput.targetPdb,
+          num_sequences: proteinMpnnInput.sequencesPerDesign ?? proteinMpnnInput.numSamples ?? 4,
+          job_id: proteinMpnnInput.jobId,
         };
 
       case "predict":
+        const predictInput = input as PredictJobInput;
         return {
-          sequence: input.sequence || "",
-          target_sequence: input.targetSequence,
+          sequence: predictInput.sequence || "",
+          target_sequence: predictInput.targetSequence,
         };
 
       case "score":
+        const scoreInput = input as ScoreJobInput;
         return {
-          design_pdb: input.designPdb || "",
-          target_pdb: input.targetPdb || input.targetStructureUrl || "",
-          binder_sequence: input.binderSequence,
-          target_chain_ids: input.targetChainIds
-            || (input.targetChainId ? [input.targetChainId] : undefined),
-          job_id: input.jobId,
+          design_pdb: scoreInput.designPdb || "",
+          target_pdb: scoreInput.targetPdb || scoreInput.targetStructureUrl || "",
+          binder_sequence: scoreInput.binderSequence,
+          target_chain_ids: scoreInput.targetChainIds
+            || (scoreInput.targetChainId ? [scoreInput.targetChainId] : undefined),
+          job_id: scoreInput.jobId,
         };
 
       case "boltzgen":
+        const boltzgenInput = input as BoltzgenJobInput;
         return {
-          target_pdb: input.targetPdb || input.targetStructureUrl,
-          target_structure_url: input.targetStructureUrl,
-          target_chain_ids: input.targetChainIds,
-          binder_length: input.binderLengthRange || input.binderLength || "80..120",
-          binding_residues: input.bindingResidues || input.hotspotResidues,
-          protocol: input.boltzgenProtocol || "protein-anything",
-          num_designs: input.numDesigns ?? 100,
-          diffusion_batch_size: input.diffusionBatchSize,
-          step_scale: input.stepScale,
-          noise_scale: input.noiseScale,
-          inverse_fold_num_sequences: input.inverseFoldNumSequences ?? 1,
-          inverse_fold_avoid: input.inverseFoldAvoid,
-          skip_inverse_folding: input.skipInverseFolding ?? false,
-          budget: input.boltzgenBudget ?? 10,
-          alpha: input.boltzgenAlpha ?? 0.01,
-          filter_biased: input.filterBiased ?? true,
-          refolding_rmsd_threshold: input.refoldingRmsdThreshold,
-          additional_filters: input.additionalFilters,
-          metrics_override: input.metricsOverride,
-          devices: input.boltzgenDevices,
-          steps: input.boltzgenSteps,
-          reuse: input.boltzgenReuse ?? false,
-          job_id: input.jobId,
-          challenge_id: input.challengeId,
+          target_pdb: boltzgenInput.targetPdb || boltzgenInput.targetStructureUrl,
+          target_structure_url: boltzgenInput.targetStructureUrl,
+          target_chain_ids: boltzgenInput.targetChainIds,
+          binder_length: boltzgenInput.binderLengthRange || boltzgenInput.binderLength || "80..120",
+          binding_residues: boltzgenInput.bindingResidues || boltzgenInput.hotspotResidues,
+          protocol: boltzgenInput.boltzgenProtocol || "protein-anything",
+          num_designs: boltzgenInput.numDesigns ?? 100,
+          diffusion_batch_size: boltzgenInput.diffusionBatchSize,
+          step_scale: boltzgenInput.stepScale,
+          noise_scale: boltzgenInput.noiseScale,
+          inverse_fold_num_sequences: boltzgenInput.inverseFoldNumSequences ?? 1,
+          inverse_fold_avoid: boltzgenInput.inverseFoldAvoid,
+          skip_inverse_folding: boltzgenInput.skipInverseFolding ?? false,
+          budget: boltzgenInput.boltzgenBudget ?? 10,
+          alpha: boltzgenInput.boltzgenAlpha ?? 0.01,
+          filter_biased: boltzgenInput.filterBiased ?? true,
+          refolding_rmsd_threshold: boltzgenInput.refoldingRmsdThreshold,
+          additional_filters: boltzgenInput.additionalFilters,
+          metrics_override: boltzgenInput.metricsOverride,
+          devices: boltzgenInput.boltzgenDevices,
+          steps: boltzgenInput.boltzgenSteps,
+          reuse: boltzgenInput.boltzgenReuse ?? false,
+          job_id: boltzgenInput.jobId,
+          challenge_id: boltzgenInput.challengeId,
         };
 
       default:
