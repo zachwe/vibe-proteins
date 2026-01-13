@@ -109,6 +109,8 @@ export function useJobs() {
 
       return jobs;
     },
+    // Always refetch on mount to ensure fresh job status
+    staleTime: 0,
     refetchInterval: (query) => {
       const jobs = query.state.data;
       if (!jobs) return false;
@@ -137,15 +139,18 @@ export function useJob(id: string) {
         queryClient.invalidateQueries({ queryKey: queryKeys.user });
       }
 
-      // Also invalidate on status change to completed/failed (final billing)
+      // Invalidate jobs list and user balance on status change to completed/failed
       if (previousJob && previousJob.status !== job.status &&
           (job.status === "completed" || job.status === "failed")) {
         queryClient.invalidateQueries({ queryKey: queryKeys.user });
+        queryClient.invalidateQueries({ queryKey: queryKeys.jobs });
       }
 
       return job;
     },
     enabled: !!id,
+    // Always refetch on mount to ensure fresh job status
+    staleTime: 0,
     // Poll for status updates if job is pending/running
     refetchInterval: (query) => {
       const job = query.state.data;
@@ -197,6 +202,8 @@ export function useSubmissions() {
 
       return submissions;
     },
+    // Always refetch on mount to ensure fresh submission status
+    staleTime: 0,
     // Poll for status updates if any submission is pending/running
     refetchInterval: (query) => {
       const submissions = query.state.data;
@@ -210,13 +217,29 @@ export function useSubmissions() {
 }
 
 export function useSubmission(id: string) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: queryKeys.submission(id),
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const data = await submissionsApi.get(id);
-      return data.submission;
+      const submission = data.submission;
+
+      // Get previous submission data to detect status changes
+      const previousSubmission = queryClient.getQueryData<typeof submission>(queryKey);
+
+      // Invalidate submissions list on status change to completed/failed
+      if (previousSubmission && previousSubmission.status !== submission.status &&
+          (submission.status === "completed" || submission.status === "failed")) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.user });
+        queryClient.invalidateQueries({ queryKey: queryKeys.submissions });
+      }
+
+      return submission;
     },
     enabled: !!id,
+    // Always refetch on mount to ensure fresh submission status
+    staleTime: 0,
     // Poll for status updates if submission is pending/running
     refetchInterval: (query) => {
       const submission = query.state.data;
