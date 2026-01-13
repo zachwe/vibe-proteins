@@ -157,6 +157,14 @@ function SubmissionRow({ submission, onRetry, isRetrying }: SubmissionRowProps) 
               {isRetrying ? "Retrying..." : "Retry Scoring"}
             </button>
           )}
+          {submission.status === "completed" && submission.designStructureUrl && (
+            <Link
+              to={`/view/submission/${submission.id}`}
+              className="text-sm text-emerald-400 hover:text-emerald-300"
+            >
+              View 3D
+            </Link>
+          )}
           <Link
             to={`/challenges/${submission.challengeId}`}
             className="text-sm text-blue-400 hover:text-blue-300"
