@@ -13,6 +13,11 @@ export const user = sqliteTable("user", {
   username: text("username").unique(), // Public display name for leaderboards
   balanceUsdCents: integer("balance_usd_cents").notNull().default(100), // USD balance in cents (e.g., 1000 = $10.00) - new users get $1 free
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for payments
+  // Admin plugin fields
+  role: text("role").default("user"), // user, admin
+  banned: integer("banned", { mode: "boolean" }).default(false),
+  banReason: text("ban_reason"),
+  banExpires: integer("ban_expires", { mode: "timestamp" }),
 });
 
 export const session = sqliteTable("session", {
@@ -26,6 +31,8 @@ export const session = sqliteTable("session", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id),
+  // Admin plugin field for impersonation tracking
+  impersonatedBy: text("impersonated_by"),
 });
 
 export const account = sqliteTable("account", {

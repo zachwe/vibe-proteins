@@ -127,6 +127,13 @@
       "when": 1736812800000,
       "tag": "0017_add_structure_note",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1736899200000,
+      "tag": "0018_admin_plugin",
+      "breakpoints": true
     }
   ]
 }

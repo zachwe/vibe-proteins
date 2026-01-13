@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin } from "better-auth/plugins";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { Resend } from "resend";
@@ -118,6 +119,15 @@ export const auth = betterAuth({
   trustedOrigins,
   // Secret is read from BETTER_AUTH_SECRET env var automatically
   // You can add more providers here later (Google, GitHub, etc.)
+
+  // Plugins
+  plugins: [
+    admin({
+      defaultRole: "user",
+      adminRoles: ["admin"],
+      impersonationSessionDuration: 60 * 60 * 24, // 24 hours
+    }),
+  ],
 
   // Database hooks for analytics
   databaseHooks: {

@@ -27,6 +27,7 @@ import BindCraftHelp from "./pages/help/BindCraftHelp";
 import BoltzGenHelp from "./pages/help/BoltzGenHelp";
 import BoltzGenPlayground from "./pages/BoltzGenPlayground";
 import Designer from "./pages/Designer";
+import Admin from "./pages/Admin";
 import HelpArticle from "./pages/HelpArticle";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -72,6 +73,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/help/:slug" element={<HelpArticle />} />
           <Route path="/design/boltzgen" element={<BoltzGenPlayground />} />
           <Route path="/design/:challengeId" element={<Designer />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/view/:type/:id" element={<StructureViewer />} />
