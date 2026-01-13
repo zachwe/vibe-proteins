@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useSession } from "../lib/auth";
 import { useCurrentUser } from "../lib/hooks";
 
@@ -14,6 +14,8 @@ export default function Header() {
   const { data: session, isPending } = useSession();
   const { data: user } = useCurrentUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
 
   return (
     <header className="bg-slate-800 border-b border-slate-700">
@@ -43,6 +45,14 @@ export default function Header() {
             >
               Help
             </Link>
+            {isHomePage && (
+              <Link
+                to="/blog"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Blog
+              </Link>
+            )}
 
             {isPending ? (
               <div className="w-20 h-8 bg-slate-700 rounded animate-pulse" />
@@ -143,6 +153,15 @@ export default function Header() {
               >
                 Help
               </Link>
+              {isHomePage && (
+                <Link
+                  to="/blog"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-slate-300 hover:text-white transition-colors py-2"
+                >
+                  Blog
+                </Link>
+              )}
 
               {session?.user ? (
                 <>

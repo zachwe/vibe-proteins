@@ -32,6 +32,8 @@ import Signup from "./pages/Signup";
 import Verified from "./pages/Verified";
 import NotFound from "./pages/NotFound";
 import Submit from "./pages/Submit";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +69,8 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/help/metrics" element={<MetricsHelp />} />
             <Route path="/help/:slug" element={<HelpArticle />} />
           <Route path="/design/boltzgen" element={<BoltzGenPlayground />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="*" element={<NotFound />} />
         </Route>
           <Route path="/login" element={<Login />} />
