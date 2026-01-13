@@ -708,16 +708,13 @@ export default function ChallengeDetail() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
-                  <button
-                    onClick={() => {
-                      trackEvent("design_started", { challengeId: challenge.id });
-                      setShowDesignPanel(true);
-                      setCurrentStep(2);
-                    }}
-                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                  <Link
+                    to={`/design/${challenge.id}${selectedHotspots.length > 0 ? `?hotspots=${selectedHotspots.join(",")}` : ""}`}
+                    onClick={() => trackEvent("design_started", { challengeId: challenge.id })}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center"
                   >
                     Start Designing
-                  </button>
+                  </Link>
                 </>
               )}
               {activeTab === "learn" && (
@@ -731,30 +728,24 @@ export default function ChallengeDetail() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
-                  <button
-                    onClick={() => {
-                      trackEvent("design_started", { challengeId: challenge.id });
-                      setShowDesignPanel(true);
-                      setCurrentStep(2);
-                    }}
-                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors"
+                  <Link
+                    to={`/design/${challenge.id}${selectedHotspots.length > 0 ? `?hotspots=${selectedHotspots.join(",")}` : ""}`}
+                    onClick={() => trackEvent("design_started", { challengeId: challenge.id })}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center"
                   >
                     Start Designing
-                  </button>
+                  </Link>
                 </>
               )}
               {activeTab === "sequence" && (
                 <>
-                  <button
-                    onClick={() => {
-                      trackEvent("design_started", { challengeId: challenge.id });
-                      setShowDesignPanel(true);
-                      setCurrentStep(2);
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                  <Link
+                    to={`/design/${challenge.id}${selectedHotspots.length > 0 ? `?hotspots=${selectedHotspots.join(",")}` : ""}`}
+                    onClick={() => trackEvent("design_started", { challengeId: challenge.id })}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
                   >
                     Start Designing
-                  </button>
+                  </Link>
                   <Link
                     to={`/submit?challengeId=${challenge.id}`}
                     className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -766,16 +757,13 @@ export default function ChallengeDetail() {
               )}
               {activeTab === "leaderboard" && (
                 <>
-                  <button
-                    onClick={() => {
-                      trackEvent("design_started", { challengeId: challenge.id });
-                      setShowDesignPanel(true);
-                      setCurrentStep(2);
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                  <Link
+                    to={`/design/${challenge.id}${selectedHotspots.length > 0 ? `?hotspots=${selectedHotspots.join(",")}` : ""}`}
+                    onClick={() => trackEvent("design_started", { challengeId: challenge.id })}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
                   >
                     Start Designing
-                  </button>
+                  </Link>
                   <Link
                     to="/leaderboards"
                     className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center"

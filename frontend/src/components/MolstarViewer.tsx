@@ -20,6 +20,97 @@ import Spinner from "./Spinner";
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
 /**
+ * In-memory cache for PDB files.
+ * Stores ArrayBuffer data keyed by URL for instant loading on subsequent visits.
+ * Cache persists across component mounts but is cleared on page refresh.
+ */
+interface CacheEntry {
+  data: ArrayBuffer;
+  timestamp: number;
+  blobUrl: string;
+}
+
+const structureCache = new Map<string, CacheEntry>();
+const CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+const CACHE_MAX_ENTRIES = 20;
+
+/**
+ * Get cached structure data, creating a blob URL if available.
+ * Returns null if not cached or cache is stale.
+ */
+function getCachedStructure(url: string): string | null {
+  const entry = structureCache.get(url);
+  if (!entry) return null;
+
+  // Check if cache entry is still fresh
+  if (Date.now() - entry.timestamp > CACHE_MAX_AGE_MS) {
+    // Revoke old blob URL and remove stale entry
+    URL.revokeObjectURL(entry.blobUrl);
+    structureCache.delete(url);
+    return null;
+  }
+
+  return entry.blobUrl;
+}
+
+/**
+ * Fetch and cache a structure file.
+ * Returns a blob URL that can be used to load the structure.
+ */
+async function fetchAndCacheStructure(url: string): Promise<string> {
+  // Check cache first
+  const cached = getCachedStructure(url);
+  if (cached) return cached;
+
+  // Fetch the structure
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.arrayBuffer();
+
+  // Determine MIME type based on URL
+  let mimeType = "chemical/x-pdb";
+  const lower = url.toLowerCase();
+  if (lower.includes(".cif") || lower.includes(".mmcif")) {
+    mimeType = "chemical/x-mmcif";
+  } else if (lower.includes(".bcif")) {
+    mimeType = "application/octet-stream";
+  }
+
+  // Create blob URL
+  const blob = new Blob([data], { type: mimeType });
+  const blobUrl = URL.createObjectURL(blob);
+
+  // Evict oldest entries if cache is full
+  if (structureCache.size >= CACHE_MAX_ENTRIES) {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    for (const [key, entry] of structureCache) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = key;
+      }
+    }
+    if (oldestKey) {
+      const oldEntry = structureCache.get(oldestKey);
+      if (oldEntry) URL.revokeObjectURL(oldEntry.blobUrl);
+      structureCache.delete(oldestKey);
+    }
+  }
+
+  // Store in cache
+  structureCache.set(url, {
+    data,
+    timestamp: Date.now(),
+    blobUrl,
+  });
+
+  return blobUrl;
+}
+
+/**
  * Convert RCSB PDB URLs to PDBe mirror URLs.
  * Used as fallback when RCSB fails (e.g., SSL cert issues).
  *
@@ -158,8 +249,10 @@ export default function MolstarViewer({
   }, [chainColors, initialized]);
 
   // Handle hotspot residue highlighting
+  // Note: We depend on isLoading so that highlights are applied after structure loads.
+  // This fixes a race condition where hotspots from URL are set before the structure is ready.
   useEffect(() => {
-    if (!viewerRef.current || !initialized) return;
+    if (!viewerRef.current || !initialized || isLoading) return;
 
     const viewer = viewerRef.current;
 
@@ -172,7 +265,7 @@ export default function MolstarViewer({
       // Clear highlights by just re-applying chain colors
       clearResidueHighlight(viewer, chainColors);
     }
-  }, [highlightResidues, chainColors, initialized]);
+  }, [highlightResidues, chainColors, initialized, isLoading]);
 
   // Handle water/ion visibility
   useEffect(() => {
@@ -253,15 +346,21 @@ export default function MolstarViewer({
 
       const { format, isBinary } = inferStructureFormat(structureUrl);
 
-      // Try to load the structure, fall back to PDBe mirror if RCSB fails
+      // Try to load the structure with caching, fall back to PDBe mirror if RCSB fails
       try {
-        await viewer.loadStructureFromUrl(structureUrl, format, isBinary);
+        // Fetch and cache the structure, returns a blob URL for instant loading
+        const cachedUrl = await fetchAndCacheStructure(structureUrl);
+        if (loadId !== loadCounterRef.current) return;
+        await viewer.loadStructureFromUrl(cachedUrl, format, isBinary);
       } catch (primaryError) {
         const mirrorUrl = convertToPDBeMirror(structureUrl);
         if (mirrorUrl) {
           console.warn(`Primary source failed, trying PDBe mirror: ${mirrorUrl}`);
           const mirrorFormat = inferStructureFormat(mirrorUrl);
-          await viewer.loadStructureFromUrl(mirrorUrl, mirrorFormat.format, mirrorFormat.isBinary);
+          // Also cache the mirror URL
+          const cachedMirrorUrl = await fetchAndCacheStructure(mirrorUrl);
+          if (loadId !== loadCounterRef.current) return;
+          await viewer.loadStructureFromUrl(cachedMirrorUrl, mirrorFormat.format, mirrorFormat.isBinary);
         } else {
           throw primaryError;
         }
