@@ -196,5 +196,50 @@
       "vegf-a"
     ],
     "contentFile": "help-articles/ranibizumab.md"
+  },
+  {
+    "slug": "oxi005",
+    "title": "OXI-005: Analytical Insulin Antibody",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "insulin"
+    ],
+    "contentFile": "help-articles/oxi005.md"
+  },
+  {
+    "slug": "durvalumab",
+    "title": "Durvalumab: Engineered PD-L1 Blocker",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "pd-l1"
+    ],
+    "contentFile": "help-articles/durvalumab.md"
+  },
+  {
+    "slug": "cetuximab",
+    "title": "Cetuximab: First Anti-EGFR Therapy",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "egfr"
+    ],
+    "contentFile": "help-articles/cetuximab.md"
+  },
+  {
+    "slug": "panitumumab",
+    "title": "Panitumumab: Fully Human EGFR Blocker",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "egfr"
+    ],
+    "contentFile": "help-articles/panitumumab.md"
+  },
+  {
+    "slug": "obinutuzumab",
+    "title": "Obinutuzumab: Glycoengineered CD20 Killer",
+    "category": "reference-binder",
+    "relatedChallenges": [
+      "cd20"
+    ],
+    "contentFile": "help-articles/obinutuzumab.md"
   }
 ]
