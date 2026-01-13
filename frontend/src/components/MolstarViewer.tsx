@@ -436,7 +436,7 @@ export default function MolstarViewer({
       {/* Control buttons */}
       {hasStructure && initialized && (
         <div className="absolute top-3 left-3 flex gap-1 z-10">
-          {/* Spin toggle */}
+          {/* Spin toggle - play/pause */}
           <button
             onClick={() => setIsSpinning(!isSpinning)}
             className={`p-2 rounded-lg transition-colors ${
@@ -444,16 +444,19 @@ export default function MolstarViewer({
                 ? "bg-blue-600 text-white"
                 : "bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700/80"
             }`}
-            title={isSpinning ? "Stop spinning" : "Start spinning"}
+            title={isSpinning ? "Pause rotation" : "Play rotation"}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
+            {isSpinning ? (
+              /* Pause icon */
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            ) : (
+              /* Play icon */
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
           </button>
 
           {/* Water/ion visibility toggle */}
