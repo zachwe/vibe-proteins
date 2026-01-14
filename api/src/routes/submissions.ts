@@ -193,18 +193,14 @@ async function runScoringInBackground(
     const ptm = typeof scores?.ptm === "number" ? scores.ptm : null;
     const interfaceArea = typeof scores?.interface_area === "number" ? scores.interface_area : null;
     const shapeComplementarity = typeof scores?.shape_complementarity === "number" ? scores.shape_complementarity : null;
-    const scoringMethod = scores?.scoring_method as string | undefined;
 
-    // Compute composite score based on scoring method
+    // Compute composite score (boltz_pae)
     let compositeScore: number | null = null;
-    if (scoringMethod === "boltz_pae" && iptm !== null) {
+    if (iptm !== null) {
       // PAE-based: use ipTM as primary metric (0-1 scale, higher = better)
       // Also factor in pLDDT if available
       const plddtNorm = plddt !== null ? plddt / 100 : 0.5;
       compositeScore = (iptm * 0.6 + plddtNorm * 0.4) * 100;
-    } else if (ipSae !== null) {
-      // Distance-based fallback: use geometric metrics
-      compositeScore = Math.abs(ipSae) * 10 + (interfaceArea ?? 0) / 100;
     }
 
     await db

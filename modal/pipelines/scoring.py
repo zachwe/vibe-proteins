@@ -184,7 +184,6 @@ def compute_scores(
         "interface_area": distance_metrics.get("interface_area", 0.0),
         "shape_complementarity": distance_metrics.get("shape_complementarity", 0.0),
         "n_interface_contacts": ipsae_scores.get("n_interface_contacts", 0),
-        "scoring_method": "boltz_pae",
     }
 
     # Include pLDDT/pTM from Boltz

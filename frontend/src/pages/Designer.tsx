@@ -106,6 +106,65 @@ const MODEL_INFO: Record<DesignModel, {
 // Hotspot selection mode
 type HotspotMode = "manual" | number;
 
+function buildRfd3HotspotSelection(
+  hotspots: string[],
+  defaultChainId: string
+): Record<string, string> | null {
+  const selection: Record<string, string> = {};
+  for (const residue of hotspots) {
+    if (!residue) continue;
+    const match = residue.match(/([A-Za-z])\s*[:\-_/]?\s*(\d+)/);
+    let chainId: string | null = null;
+    let resId: string | null = null;
+    if (match) {
+      chainId = match[1];
+      resId = match[2];
+    } else if (/^\d+$/.test(residue)) {
+      chainId = defaultChainId;
+      resId = residue;
+    }
+    if (!chainId || !resId) continue;
+    selection[`${chainId.toUpperCase()}${parseInt(resId, 10)}`] = "ALL";
+  }
+  return Object.keys(selection).length > 0 ? selection : null;
+}
+
+function buildBoltzgenYaml(
+  targetPath: string,
+  targetChainId: string,
+  binderLength: string,
+  bindingResidues: string[] | null,
+  protocol: string,
+  numDesigns: number,
+  budget: number
+): string {
+  const lines: string[] = [
+    `# protocol: ${protocol}`,
+    `# num_designs: ${numDesigns}`,
+    `# budget: ${budget}`,
+    "entities:",
+    "  - protein:",
+    "      id: B",
+    `      sequence: ${binderLength}`,
+    "  - file:",
+    `      path: ${targetPath}`,
+    "      include:",
+    "        - chain:",
+    `            id: ${targetChainId}`,
+  ];
+
+  if (bindingResidues && bindingResidues.length > 0) {
+    lines.push(
+      "binding_types:",
+      "  - chain:",
+      `      id: ${targetChainId}`,
+      `      binding: "${bindingResidues.join(",")}"`
+    );
+  }
+
+  return lines.join("\n");
+}
+
 // Section component
 function Section({
   title,
@@ -187,6 +246,7 @@ export default function Designer() {
     model: true,
     hotspots: true,
     advanced: false,
+    rawInput: false,
   });
 
   // Poll job status
@@ -360,6 +420,67 @@ export default function Designer() {
 
   const currentMode = getCurrentMode();
   const modelInfo = MODEL_INFO[selectedModel];
+  const rawInputModel = selectedModel;
+
+  const rfd3RawInput = useMemo(() => {
+    const targetChainId = challenge.targetChainId || "A";
+    const startResidue = challenge.pdbStartResidue || 1;
+    const targetLength = challenge.targetSequence?.length ?? null;
+    const endResidue = targetLength ? startResidue + targetLength - 1 : null;
+    const binderRange = "85-85";
+    const targetSegment = endResidue
+      ? `${targetChainId}${startResidue}-${endResidue}`
+      : `${targetChainId}${startResidue}-END`;
+    const contig = `${binderRange},/0,${targetSegment}`;
+    const hotspotSelection = buildRfd3HotspotSelection(
+      selectedHotspots,
+      targetChainId
+    );
+
+    const spec: Record<string, unknown> = {
+      dialect: 2,
+      infer_ori_strategy: hotspotSelection ? "hotspots" : "com",
+      input: challenge.targetStructureUrl || "TARGET_STRUCTURE",
+      contig,
+      is_non_loopy: true,
+    };
+
+    if (hotspotSelection) {
+      spec.select_hotspots = hotspotSelection;
+    }
+
+    return JSON.stringify({ design: spec }, null, 2);
+  }, [
+    challenge.pdbStartResidue,
+    challenge.targetChainId,
+    challenge.targetSequence,
+    challenge.targetStructureUrl,
+    selectedHotspots,
+  ]);
+
+  const boltzgenRawInput = useMemo(() => {
+    const targetPath = challenge.targetStructureUrl || "TARGET_STRUCTURE.cif";
+    const targetChainId = challenge.targetChainId || "A";
+    const protocol = currentDesignMode.boltzgenProtocol || "protein-anything";
+    const bindingResidues = selectedHotspots.length > 0 ? selectedHotspots : null;
+    return buildBoltzgenYaml(
+      targetPath,
+      targetChainId,
+      bgBinderLength,
+      bindingResidues,
+      protocol,
+      bgNumDesigns,
+      bgBudget
+    );
+  }, [
+    bgBinderLength,
+    bgBudget,
+    bgNumDesigns,
+    challenge.targetChainId,
+    challenge.targetStructureUrl,
+    currentDesignMode.boltzgenProtocol,
+    selectedHotspots,
+  ]);
 
   // Stage icons for progress display
   const stageIcons: Record<string, string> = {
@@ -908,6 +1029,41 @@ export default function Designer() {
                 </div>
               )}
             </div>
+
+            {/* Raw Input Preview */}
+            <Section
+              title="Raw Input Preview"
+              expanded={expandedSections.rawInput}
+              onToggle={() => toggleSection("rawInput")}
+              badge={
+                <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
+                  {rawInputModel === "rfdiffusion3" ? "RFDiffusion3" : "BoltzGen"}
+                </span>
+              }
+            >
+              <div className="space-y-2">
+                <p className="text-xs text-slate-400">
+                  {rawInputModel === "rfdiffusion3"
+                    ? "Preview of the RFDiffusion3 inputs.json format (contig derived from target metadata)."
+                    : "Preview of the BoltzGen YAML input format (matches the GitHub examples)."}
+                </p>
+                <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 overflow-auto max-h-80">
+                  <pre className="text-xs text-slate-200 whitespace-pre font-mono">
+                    {rawInputModel === "rfdiffusion3" ? rfd3RawInput : boltzgenRawInput}
+                  </pre>
+                </div>
+                {rawInputModel === "boltzgen" && (
+                  <a
+                    href="https://github.com/HannesStark/boltzgen/blob/main/example/nanobody/penguinpox.yaml"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    View BoltzGen YAML example
+                  </a>
+                )}
+              </div>
+            </Section>
 
             {/* Help link */}
             <div className="text-center">
