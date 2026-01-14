@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { signIn, sendVerificationEmail } from "../lib/auth";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/challenges";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,7 +36,7 @@ export default function Login() {
           setError(errorMsg);
         }
       } else {
-        navigate("/challenges");
+        navigate(redirectTo);
       }
     } catch {
       setError("An unexpected error occurred");
@@ -144,7 +146,10 @@ export default function Login() {
         <div className="mt-6 text-center">
           <p className="text-slate-400">
             Don't have an account?{" "}
-            <Link to="/signup" className="text-blue-400 hover:text-blue-300">
+            <Link
+              to={`/signup${redirectTo !== "/challenges" ? `?redirect=${encodeURIComponent(redirectTo)}` : ""}`}
+              className="text-blue-400 hover:text-blue-300"
+            >
               Sign up
             </Link>
           </p>

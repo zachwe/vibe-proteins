@@ -34,6 +34,7 @@ interface DesignMode {
   binderLength: { min: number; max: number; default: number };
   models: DesignModel[];
   boltzgenProtocol?: string;
+  boltzgenScaffoldSet?: "nanobody" | "fab";
 }
 
 const DESIGN_MODES: DesignMode[] = [
@@ -50,22 +51,24 @@ const DESIGN_MODES: DesignMode[] = [
   {
     id: "nanobody",
     name: "Nanobody",
-    description: "Single-domain antibody (~120 residues). Stable, small, easy to produce.",
+    description: "Single-domain antibody. Uses curated nanobody scaffolds with CDR design.",
     icon: "🔬",
     recommendedFor: ["therapeutics", "diagnostics", "research"],
     binderLength: { min: 110, max: 140, default: 125 },
     models: ["boltzgen"],
     boltzgenProtocol: "nanobody-anything",
+    boltzgenScaffoldSet: "nanobody",
   },
   {
     id: "antibody",
     name: "Antibody CDR",
-    description: "Design complementarity-determining regions for antibody binding.",
+    description: "Fab-style antibody scaffolds with CDR design for precise epitope targeting.",
     icon: "🛡️",
     recommendedFor: ["therapeutics", "high-affinity"],
     binderLength: { min: 100, max: 150, default: 125 },
     models: ["boltzgen"],
     boltzgenProtocol: "antibody-anything",
+    boltzgenScaffoldSet: "fab",
   },
   {
     id: "peptide",
@@ -103,8 +106,53 @@ const MODEL_INFO: Record<DesignModel, {
   },
 };
 
+const BOLTZGEN_SCAFFOLD_LIBRARY: Record<"nanobody" | "fab", string[]> = {
+  nanobody: [
+    "/assets/boltzgen/nanobody_scaffolds/7eow.yaml",
+    "/assets/boltzgen/nanobody_scaffolds/7xl0.yaml",
+    "/assets/boltzgen/nanobody_scaffolds/8coh.yaml",
+    "/assets/boltzgen/nanobody_scaffolds/8z8v.yaml",
+  ],
+  fab: [
+    "/assets/boltzgen/fab_scaffolds/adalimumab.6cr1.yaml",
+    "/assets/boltzgen/fab_scaffolds/belimumab.5y9k.yaml",
+    "/assets/boltzgen/fab_scaffolds/crenezumab.5vzy.yaml",
+    "/assets/boltzgen/fab_scaffolds/dupilumab.6wgb.yaml",
+    "/assets/boltzgen/fab_scaffolds/golimumab.5yoy.yaml",
+    "/assets/boltzgen/fab_scaffolds/guselkumab.4m6m.yaml",
+    "/assets/boltzgen/fab_scaffolds/mab1.3h42.yaml",
+    "/assets/boltzgen/fab_scaffolds/necitumumab.6b3s.yaml",
+    "/assets/boltzgen/fab_scaffolds/nirsevimab.5udc.yaml",
+    "/assets/boltzgen/fab_scaffolds/sarilumab.8iow.yaml",
+    "/assets/boltzgen/fab_scaffolds/secukinumab.6wio.yaml",
+    "/assets/boltzgen/fab_scaffolds/tezepelumab.5j13.yaml",
+    "/assets/boltzgen/fab_scaffolds/tralokinumab.5l6y.yaml",
+    "/assets/boltzgen/fab_scaffolds/ustekinumab.3hmw.yaml",
+  ],
+};
+
 // Hotspot selection mode
 type HotspotMode = "manual" | number;
+
+function normalizeBoltzgenBindingResidues(
+  residues: string[] | null,
+  targetChainId: string
+): string[] | null {
+  if (!residues || residues.length === 0) return null;
+  const normalized: string[] = [];
+  for (const residue of residues) {
+    if (!residue) continue;
+    const match = residue.match(/([A-Za-z])\s*[:\-_/]?\s*(\d+)/);
+    if (match) {
+      const [, chainId, resId] = match;
+      if (chainId.toUpperCase() !== targetChainId.toUpperCase()) continue;
+      normalized.push(`${parseInt(resId, 10)}`);
+    } else if (/^\d+$/.test(residue)) {
+      normalized.push(`${parseInt(residue, 10)}`);
+    }
+  }
+  return normalized.length > 0 ? normalized : null;
+}
 
 function buildRfd3HotspotSelection(
   hotspots: string[],
@@ -136,16 +184,14 @@ function buildBoltzgenYaml(
   bindingResidues: string[] | null,
   protocol: string,
   numDesigns: number,
-  budget: number
+  budget: number,
+  scaffoldPaths: string[] | null
 ): string {
   const lines: string[] = [
     `# protocol: ${protocol}`,
     `# num_designs: ${numDesigns}`,
     `# budget: ${budget}`,
     "entities:",
-    "  - protein:",
-    "      id: B",
-    `      sequence: ${binderLength}`,
     "  - file:",
     `      path: ${targetPath}`,
     "      include:",
@@ -155,10 +201,23 @@ function buildBoltzgenYaml(
 
   if (bindingResidues && bindingResidues.length > 0) {
     lines.push(
-      "binding_types:",
-      "  - chain:",
-      `      id: ${targetChainId}`,
-      `      binding: "${bindingResidues.join(",")}"`
+      "      binding_types:",
+      "        - chain:",
+      `            id: ${targetChainId}`,
+      `            binding: "${bindingResidues.join(",")}"`
+    );
+  }
+
+  if (scaffoldPaths && scaffoldPaths.length > 0) {
+    lines.push("  - file:", "      path:");
+    for (const scaffoldPath of scaffoldPaths) {
+      lines.push(`        - ${scaffoldPath}`);
+    }
+  } else {
+    lines.push(
+      "  - protein:",
+      "      id: B",
+      `      sequence: ${binderLength}`
     );
   }
 
@@ -375,6 +434,7 @@ export default function Designer() {
         });
         setSubmittedJobId(result.job.id);
       } else if (selectedModel === "boltzgen") {
+        const scaffoldSet = currentDesignMode.boltzgenScaffoldSet;
         const result = await createJob.mutateAsync({
           challengeId: challenge.id,
           type: "boltzgen",
@@ -382,7 +442,8 @@ export default function Designer() {
             targetStructureUrl: challenge.targetStructureUrl,
             targetChainIds: challenge.targetChainId ? [challenge.targetChainId] : undefined,
             bindingResidues: selectedHotspots.length > 0 ? selectedHotspots : undefined,
-            binderLengthRange: bgBinderLength,
+            binderLengthRange: scaffoldSet ? undefined : bgBinderLength,
+            boltzgenScaffoldSet: scaffoldSet,
             boltzgenProtocol: currentDesignMode.boltzgenProtocol || "protein-anything",
             numDesigns: bgNumDesigns,
             boltzgenBudget: bgBudget,
@@ -418,9 +479,54 @@ export default function Designer() {
     );
   }
 
+  // Require authentication to use the designer
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-blue-600/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-3">Sign in to Design</h1>
+          <p className="text-slate-400 mb-6">
+            Create an account or sign in to design binders for {challenge.name}.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              to={`/login?redirect=${encodeURIComponent(`/design/${challengeId}`)}`}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Sign In
+            </Link>
+            <Link
+              to={`/challenges/${challengeId}`}
+              className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Back to Challenge
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const currentMode = getCurrentMode();
   const modelInfo = MODEL_INFO[selectedModel];
   const rawInputModel = selectedModel;
+  const boltzgenScaffoldSet = currentDesignMode.boltzgenScaffoldSet;
+  const usesBoltzgenScaffolds = selectedModel === "boltzgen" && Boolean(boltzgenScaffoldSet);
+  const boltzgenScaffoldCount = boltzgenScaffoldSet
+    ? BOLTZGEN_SCAFFOLD_LIBRARY[boltzgenScaffoldSet].length
+    : 0;
+  const boltzgenExampleUrl = boltzgenScaffoldSet === "fab"
+    ? "https://github.com/HannesStark/boltzgen/blob/main/example/fab_targets/pdl1.yaml"
+    : boltzgenScaffoldSet === "nanobody"
+      ? "https://github.com/HannesStark/boltzgen/blob/main/example/nanobody/penguinpox.yaml"
+      : currentDesignMode.id === "peptide"
+        ? "https://github.com/HannesStark/boltzgen/blob/main/example/vanilla_peptide_with_target_binding_site/beetletert.yaml"
+        : "https://github.com/HannesStark/boltzgen/blob/main/example/vanilla_protein/1g13prot.yaml";
 
   const rfd3RawInput = useMemo(() => {
     const targetChainId = challenge.targetChainId || "A";
@@ -462,7 +568,13 @@ export default function Designer() {
     const targetPath = challenge.targetStructureUrl || "TARGET_STRUCTURE.cif";
     const targetChainId = challenge.targetChainId || "A";
     const protocol = currentDesignMode.boltzgenProtocol || "protein-anything";
-    const bindingResidues = selectedHotspots.length > 0 ? selectedHotspots : null;
+    const bindingResidues = normalizeBoltzgenBindingResidues(
+      selectedHotspots.length > 0 ? selectedHotspots : null,
+      targetChainId
+    );
+    const scaffoldPaths = currentDesignMode.boltzgenScaffoldSet
+      ? BOLTZGEN_SCAFFOLD_LIBRARY[currentDesignMode.boltzgenScaffoldSet]
+      : null;
     return buildBoltzgenYaml(
       targetPath,
       targetChainId,
@@ -470,7 +582,8 @@ export default function Designer() {
       bindingResidues,
       protocol,
       bgNumDesigns,
-      bgBudget
+      bgBudget,
+      scaffoldPaths
     );
   }, [
     bgBinderLength,
@@ -479,6 +592,7 @@ export default function Designer() {
     challenge.targetChainId,
     challenge.targetStructureUrl,
     currentDesignMode.boltzgenProtocol,
+    currentDesignMode.boltzgenScaffoldSet,
     selectedHotspots,
   ]);
 
@@ -825,21 +939,34 @@ export default function Designer() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-slate-300 mb-1">
-                      Binder Length Range
-                    </label>
-                    <input
-                      type="text"
-                      value={bgBinderLength}
-                      onChange={e => setBgBinderLength(e.target.value)}
-                      placeholder="80..120"
-                      className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none text-sm"
-                    />
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      Format: min..max (e.g., "80..120") or fixed (e.g., "100")
-                    </p>
-                  </div>
+                  {usesBoltzgenScaffolds ? (
+                    <div className="bg-slate-700/40 border border-slate-600 rounded-lg p-3 text-xs text-slate-300">
+                      <p className="font-medium text-slate-200 mb-1">Scaffold library enabled</p>
+                      <p>
+                        Using {boltzgenScaffoldCount} curated {boltzgenScaffoldSet === "nanobody" ? "nanobody" : "Fab"}
+                        {" "}scaffolds with CDR design. Binder length is defined by the scaffold templates.
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-2">
+                        Hotspot residues are mapped to mmCIF label_seq_id before BoltzGen runs.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm text-slate-300 mb-1">
+                        Binder Length Range
+                      </label>
+                      <input
+                        type="text"
+                        value={bgBinderLength}
+                        onChange={e => setBgBinderLength(e.target.value)}
+                        placeholder="80..120"
+                        className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none text-sm"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        Format: min..max (e.g., "80..120") or fixed (e.g., "100")
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-slate-300 mb-1">
@@ -1045,7 +1172,9 @@ export default function Designer() {
                 <p className="text-xs text-slate-400">
                   {rawInputModel === "rfdiffusion3"
                     ? "Preview of the RFDiffusion3 inputs.json format (contig derived from target metadata)."
-                    : "Preview of the BoltzGen YAML input format (matches the GitHub examples)."}
+                    : usesBoltzgenScaffolds
+                      ? "Preview of the BoltzGen YAML input format with scaffold libraries (matches the GitHub examples)."
+                      : "Preview of the BoltzGen YAML input format (matches the GitHub examples)."}
                 </p>
                 <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 overflow-auto max-h-80">
                   <pre className="text-xs text-slate-200 whitespace-pre font-mono">
@@ -1054,7 +1183,7 @@ export default function Designer() {
                 </div>
                 {rawInputModel === "boltzgen" && (
                   <a
-                    href="https://github.com/HannesStark/boltzgen/blob/main/example/nanobody/penguinpox.yaml"
+                    href={boltzgenExampleUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-blue-400 hover:text-blue-300"

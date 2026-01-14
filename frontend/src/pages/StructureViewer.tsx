@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
@@ -6,6 +6,8 @@ import { referenceBindersApi, submissionsApi, challengesApi } from "../lib/api";
 import type { ReferenceBinder, Submission, Challenge } from "../lib/api";
 import MolstarViewer, { type ChainInfo } from "../components/MolstarViewer";
 import Spinner from "../components/Spinner";
+import ChatPanel from "../components/ChatPanel";
+import type { ChatContext } from "../hooks/useChat";
 
 interface StructureViewerData {
   type: "reference" | "submission";
@@ -31,6 +33,7 @@ interface StructureViewerData {
     helpArticleSlug?: string | null;
     challengeId?: string;
     challengeName?: string;
+    referenceBinderName?: string;
   };
 }
 
@@ -119,6 +122,7 @@ function ReferenceBinderViewer({ binderId }: { binderId: string }) {
           helpArticleSlug: data.helpArticleSlug,
           challengeId: data.challengeId,
           challengeName: challengeData?.name,
+          referenceBinderName: data.name,
         },
       }}
     />
@@ -193,6 +197,33 @@ function SubmissionViewer({ submissionId }: { submissionId: string }) {
 
 function StructureViewerContent({ data }: { data: StructureViewerData }) {
   const [chainInfo, setChainInfo] = useState<ChainInfo[]>([]);
+  const [structureContent, setStructureContent] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Fetch structure content for chat context
+  useEffect(() => {
+    const fetchStructure = async () => {
+      // Determine the URL to fetch
+      let url = data.structureUrl;
+      if (!url && data.pdbId) {
+        // Try mmCIF first, then PDB
+        url = `https://files.rcsb.org/download/${data.pdbId}.cif`;
+      }
+      if (!url) return;
+
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const text = await response.text();
+          setStructureContent(text);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch structure for chat context:", err);
+      }
+    };
+
+    fetchStructure();
+  }, [data.structureUrl, data.pdbId]);
 
   // Determine chain role based on chainColors configuration
   const getChainRole = (chainId: string): 'target' | 'binder' | 'context' | null => {
@@ -200,6 +231,30 @@ function StructureViewerContent({ data }: { data: StructureViewerData }) {
     if (data.chainColors.binder?.includes(chainId)) return 'binder';
     if (data.chainColors.context?.includes(chainId)) return 'context';
     return null;
+  };
+
+  // Build chat context
+  const chatContext: ChatContext = {
+    structureContent: structureContent || undefined,
+    structureFormat: data.pdbId ? "mmcif" : "pdb",
+    referenceBinderName: data.metadata.referenceBinderName,
+    referenceBinderType: data.metadata.binderType,
+    pdbId: data.pdbId || undefined,
+    chainInfo: chainInfo
+      .filter((c) => c.entityDescription)
+      .map((c) => ({
+        id: c.id,
+        entityDescription: c.entityDescription,
+        role: getChainRole(c.id) || undefined,
+      })),
+    scores: {
+      compositeScore: data.scores.compositeScore,
+      plddt: data.scores.plddt,
+      ptm: data.scores.ptm,
+      ipSaeScore: data.scores.ipSaeScore,
+      interfaceArea: data.scores.interfaceArea,
+    },
+    challengeName: data.metadata.challengeName,
   };
 
   const getChainColorClass = (role: 'target' | 'binder' | 'context' | null): string => {
@@ -398,6 +453,13 @@ function StructureViewerContent({ data }: { data: StructureViewerData }) {
           </div>
         </div>
       </div>
+
+      {/* Slide-out Chat Panel */}
+      <ChatPanel
+        context={chatContext}
+        isOpen={isChatOpen}
+        onToggle={() => setIsChatOpen(!isChatOpen)}
+      />
     </>
   );
 }

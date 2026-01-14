@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { signUp } from "../lib/auth";
 
@@ -7,6 +7,8 @@ const isProduction = import.meta.env.PROD;
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/challenges";
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -35,7 +37,7 @@ export default function Signup() {
         setEmailSent(true);
       } else {
         // In development, no email verification required
-        navigate("/challenges");
+        navigate(redirectTo);
       }
     } catch {
       setError("An unexpected error occurred");
@@ -65,7 +67,7 @@ export default function Signup() {
             Didn't receive the email? Check your spam folder or try signing up again.
           </p>
           <Link
-            to="/login"
+            to={`/login${redirectTo !== "/challenges" ? `?redirect=${encodeURIComponent(redirectTo)}` : ""}`}
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
           >
             Go to Login
@@ -186,7 +188,10 @@ export default function Signup() {
         <div className="mt-6 text-center">
           <p className="text-slate-400">
             Already have an account?{" "}
-            <Link to="/login" className="text-blue-400 hover:text-blue-300">
+            <Link
+              to={`/login${redirectTo !== "/challenges" ? `?redirect=${encodeURIComponent(redirectTo)}` : ""}`}
+              className="text-blue-400 hover:text-blue-300"
+            >
               Sign in
             </Link>
           </p>
