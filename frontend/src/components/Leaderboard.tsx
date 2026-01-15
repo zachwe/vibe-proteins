@@ -119,39 +119,26 @@ function ReferenceBinderRow({
   const score = getPrimaryScore();
 
   return (
-    <div className="flex items-center gap-4 p-3 rounded-lg bg-gradient-to-r from-amber-900/20 to-slate-800/50 border border-amber-500/20">
-      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${binderConfig.color} border text-sm`}>
+    <div className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-amber-900/20 to-slate-800/50 border border-amber-500/20">
+      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${binderConfig.color} border text-sm flex-shrink-0`}>
         {binderConfig.icon}
       </span>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-amber-200 truncate">
+          <span className="font-medium text-amber-200 truncate max-w-[200px]">
             {binder.name}
           </span>
-          <span className={`text-xs px-1.5 py-0.5 rounded ${binderConfig.color} border`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded ${binderConfig.color} border whitespace-nowrap`}>
             {binderConfig.label}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-          <span className={approvalConfig.color}>{approvalConfig.label}</span>
+        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
+          <span className={`${approvalConfig.color} whitespace-nowrap`}>{approvalConfig.label}</span>
           {binder.discoveryYear && (
             <>
               <span>•</span>
               <span>{binder.discoveryYear}</span>
-            </>
-          )}
-          {binder.pdbId && (
-            <>
-              <span>•</span>
-              <a
-                href={binder.pdbUrl || `https://www.rcsb.org/structure/${binder.pdbId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:underline"
-              >
-                PDB {binder.pdbId}
-              </a>
             </>
           )}
         </div>
@@ -165,7 +152,7 @@ function ReferenceBinderRow({
         )}
       </div>
 
-      <div className="text-right flex flex-col items-end gap-1">
+      <div className="text-right flex flex-col items-end gap-1 flex-shrink-0">
         {score !== null ? (
           <div className="flex items-center gap-1.5">
             {binder.scoringNote && (
@@ -183,24 +170,36 @@ function ReferenceBinderRow({
         ) : (
           <div className="text-sm text-slate-500">—</div>
         )}
-        <div className="flex items-center gap-2">
-          {(binder.complexStructureUrl || binder.pdbUrl) && (
-            <Link
-              to={`/view/reference/${binder.id}`}
-              className="text-xs text-emerald-400 hover:text-emerald-300"
-              title="View 3D structure"
+        <div className="flex flex-col items-end gap-0.5">
+          {binder.pdbId && (
+            <a
+              href={binder.pdbUrl || `https://www.rcsb.org/structure/${binder.pdbId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:underline whitespace-nowrap"
             >
-              3D
-            </Link>
+              PDB {binder.pdbId}
+            </a>
           )}
-          {binder.helpArticleSlug && (
-            <Link
-              to={`/help/${binder.helpArticleSlug}`}
-              className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
-            >
-              Learn more →
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {(binder.complexStructureUrl || binder.pdbUrl) && (
+              <Link
+                to={`/view/reference/${binder.id}`}
+                className="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap"
+                title="View 3D structure"
+              >
+                View 3D
+              </Link>
+            )}
+            {binder.helpArticleSlug && (
+              <Link
+                to={`/help/${binder.helpArticleSlug}`}
+                className="text-xs text-blue-400 hover:text-blue-300 hover:underline whitespace-nowrap"
+              >
+                Learn more →
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useChat, type ChatContext } from "../hooks/useChat";
+import { useCurrentUser } from "../lib/hooks";
 import Spinner from "./Spinner";
 
 interface ChatPanelProps {
@@ -23,6 +25,7 @@ export default function ChatPanel({ context, isOpen, onToggle }: ChatPanelProps)
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const { data: user } = useCurrentUser();
 
   const { messages, isLoading, error, activeTool, sendMessage, cancel, clearMessages } =
     useChat({ context });
@@ -65,7 +68,7 @@ export default function ChatPanel({ context, isOpen, onToggle }: ChatPanelProps)
       {/* Toggle button - always visible */}
       <button
         onClick={onToggle}
-        className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-l-lg shadow-lg transition-all ${
+        className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-teal-600 hover:bg-teal-700 text-white p-3 rounded-l-lg shadow-lg transition-all ${
           isOpen ? "translate-x-full opacity-0" : "translate-x-0 opacity-100"
         }`}
         title="Ask Claude about this structure"
@@ -97,7 +100,7 @@ export default function ChatPanel({ context, isOpen, onToggle }: ChatPanelProps)
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800/95 backdrop-blur">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
@@ -137,8 +140,8 @@ export default function ChatPanel({ context, isOpen, onToggle }: ChatPanelProps)
         <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ height: "calc(100% - 140px)" }}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <div className="w-16 h-16 rounded-full bg-purple-600/20 flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-16 h-16 rounded-full bg-teal-600/20 flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -182,7 +185,7 @@ export default function ChatPanel({ context, isOpen, onToggle }: ChatPanelProps)
                   <div
                     className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
                       msg.role === "user"
-                        ? "bg-purple-600 text-white rounded-br-md"
+                        ? "bg-teal-600 text-white rounded-br-md"
                         : "bg-slate-700 text-slate-100 rounded-bl-md"
                     }`}
                   >
@@ -239,41 +242,55 @@ export default function ChatPanel({ context, isOpen, onToggle }: ChatPanelProps)
 
         {/* Input area */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700 bg-slate-800/95 backdrop-blur">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask a question..."
-                disabled={isLoading}
-                rows={1}
-                className="w-full bg-slate-700 text-white px-4 py-3 rounded-xl border border-slate-600 focus:border-purple-500 focus:outline-none placeholder-slate-400 text-sm disabled:opacity-50 resize-none"
-                style={{ minHeight: "46px", maxHeight: "120px" }}
-              />
+          {!user ? (
+            <div className="text-center py-2">
+              <p className="text-sm text-slate-400 mb-3">Sign in to ask questions about this structure</p>
+              <Link
+                to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                className="inline-block bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Sign In
+              </Link>
             </div>
-            {isLoading ? (
-              <button
-                type="button"
-                onClick={cancel}
-                className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium transition-colors"
-              >
-                Stop
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!inputValue.trim()}
-                className="px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors"
-              >
-                Send
-              </button>
-            )}
-          </form>
-          <p className="text-[10px] text-slate-500 mt-2 text-center">
-            Press Enter to send, Shift+Enter for new line
-          </p>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="flex items-end gap-2">
+                <div className="flex-1">
+                  <textarea
+                    ref={inputRef}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask a question..."
+                    disabled={isLoading}
+                    rows={1}
+                    className="w-full bg-slate-700 text-white px-4 py-2.5 rounded-lg border border-slate-600 focus:border-teal-500 focus:outline-none placeholder-slate-400 text-sm disabled:opacity-50 resize-none"
+                    style={{ minHeight: "42px", maxHeight: "120px" }}
+                  />
+                </div>
+                {isLoading ? (
+                  <button
+                    type="button"
+                    onClick={cancel}
+                    className="h-[42px] px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Stop
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!inputValue.trim()}
+                    className="h-[42px] px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Send
+                  </button>
+                )}
+              </form>
+              <p className="text-[10px] text-slate-500 mt-2 text-center">
+                Press Enter to send, Shift+Enter for new line
+              </p>
+            </>
+          )}
         </div>
       </div>
     </>
