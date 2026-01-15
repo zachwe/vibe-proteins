@@ -772,7 +772,19 @@ export default function ResultsPanel({
 
   // If job is still running or pending
   if (job.status !== "completed") {
-    const progressEvents = job.progress;
+    const allProgressEvents = job.progress;
+    // Filter out "Pipeline running" messages for cleaner display
+    const progressEvents = allProgressEvents?.filter(
+      (e) => !e.message.toLowerCase().includes("pipeline running")
+    ) || [];
+    const lastDisplayEvent = progressEvents[progressEvents.length - 1];
+
+    // Check if updates are stale (no update in 2+ minutes)
+    const lastEventTime = allProgressEvents?.[allProgressEvents.length - 1]?.timestamp
+      ? allProgressEvents[allProgressEvents.length - 1].timestamp * 1000 // Convert from seconds to ms
+      : new Date(job.createdAt).getTime();
+    const minutesSinceUpdate = (Date.now() - lastEventTime) / 1000 / 60;
+    const isStale = minutesSinceUpdate > 2;
 
     // Stage icons and colors
     const stageStyles: Record<string, { icon: string; color: string }> = {
@@ -823,13 +835,20 @@ export default function ResultsPanel({
         {/* Progress timeline */}
         <div className="space-y-4">
           {/* Current status indicator */}
-          <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+          <div className={`flex items-center gap-3 rounded-lg p-4 ${
+            isStale
+              ? "bg-amber-500/10 border border-amber-500/30"
+              : "bg-blue-500/10 border border-blue-500/30"
+          }`}>
             <Spinner size="sm" />
             <div>
-              <p className="text-blue-400 font-medium">
-                {progressEvents && progressEvents.length > 0
-                  ? progressEvents[progressEvents.length - 1].message
-                  : "Starting job..."}
+              <p className={`font-medium ${isStale ? "text-amber-400" : "text-blue-400"}`}>
+                {lastDisplayEvent?.message || "Starting job..."}
+                {isStale && (
+                  <span className="ml-2 text-amber-500" title="No updates received recently">
+                    (waiting for update...)
+                  </span>
+                )}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
                 Status: {job.status}
@@ -838,7 +857,7 @@ export default function ResultsPanel({
           </div>
 
           {/* Progress events timeline */}
-          {progressEvents && progressEvents.length > 0 && (
+          {progressEvents.length > 0 && (
             <div className="border border-slate-700 rounded-lg overflow-hidden">
               <div className="bg-slate-700/50 px-4 py-2 border-b border-slate-700">
                 <h3 className="text-sm font-medium text-slate-300">Progress</h3>
@@ -877,7 +896,7 @@ export default function ResultsPanel({
           )}
 
           {/* No progress yet */}
-          {(!progressEvents || progressEvents.length === 0) && (
+          {progressEvents.length === 0 && (
             <div className="text-center py-6 text-slate-500">
               <p className="text-sm">Waiting for progress updates...</p>
               <p className="text-xs mt-1">This may take a few moments to start.</p>
