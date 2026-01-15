@@ -20,6 +20,32 @@ def estimate_backbone_length(path: Path) -> int:
     return max(length, 60)
 
 
+def mmcif_auth_label_mapping(path: Path) -> tuple[dict[tuple[str, str], tuple[str, str]], dict[str, str]]:
+    """Build auth->label residue and chain mappings from a mmCIF file."""
+    from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+
+    data = MMCIF2Dict(str(path))
+    label_asym = data.get("_atom_site.label_asym_id", [])
+    label_seq = data.get("_atom_site.label_seq_id", [])
+    auth_asym = data.get("_atom_site.auth_asym_id", [])
+    auth_seq = data.get("_atom_site.auth_seq_id", [])
+
+    residue_map: dict[tuple[str, str], tuple[str, str]] = {}
+    chain_map: dict[str, str] = {}
+    for la, ls, aa, aseq in zip(label_asym, label_seq, auth_asym, auth_seq):
+        if not aa or not aseq or not la or not ls:
+            continue
+        if str(aseq) in {".", "?"} or str(ls) in {".", "?"}:
+            continue
+        auth_chain = str(aa)
+        label_chain = str(la)
+        chain_map.setdefault(auth_chain, label_chain)
+        key = (auth_chain, str(aseq))
+        if key not in residue_map:
+            residue_map[key] = (label_chain, str(ls))
+    return residue_map, chain_map
+
+
 def chain_lengths_from_pdb(path: Path) -> dict[str, int]:
     """Get the number of residues per chain from a PDB file."""
     lengths: dict[str, int] = {}

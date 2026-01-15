@@ -13,10 +13,12 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from pipelines.boltzgen import (  # noqa: E402
+    build_binding_types,
     find_boltzgen_structures,
     parse_boltzgen_metrics,
     write_boltzgen_yaml,
 )
+from utils.pdb import mmcif_auth_label_mapping  # noqa: E402
 
 
 class TestWriteBoltzgenYaml(unittest.TestCase):
@@ -35,7 +37,7 @@ class TestWriteBoltzgenYaml(unittest.TestCase):
                 target_path=target_path,
                 target_chain_ids=["A"],
                 binder_length="80..120",
-                binding_residues=None,
+                binding_types=None,
                 output_path=output_path,
             )
 
@@ -47,19 +49,19 @@ class TestWriteBoltzgenYaml(unittest.TestCase):
             entities = spec["entities"]
             self.assertEqual(len(entities), 2)
 
-            # First entity should be the binder
-            self.assertIn("protein", entities[0])
-            self.assertEqual(entities[0]["protein"]["id"], "B")
-            self.assertEqual(entities[0]["protein"]["sequence"], "80..120")
+            # First entity should be the target file
+            self.assertIn("file", entities[0])
+            self.assertEqual(entities[0]["file"]["path"], str(target_path))
+            self.assertEqual(len(entities[0]["file"]["include"]), 1)
+            self.assertEqual(entities[0]["file"]["include"][0]["chain"]["id"], "A")
 
-            # Second entity should be the target file
-            self.assertIn("file", entities[1])
-            self.assertEqual(entities[1]["file"]["path"], str(target_path))
-            self.assertEqual(len(entities[1]["file"]["include"]), 1)
-            self.assertEqual(entities[1]["file"]["include"][0]["chain"]["id"], "A")
+            # Second entity should be the binder
+            self.assertIn("protein", entities[1])
+            self.assertEqual(entities[1]["protein"]["id"], "B")
+            self.assertEqual(entities[1]["protein"]["sequence"], "80..120")
 
             # Should not have binding_types without binding residues
-            self.assertNotIn("binding_types", spec)
+            self.assertNotIn("binding_types", entities[0]["file"])
 
     def test_yaml_with_binding_residues(self) -> None:
         """Should include binding_types when binding residues specified."""
@@ -74,14 +76,15 @@ class TestWriteBoltzgenYaml(unittest.TestCase):
                 target_path=target_path,
                 target_chain_ids=["A"],
                 binder_length=100,
-                binding_residues=["5..7", "13", "25..30"],
+                binding_types=[{"chain": {"id": "A", "binding": "5..7,13,25..30"}}],
                 output_path=output_path,
             )
 
             spec = yaml.safe_load(output_path.read_text())
 
-            self.assertIn("binding_types", spec)
-            binding_types = spec["binding_types"]
+            file_entity = spec["entities"][0]["file"]
+            self.assertIn("binding_types", file_entity)
+            binding_types = file_entity["binding_types"]
             self.assertEqual(len(binding_types), 1)
             self.assertEqual(binding_types[0]["chain"]["id"], "A")
             self.assertEqual(binding_types[0]["chain"]["binding"], "5..7,13,25..30")
@@ -99,12 +102,12 @@ class TestWriteBoltzgenYaml(unittest.TestCase):
                 target_path=target_path,
                 target_chain_ids=["A", "C", "D"],
                 binder_length="60..80",
-                binding_residues=None,
+                binding_types=None,
                 output_path=output_path,
             )
 
             spec = yaml.safe_load(output_path.read_text())
-            file_entity = spec["entities"][1]["file"]
+            file_entity = spec["entities"][0]["file"]
             include = file_entity["include"]
 
             self.assertEqual(len(include), 3)
@@ -124,12 +127,12 @@ class TestWriteBoltzgenYaml(unittest.TestCase):
                 target_path=target_path,
                 target_chain_ids=["A"],
                 binder_length=100,
-                binding_residues=None,
+                binding_types=None,
                 output_path=output_path,
             )
 
             spec = yaml.safe_load(output_path.read_text())
-            self.assertEqual(spec["entities"][0]["protein"]["sequence"], "100")
+            self.assertEqual(spec["entities"][1]["protein"]["sequence"], "100")
 
     def test_yaml_binder_length_range_with_dash(self) -> None:
         """Should convert dash-separated range to double-dot format."""
@@ -144,12 +147,42 @@ class TestWriteBoltzgenYaml(unittest.TestCase):
                 target_path=target_path,
                 target_chain_ids=["A"],
                 binder_length="80-120",
-                binding_residues=None,
+                binding_types=None,
                 output_path=output_path,
             )
 
             spec = yaml.safe_load(output_path.read_text())
-            self.assertEqual(spec["entities"][0]["protein"]["sequence"], "80..120")
+            self.assertEqual(spec["entities"][1]["protein"]["sequence"], "80..120")
+
+    def test_yaml_with_scaffold_paths(self) -> None:
+        """Should include scaffold file list instead of binder length."""
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_path = Path(tmpdir) / "target.pdb"
+            target_path.write_text("ATOM 1 N GLY A 1\nEND\n")
+            scaffold_a = Path(tmpdir) / "scaffold_a.yaml"
+            scaffold_b = Path(tmpdir) / "scaffold_b.yaml"
+            scaffold_a.write_text("entities: []\n")
+            scaffold_b.write_text("entities: []\n")
+            output_path = Path(tmpdir) / "design_spec.yaml"
+
+            write_boltzgen_yaml(
+                target_path=target_path,
+                target_chain_ids=["A"],
+                binder_length="80..120",
+                binding_types=None,
+                output_path=output_path,
+                scaffold_paths=[scaffold_a, scaffold_b],
+            )
+
+            spec = yaml.safe_load(output_path.read_text())
+            entities = spec["entities"]
+            self.assertIn("file", entities[1])
+            self.assertEqual(
+                entities[1]["file"]["path"],
+                [str(scaffold_a), str(scaffold_b)],
+            )
 
 
 class TestParseBoltzgenMetrics(unittest.TestCase):
@@ -205,7 +238,65 @@ class TestParseBoltzgenMetrics(unittest.TestCase):
 
             results = parse_boltzgen_metrics(output_dir, budget=10)
 
-            self.assertEqual(results, [])
+        self.assertEqual(results, [])
+
+
+class TestBoltzgenBindingTypes(unittest.TestCase):
+    """Tests for binding type mapping helpers."""
+
+    def test_mmcif_auth_label_mapping(self) -> None:
+        """Should map auth chain/residue ids to label ids."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cif_path = Path(tmpdir) / "example.cif"
+            cif_path.write_text(
+                "data_test\n#\n"
+                "loop_\n"
+                "_atom_site.label_asym_id\n"
+                "_atom_site.label_seq_id\n"
+                "_atom_site.auth_asym_id\n"
+                "_atom_site.auth_seq_id\n"
+                "A 1 A 101\n"
+                "A 2 A 102\n"
+                "B 1 B 5\n"
+                "#\n"
+            )
+
+            residue_map, chain_map = mmcif_auth_label_mapping(cif_path)
+            self.assertEqual(chain_map["A"], "A")
+            self.assertEqual(chain_map["B"], "B")
+            self.assertEqual(residue_map[("A", "101")], ("A", "1"))
+            self.assertEqual(residue_map[("A", "102")], ("A", "2"))
+            self.assertEqual(residue_map[("B", "5")], ("B", "1"))
+
+    def test_build_binding_types_with_mapping(self) -> None:
+        """Should translate auth residue ids into label_seq_id bindings."""
+        residue_map = {
+            ("A", "101"): ("A", "1"),
+            ("A", "102"): ("A", "2"),
+            ("B", "5"): ("B", "1"),
+        }
+        chain_map = {"A": "A", "B": "B"}
+        binding_types = build_binding_types(
+            ["A:101", "A:102", "B:5"],
+            ["A", "B"],
+            residue_map,
+            chain_map,
+        )
+        self.assertEqual(
+            binding_types,
+            [
+                {"chain": {"id": "A", "binding": "1,2"}},
+                {"chain": {"id": "B", "binding": "1"}},
+            ],
+        )
+
+    def test_build_binding_types_filters_chain(self) -> None:
+        """Should ignore residues outside selected target chains."""
+        binding_types = build_binding_types(
+            ["A:10", "C:5"],
+            ["A"],
+        )
+        self.assertEqual(binding_types, [{"chain": {"id": "A", "binding": "10"}}])
 
 
 class TestFindBoltzgenStructures(unittest.TestCase):

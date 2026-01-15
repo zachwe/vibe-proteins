@@ -39,6 +39,7 @@ def _add_local_sources(image: modal.Image) -> modal.Image:
         .add_local_python_source("core")
         .add_local_python_source("pipelines")
         .add_local_python_source("utils")
+        .add_local_dir("assets", remote_path="/assets")
     )
 
 

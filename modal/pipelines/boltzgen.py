@@ -31,7 +31,7 @@ from core.config import (
 from core.job_status import send_progress, send_completion, send_usage_update
 from pipelines.proteinmpnn import resolve_structure_source
 from utils.boltz_helpers import _extract_chain_sequences
-from utils.pdb import ordered_chain_ids_from_pdb, cif_to_pdb, tail_file
+from utils.pdb import ordered_chain_ids_from_pdb, cif_to_pdb, tail_file, mmcif_auth_label_mapping
 from utils.storage import download_to_path, object_url, upload_bytes, upload_file
 
 
@@ -39,8 +39,9 @@ def write_boltzgen_yaml(
     target_path: Path,
     target_chain_ids: list[str],
     binder_length: str | int,
-    binding_residues: list[str] | None,
+    binding_types: list[dict] | None,
     output_path: Path,
+    scaffold_paths: list[Path] | None = None,
 ) -> None:
     """
     Write a BoltzGen design specification YAML file.
@@ -49,37 +50,99 @@ def write_boltzgen_yaml(
         target_path: Path to target structure file (CIF or PDB)
         target_chain_ids: Chain IDs from the target to include
         binder_length: Binder length specification (e.g., "80..140" or 100)
-        binding_residues: Optional list of binding site residues (e.g., ["5..7", "13"])
+        binding_types: Optional binding_types entries for target chains
         output_path: Path to write the YAML file
+        scaffold_paths: Optional list of scaffold YAML paths for antibody/nanobody design
     """
     import yaml
 
-    # Format binder length
-    if isinstance(binder_length, int):
-        binder_len_str = str(binder_length)
-    else:
-        binder_len_str = str(binder_length).replace("-", "..").strip()
-
-    # Build entities section
     entities = []
-
-    # Add designable binder (chain B by default)
-    entities.append({"protein": {"id": "B", "sequence": binder_len_str}})
 
     # Add target from file with specified chains
     include_chains = [{"chain": {"id": chain_id}} for chain_id in target_chain_ids]
-    entities.append({"file": {"path": str(target_path), "include": include_chains}})
+    file_entity: dict = {"path": str(target_path), "include": include_chains}
+    if binding_types:
+        file_entity["binding_types"] = binding_types
+    entities.append({"file": file_entity})
+
+    # Add designable binder or scaffold library
+    if scaffold_paths:
+        entities.append({"file": {"path": [str(path) for path in scaffold_paths]}})
+    else:
+        if isinstance(binder_length, int):
+            binder_len_str = str(binder_length)
+        else:
+            binder_len_str = str(binder_length).replace("-", "..").strip()
+        entities.append({"protein": {"id": "B", "sequence": binder_len_str}})
 
     spec: dict = {"entities": entities}
 
-    # Add binding_types if binding residues specified
-    if binding_residues:
-        binding_str = ",".join(binding_residues)
-        # Assume binding to first target chain
-        target_chain = target_chain_ids[0] if target_chain_ids else "A"
-        spec["binding_types"] = [{"chain": {"id": target_chain, "binding": binding_str}}]
-
     output_path.write_text(yaml.dump(spec, default_flow_style=False))
+
+
+def resolve_scaffold_paths(scaffold_set: str | None, scaffold_paths: list[str] | None) -> list[Path] | None:
+    """Resolve scaffold YAML paths from a named set or explicit path list."""
+    if scaffold_paths:
+        return [Path(path) for path in scaffold_paths]
+    if not scaffold_set:
+        return None
+    base_dir = Path("/assets/boltzgen")
+    if scaffold_set == "nanobody":
+        paths = sorted((base_dir / "nanobody_scaffolds").glob("*.yaml"))
+    elif scaffold_set in {"fab", "antibody"}:
+        paths = sorted((base_dir / "fab_scaffolds").glob("*.yaml"))
+    else:
+        raise ValueError(f"Unknown scaffold set: {scaffold_set}")
+    if not paths:
+        raise ValueError(f"No scaffold YAMLs found for scaffold set: {scaffold_set}")
+    return paths
+
+
+def build_binding_types(
+    binding_residues: list[str] | None,
+    target_chain_ids: list[str],
+    residue_map: dict[tuple[str, str], tuple[str, str]] | None = None,
+    chain_map: dict[str, str] | None = None,
+) -> list[dict] | None:
+    """Convert auth-style binding residues into BoltzGen binding_types entries."""
+    if not binding_residues:
+        return None
+
+    import re
+
+    default_chain = target_chain_ids[0] if target_chain_ids else None
+    if not default_chain:
+        return None
+
+    residue_map = residue_map or {}
+    chain_map = chain_map or {}
+
+    binding_by_chain: dict[str, list[str]] = {}
+    for residue in binding_residues:
+        if not residue:
+            continue
+        match = re.search(r"([A-Za-z])\s*[:\-_/]?\s*(\d+)", residue)
+        if match:
+            auth_chain, res_id = match.groups()
+        elif residue.isdigit():
+            auth_chain, res_id = default_chain, residue
+        else:
+            continue
+        if target_chain_ids and auth_chain not in target_chain_ids:
+            continue
+        label_chain = chain_map.get(auth_chain, auth_chain)
+        label_res = residue_map.get((auth_chain, str(res_id)), (label_chain, str(res_id)))[1]
+        residues = binding_by_chain.setdefault(label_chain, [])
+        residues.append(str(label_res))
+
+    if not binding_by_chain:
+        return None
+
+    binding_types = []
+    for chain_id, residues in binding_by_chain.items():
+        deduped = list(dict.fromkeys(residues))
+        binding_types.append({"chain": {"id": chain_id, "binding": ",".join(deduped)}})
+    return binding_types
 
 
 def parse_boltzgen_metrics(output_dir: Path, budget: int) -> list[dict]:
@@ -314,6 +377,8 @@ def run_boltzgen(
     # Design specification
     binder_length: str | int = "80..120",
     binding_residues: list[str] | None = None,
+    scaffold_set: str | None = None,
+    scaffold_paths: list[str] | None = None,
     # Protocol selection
     protocol: str = "protein-anything",
     # Design parameters
@@ -394,19 +459,33 @@ def run_boltzgen(
 
     # Determine target chains if not specified
     if not target_chain_ids:
-        target_chain_ids = ordered_chain_ids_from_pdb(target_path)
+        if target_path.suffix.lower() == ".cif":
+            _, chain_map = mmcif_auth_label_mapping(target_path)
+            target_chain_ids = list(dict.fromkeys(chain_map.keys()))
+        else:
+            target_chain_ids = ordered_chain_ids_from_pdb(target_path)
     if not target_chain_ids:
         raise ValueError("No protein chains found in target structure.")
+
+    residue_map: dict[tuple[str, str], tuple[str, str]] = {}
+    chain_map: dict[str, str] = {}
+    if target_path.suffix.lower() == ".cif":
+        residue_map, chain_map = mmcif_auth_label_mapping(target_path)
+
+    mapped_chain_ids = [chain_map.get(chain_id, chain_id) for chain_id in target_chain_ids]
+    binding_types = build_binding_types(binding_residues, target_chain_ids, residue_map, chain_map)
+    scaffold_paths_resolved = resolve_scaffold_paths(scaffold_set, scaffold_paths)
 
     # Write design specification YAML
     design_spec_path = work_dir / "design_spec.yaml"
     if not design_spec_path.exists():
         write_boltzgen_yaml(
             target_path=target_path,
-            target_chain_ids=target_chain_ids,
+            target_chain_ids=mapped_chain_ids,
             binder_length=binder_length,
-            binding_residues=binding_residues,
+            binding_types=binding_types,
             output_path=design_spec_path,
+            scaffold_paths=scaffold_paths_resolved,
         )
 
     # Build BoltzGen command
@@ -539,6 +618,8 @@ def run_boltzgen(
         "target_chains": target_chain_ids,
         "parameters": {
             "binder_length": binder_length,
+            "scaffold_set": scaffold_set,
+            "scaffold_paths": scaffold_paths,
             "num_designs": num_designs,
             "budget": budget,
             "alpha": alpha,
@@ -565,6 +646,8 @@ def run_boltzgen(
         "protocol": protocol,
         "parameters": {
             "binder_length": binder_length,
+            "scaffold_set": scaffold_set,
+            "scaffold_paths": scaffold_paths,
             "num_designs": num_designs,
             "budget": budget,
             "alpha": alpha,

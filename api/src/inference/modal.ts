@@ -234,6 +234,8 @@ export class ModalProvider implements InferenceProvider {
           target_chain_ids: boltzgenInput.targetChainIds,
           binder_length: boltzgenInput.binderLengthRange || boltzgenInput.binderLength || "80..120",
           binding_residues: boltzgenInput.bindingResidues || boltzgenInput.hotspotResidues,
+          scaffold_set: boltzgenInput.boltzgenScaffoldSet,
+          scaffold_paths: boltzgenInput.boltzgenScaffoldPaths,
           protocol: boltzgenInput.boltzgenProtocol || "protein-anything",
           num_designs: boltzgenInput.numDesigns ?? 100,
           diffusion_batch_size: boltzgenInput.diffusionBatchSize,

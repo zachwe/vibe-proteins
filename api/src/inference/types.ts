@@ -81,6 +81,8 @@ export interface BoltzgenJobInput extends JobInputBase {
   binderLength?: number;
   bindingResidues?: string[];
   hotspotResidues?: string[];
+  boltzgenScaffoldSet?: string;
+  boltzgenScaffoldPaths?: string[];
   boltzgenProtocol?: string;
   numDesigns?: number;
   diffusionBatchSize?: number;

@@ -307,6 +307,8 @@ Recently completed:
 - **Hotspot selection** (Phase 10): SequenceSelector with residue picking, HotspotIndicator with range support
 - PAE-based ipSAE scoring, composite scores, feedback generation
 - Usage-based billing with Stripe integration
+- **BoltzGen antibody/nanobody scaffolds**: scaffold library integration, label_seq_id hotspot mapping, and raw input previews
+- **Blog post**: antibody/nanobody design concepts and BoltzGen usage guide
 
 Next up:
 - Reference binders frontend (leaderboard integration, help article pages)

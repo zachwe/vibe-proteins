@@ -16,6 +16,115 @@ export interface BlogPost {
 }
 
 export const blogPosts: BlogPost[] = [
+  {
+    slug: "antibody-design-boltzgen-proteindojo",
+    title: "Antibody Design with BoltzGen: Scaffolds, CDRs, and Practical Workflows",
+    description: "A friendly guide to antibody and nanobody structure, how BoltzGen models CDR design, and how to run locally or on ProteinDojo.",
+    author: "ProteinDojo Team",
+    publishedAt: "2026-02-20",
+    category: "technical",
+    content: `
+Antibodies are amazing binders, but they play by different rules than generic proteins. This guide explains the basics, how BoltzGen models antibodies and nanobodies, and how to run designs locally or on ProteinDojo.
+
+## Antibodies in 60 seconds
+
+Antibodies have two main parts:
+
+- **Frameworks**: the stable scaffold that folds reliably.
+- **CDRs (complementarity-determining regions)**: short loops that do most of the binding.
+
+For full antibodies (Fab fragments), you have a **heavy chain** and a **light chain**. Nanobodies are single-domain antibodies, usually just the heavy-chain variable domain.
+
+### Quick structure map
+
+~~~text
+        Heavy chain (VH)       Light chain (VL)
+             |                      |
+        [Framework]            [Framework]
+          /  |  \\               /  |  \\
+       CDR1 CDR2 CDR3        CDR1 CDR2 CDR3
+~~~
+
+The key design idea: keep the framework stable and only vary the CDRs.
+
+## How BoltzGen treats antibodies and nanobodies
+
+BoltzGen models antibody and nanobody design around **scaffolds**:
+
+- A scaffold YAML defines the framework, chain layout, and which CDRs are designable.
+- BoltzGen varies CDR sequences (and optional insertions) while keeping the scaffold stable.
+- This gives you realistic antibodies without drifting into unstable backbone territory.
+
+### Why binder length ranges are usually wrong for antibodies
+
+For antibodies and nanobodies, a wide binder-length range is not ideal. The framework size should stay close to a real antibody scaffold. If you want length variation, it should happen inside specific CDR loops via insertions, not by growing or shrinking the whole chain. The scaffold templates already encode this behavior.
+
+## Target binding and residue numbering
+
+BoltzGen uses **label_seq_id** when it reads mmCIF files. That means:
+
+- If you select hotspot residues using PDB numbering, they need to be mapped to label_seq_id.
+- ProteinDojo handles this mapping automatically for BoltzGen.
+
+If you are running locally, make sure your binding residues refer to label_seq_id values from the mmCIF file.
+
+## Example: nanobody scaffold design YAML
+
+~~~yaml
+entities:
+  - file:
+      path: target.cif
+      include:
+        - chain:
+            id: A
+      binding_types:
+        - chain:
+            id: A
+            binding: "45,49,52"
+
+  - file:
+      path:
+        - ./nanobody_scaffolds/7eow.yaml
+        - ./nanobody_scaffolds/7xl0.yaml
+        - ./nanobody_scaffolds/8coh.yaml
+        - ./nanobody_scaffolds/8z8v.yaml
+~~~
+
+## Running BoltzGen locally (GPU required)
+
+1. Install BoltzGen with CUDA support.
+2. Download a target mmCIF.
+3. Use scaffold YAMLs for nanobody or Fab design.
+
+~~~bash
+pip install boltzgen
+boltzgen run design.yaml --protocol nanobody-anything --num_designs 200 --budget 20 --cache /tmp/boltzgen-cache
+~~~
+
+### Practical tips
+
+- Start with a small set of hotspot residues (2 to 6) near the binding epitope.
+- Use multiple scaffolds to increase diversity and robustness.
+- If the target is known to move on binding, consider testing multiple target conformations.
+
+## Designing antibodies on ProteinDojo
+
+ProteinDojo wraps the scaffold setup for you:
+
+1. Open the Design page for a target.
+2. Choose **Nanobody** or **Antibody CDR** mode.
+3. Pick hotspots on the target sequence.
+4. Submit the job. The scaffold library is selected automatically.
+
+The Raw Input Preview shows the exact BoltzGen YAML so you can compare with the official examples.
+
+## Final note: induced fit vs conformational selection
+
+Some targets change shape when they bind. This is often called **induced fit** (the target shifts after binding) or **conformational selection** (the binder stabilizes an existing alternative shape). If you expect this, try multiple target structures or loosen structural constraints when possible.
+
+If you have questions, reach out or share a target you want to design against. We can help tune the scaffold and hotspot choices.
+`,
+  },
   // TODO: Uncomment when ready to publish
   // {
   //   slug: "2025-fda-drug-approvals-protein-targets",
