@@ -403,6 +403,73 @@ export default function Designer() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // Raw input previews (must be before early returns to satisfy Rules of Hooks)
+  const rfd3RawInput = useMemo(() => {
+    if (!challenge) return "";
+    const targetChainId = challenge.targetChainId || "A";
+    const startResidue = challenge.pdbStartResidue || 1;
+    const targetLength = challenge.targetSequence?.length ?? null;
+    const endResidue = targetLength ? startResidue + targetLength - 1 : null;
+    const binderRange = "85-85";
+    const targetSegment = endResidue
+      ? `${targetChainId}${startResidue}-${endResidue}`
+      : `${targetChainId}${startResidue}-END`;
+    const contig = `${binderRange},/0,${targetSegment}`;
+    const hotspotSelection = buildRfd3HotspotSelection(
+      selectedHotspots,
+      targetChainId
+    );
+
+    const spec: Record<string, unknown> = {
+      dialect: 2,
+      infer_ori_strategy: hotspotSelection ? "hotspots" : "com",
+      input: challenge.targetStructureUrl || "TARGET_STRUCTURE",
+      contig,
+      is_non_loopy: true,
+    };
+
+    if (hotspotSelection) {
+      spec.select_hotspots = hotspotSelection;
+    }
+
+    return JSON.stringify({ design: spec }, null, 2);
+  }, [
+    challenge,
+    selectedHotspots,
+  ]);
+
+  const boltzgenRawInput = useMemo(() => {
+    if (!challenge) return "";
+    const targetPath = challenge.targetStructureUrl || "TARGET_STRUCTURE.cif";
+    const targetChainId = challenge.targetChainId || "A";
+    const protocol = currentDesignMode.boltzgenProtocol || "protein-anything";
+    const bindingResidues = normalizeBoltzgenBindingResidues(
+      selectedHotspots.length > 0 ? selectedHotspots : null,
+      targetChainId
+    );
+    const scaffoldPaths = currentDesignMode.boltzgenScaffoldSet
+      ? BOLTZGEN_SCAFFOLD_LIBRARY[currentDesignMode.boltzgenScaffoldSet]
+      : null;
+    return buildBoltzgenYaml(
+      targetPath,
+      targetChainId,
+      bgBinderLength,
+      bindingResidues,
+      protocol,
+      bgNumDesigns,
+      bgBudget,
+      scaffoldPaths
+    );
+  }, [
+    bgBinderLength,
+    bgBudget,
+    bgNumDesigns,
+    challenge,
+    currentDesignMode.boltzgenProtocol,
+    currentDesignMode.boltzgenScaffoldSet,
+    selectedHotspots,
+  ]);
+
   // Submit job
   const handleSubmit = async () => {
     if (!user) {
@@ -527,74 +594,6 @@ export default function Designer() {
       : currentDesignMode.id === "peptide"
         ? "https://github.com/HannesStark/boltzgen/blob/main/example/vanilla_peptide_with_target_binding_site/beetletert.yaml"
         : "https://github.com/HannesStark/boltzgen/blob/main/example/vanilla_protein/1g13prot.yaml";
-
-  const rfd3RawInput = useMemo(() => {
-    const targetChainId = challenge.targetChainId || "A";
-    const startResidue = challenge.pdbStartResidue || 1;
-    const targetLength = challenge.targetSequence?.length ?? null;
-    const endResidue = targetLength ? startResidue + targetLength - 1 : null;
-    const binderRange = "85-85";
-    const targetSegment = endResidue
-      ? `${targetChainId}${startResidue}-${endResidue}`
-      : `${targetChainId}${startResidue}-END`;
-    const contig = `${binderRange},/0,${targetSegment}`;
-    const hotspotSelection = buildRfd3HotspotSelection(
-      selectedHotspots,
-      targetChainId
-    );
-
-    const spec: Record<string, unknown> = {
-      dialect: 2,
-      infer_ori_strategy: hotspotSelection ? "hotspots" : "com",
-      input: challenge.targetStructureUrl || "TARGET_STRUCTURE",
-      contig,
-      is_non_loopy: true,
-    };
-
-    if (hotspotSelection) {
-      spec.select_hotspots = hotspotSelection;
-    }
-
-    return JSON.stringify({ design: spec }, null, 2);
-  }, [
-    challenge.pdbStartResidue,
-    challenge.targetChainId,
-    challenge.targetSequence,
-    challenge.targetStructureUrl,
-    selectedHotspots,
-  ]);
-
-  const boltzgenRawInput = useMemo(() => {
-    const targetPath = challenge.targetStructureUrl || "TARGET_STRUCTURE.cif";
-    const targetChainId = challenge.targetChainId || "A";
-    const protocol = currentDesignMode.boltzgenProtocol || "protein-anything";
-    const bindingResidues = normalizeBoltzgenBindingResidues(
-      selectedHotspots.length > 0 ? selectedHotspots : null,
-      targetChainId
-    );
-    const scaffoldPaths = currentDesignMode.boltzgenScaffoldSet
-      ? BOLTZGEN_SCAFFOLD_LIBRARY[currentDesignMode.boltzgenScaffoldSet]
-      : null;
-    return buildBoltzgenYaml(
-      targetPath,
-      targetChainId,
-      bgBinderLength,
-      bindingResidues,
-      protocol,
-      bgNumDesigns,
-      bgBudget,
-      scaffoldPaths
-    );
-  }, [
-    bgBinderLength,
-    bgBudget,
-    bgNumDesigns,
-    challenge.targetChainId,
-    challenge.targetStructureUrl,
-    currentDesignMode.boltzgenProtocol,
-    currentDesignMode.boltzgenScaffoldSet,
-    selectedHotspots,
-  ]);
 
   // Stage icons for progress display
   const stageIcons: Record<string, string> = {
