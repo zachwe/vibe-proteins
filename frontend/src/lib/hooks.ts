@@ -109,8 +109,9 @@ export function useJobs() {
 
       return jobs;
     },
-    // Always refetch on mount to ensure fresh job status
-    staleTime: 0,
+    // Stale time should match or exceed refetch interval to prevent duplicate requests
+    // Data is fresh for 5s, matching the poll interval for active jobs
+    staleTime: 5000,
     refetchInterval: (query) => {
       const jobs = query.state.data;
       if (!jobs) return false;
@@ -149,8 +150,8 @@ export function useJob(id: string) {
       return job;
     },
     enabled: !!id,
-    // Always refetch on mount to ensure fresh job status
-    staleTime: 0,
+    // Stale time should match or exceed refetch interval to prevent duplicate requests
+    staleTime: 2000,
     // Poll for status updates if job is pending/running
     refetchInterval: (query) => {
       const job = query.state.data;
@@ -202,8 +203,8 @@ export function useSubmissions() {
 
       return submissions;
     },
-    // Always refetch on mount to ensure fresh submission status
-    staleTime: 0,
+    // Stale time should match or exceed refetch interval to prevent duplicate requests
+    staleTime: 3000,
     // Poll for status updates if any submission is pending/running
     refetchInterval: (query) => {
       const submissions = query.state.data;
@@ -238,8 +239,8 @@ export function useSubmission(id: string) {
       return submission;
     },
     enabled: !!id,
-    // Always refetch on mount to ensure fresh submission status
-    staleTime: 0,
+    // Stale time should match or exceed refetch interval to prevent duplicate requests
+    staleTime: 2000,
     // Poll for status updates if submission is pending/running
     refetchInterval: (query) => {
       const submission = query.state.data;
