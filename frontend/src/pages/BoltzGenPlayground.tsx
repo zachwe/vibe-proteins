@@ -797,10 +797,20 @@ function JobStatusPanel({
   };
 
   const isLoading = !job;
-  const progressEvents = job?.progress;
-  const latestProgress = progressEvents && progressEvents.length > 0
+  const allProgressEvents = job?.progress;
+  // Filter out "Pipeline running" messages for cleaner display
+  const progressEvents = allProgressEvents?.filter(
+    (e) => !e.message.toLowerCase().includes("pipeline running")
+  ) || [];
+  const latestProgress = progressEvents.length > 0
     ? progressEvents[progressEvents.length - 1]
     : null;
+
+  // Check if updates are stale (no update in 2+ minutes)
+  const lastEventTime = allProgressEvents?.[allProgressEvents.length - 1]?.timestamp
+    || (job?.createdAt ? new Date(job.createdAt).getTime() : Date.now());
+  const minutesSinceUpdate = (Date.now() - lastEventTime) / 1000 / 60;
+  const isStale = !isLoading && job?.status !== "completed" && job?.status !== "failed" && minutesSinceUpdate > 2;
 
   // Completed state
   if (job?.status === "completed") {
@@ -878,16 +888,25 @@ function JobStatusPanel({
       </div>
 
       {/* Current status banner */}
-      <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
+      <div className={`flex items-center gap-3 rounded-lg p-3 mb-4 ${
+        isStale
+          ? "bg-amber-500/10 border border-amber-500/30"
+          : "bg-blue-500/10 border border-blue-500/30"
+      }`}>
         <Spinner size="sm" />
-        <span className="text-blue-400 text-sm">
+        <span className={`text-sm ${isStale ? "text-amber-400" : "text-blue-400"}`}>
           {isLoading ? "Submitting job..." :
            latestProgress ? latestProgress.message : "Starting BoltzGen pipeline..."}
+          {isStale && (
+            <span className="ml-2 text-amber-500" title="No updates received recently">
+              (waiting for update...)
+            </span>
+          )}
         </span>
       </div>
 
       {/* Progress timeline */}
-      {progressEvents && progressEvents.length > 0 && (
+      {progressEvents.length > 0 && (
         <div className="border border-slate-700 rounded-lg overflow-hidden mb-4">
           <div className="divide-y divide-slate-700/50 max-h-48 overflow-y-auto">
             {progressEvents.map((event, index) => {

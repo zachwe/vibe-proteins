@@ -1026,33 +1026,57 @@ export default function Designer() {
 
                   {/* Progress events */}
                   {(job.status === "pending" || job.status === "running") && (
-                    <>
-                      <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                        <Spinner size="sm" />
-                        <span className="text-blue-400 text-sm">
-                          {job.progress && job.progress.length > 0
-                            ? job.progress[job.progress.length - 1].message
-                            : "Starting job..."}
-                        </span>
-                      </div>
-                      {job.progress && job.progress.length > 0 && (
-                        <div className="border border-slate-700 rounded-lg overflow-hidden max-h-32 overflow-y-auto">
-                          {job.progress.map((event, index) => (
-                            <div
-                              key={index}
-                              className={`px-3 py-1.5 flex items-center gap-2 text-xs ${
-                                index === job.progress!.length - 1 ? "bg-slate-700/30" : ""
-                              }`}
-                            >
-                              <span>{stageIcons[event.stage] || "•"}</span>
-                              <span className={index === job.progress!.length - 1 ? "text-white" : "text-slate-400"}>
-                                {event.message}
-                              </span>
+                    (() => {
+                      // Filter out "Pipeline running" messages for cleaner display
+                      const displayProgress = job.progress?.filter(
+                        (e) => !e.message.toLowerCase().includes("pipeline running")
+                      ) || [];
+                      const lastEvent = job.progress?.[job.progress.length - 1];
+                      const lastDisplayEvent = displayProgress[displayProgress.length - 1];
+
+                      // Check if updates are stale (no update in 2+ minutes)
+                      const now = Date.now();
+                      const lastUpdateTime = lastEvent?.timestamp || new Date(job.createdAt).getTime();
+                      const minutesSinceUpdate = (now - lastUpdateTime) / 1000 / 60;
+                      const isStale = minutesSinceUpdate > 2;
+
+                      return (
+                        <>
+                          <div className={`flex items-center gap-3 rounded-lg p-3 ${
+                            isStale
+                              ? "bg-amber-500/10 border border-amber-500/30"
+                              : "bg-blue-500/10 border border-blue-500/30"
+                          }`}>
+                            <Spinner size="sm" />
+                            <span className={`text-sm ${isStale ? "text-amber-400" : "text-blue-400"}`}>
+                              {lastDisplayEvent?.message || "Starting job..."}
+                              {isStale && (
+                                <span className="ml-2 text-amber-500" title="No updates received recently">
+                                  (waiting for update...)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          {displayProgress.length > 0 && (
+                            <div className="border border-slate-700 rounded-lg overflow-hidden max-h-32 overflow-y-auto">
+                              {displayProgress.map((event, index) => (
+                                <div
+                                  key={index}
+                                  className={`px-3 py-1.5 flex items-center gap-2 text-xs ${
+                                    index === displayProgress.length - 1 ? "bg-slate-700/30" : ""
+                                  }`}
+                                >
+                                  <span>{stageIcons[event.stage] || "•"}</span>
+                                  <span className={index === displayProgress.length - 1 ? "text-white" : "text-slate-400"}>
+                                    {event.message}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
+                          )}
+                        </>
+                      );
+                    })()
                   )}
 
                   {job.status === "completed" && (
