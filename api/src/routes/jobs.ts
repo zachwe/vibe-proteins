@@ -1,36 +1,20 @@
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
-import { db, jobs, user, challenges, transactions, gpuPricing } from "../db";
+import { db, jobs, user, challenges, transactions } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider, type JobType } from "../inference";
 import { getSignedUrl } from "../storage/r2";
 import { analytics } from "../services/analytics";
+import { getJobCostCents } from "../billing";
 
 const app = new Hono();
 
 // Minimum balance required to submit a job (in cents) - prevents users with $0 from submitting
 const MIN_BALANCE_CENTS = 10; // $0.10 minimum
 
-// Helper to calculate cost from GPU usage
-async function calculateJobCost(gpuType: string, executionSeconds: number): Promise<number> {
-  // Look up GPU pricing
-  const pricing = await db
-    .select()
-    .from(gpuPricing)
-    .where(eq(gpuPricing.id, gpuType))
-    .get();
-
-  if (!pricing) {
-    // Fallback to A10G rate if GPU type not found
-    const fallbackRate = 0.000306 * 1.3; // A10G + 30%
-    return Math.ceil(fallbackRate * executionSeconds * 100); // Convert to cents
-  }
-
-  // Calculate: modalRate * (1 + markup%) * seconds * 100 (to cents)
-  const ourRate = pricing.modalRatePerSec * (1 + pricing.markupPercent / 100);
-  return Math.ceil(ourRate * executionSeconds * 100);
-}
+// Alias for backward compatibility within this file
+const calculateJobCost = getJobCostCents;
 
 // Helper to process partial billing for long-running jobs
 async function processPartialBilling(
