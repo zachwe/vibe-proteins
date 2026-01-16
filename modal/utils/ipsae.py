@@ -115,6 +115,25 @@ def _get_plddt_per_residue(path: Path) -> np.ndarray | None:
     return np.array(plddts)
 
 
+def _rowwise_max_ptm(
+    pae_matrix: np.ndarray,
+    mask: np.ndarray,
+    d0: float,
+) -> float:
+    """Compute max of row-wise mean pTM values under a mask."""
+    if pae_matrix.size == 0:
+        return 0.0
+    ptm_matrix = ptm_func(pae_matrix, d0)
+    row_means = []
+    for i in range(ptm_matrix.shape[0]):
+        valid = mask[i]
+        if np.any(valid):
+            row_means.append(float(np.mean(ptm_matrix[i, valid])))
+        else:
+            row_means.append(0.0)
+    return float(max(row_means)) if row_means else 0.0
+
+
 def compute_ipsae_from_pae(
     pae_matrix: np.ndarray,
     structure_path: Path,
@@ -205,7 +224,7 @@ def compute_ipsae_from_pae(
         pae_1to2 = pae_matrix[np.ix_(idx1, idx2)]
         pae_2to1 = pae_matrix[np.ix_(idx2, idx1)]
 
-        # Symmetric PAE (minimum of both directions)
+        # Symmetric PAE (minimum of both directions) for contact counting
         pae_interface = np.minimum(pae_1to2, pae_2to1.T)
 
         # Find confident contacts
@@ -221,30 +240,40 @@ def compute_ipsae_from_pae(
         total_length = len(residues1) + len(residues2)
         d0_chn = calc_d0(total_length)
 
-        # d0_dom: based on residues with any confident contact
-        residues_with_contact = (
-            contact_mask.any(axis=1).sum() + contact_mask.any(axis=0).sum()
+        # d0_dom: based on residues with any confident contact (directional)
+        mask_1to2 = pae_1to2 < pae_cutoff
+        mask_2to1 = pae_2to1 < pae_cutoff
+        residues_with_contact_1 = mask_1to2.any(axis=1).sum() + mask_1to2.any(axis=0).sum()
+        residues_with_contact_2 = mask_2to1.any(axis=1).sum() + mask_2to1.any(axis=0).sum()
+        d0_dom_1 = calc_d0(max(residues_with_contact_1, 27))
+        d0_dom_2 = calc_d0(max(residues_with_contact_2, 27))
+
+        # Compute ipSAE scores (row-wise max of masked pTM means)
+        ipsae_chn_raw = max(
+            _rowwise_max_ptm(pae_1to2, mask_1to2, d0_chn),
+            _rowwise_max_ptm(pae_2to1, mask_2to1, d0_chn),
         )
-        d0_dom = calc_d0(max(residues_with_contact, 27))
-
-        # Compute ipSAE scores
-        pae_contacts = pae_interface[contact_mask]
-
-        # ipSAE with d0_chn
-        ptm_scores_chn = ptm_func(pae_contacts, d0_chn)
-        ipsae_chn = -np.mean(ptm_scores_chn) if len(ptm_scores_chn) > 0 else 0.0
+        ipsae_chn = -ipsae_chn_raw
         all_ipsae_chn.append(ipsae_chn)
 
-        # ipSAE with d0_dom
-        ptm_scores_dom = ptm_func(pae_contacts, d0_dom)
-        ipsae_dom = -np.mean(ptm_scores_dom) if len(ptm_scores_dom) > 0 else 0.0
+        ipsae_dom_raw = max(
+            _rowwise_max_ptm(pae_1to2, mask_1to2, d0_dom_1),
+            _rowwise_max_ptm(pae_2to1, mask_2to1, d0_dom_2),
+        )
+        ipsae_dom = -ipsae_dom_raw
         all_ipsae_dom.append(ipsae_dom)
 
-        # ipTM: average PTM score for interface
-        iptm = np.mean(ptm_scores_chn) if len(ptm_scores_chn) > 0 else 0.0
+        # ipTM: row-wise max of PTM means without PAE cutoff
+        full_mask_1 = np.ones_like(pae_1to2, dtype=bool)
+        full_mask_2 = np.ones_like(pae_2to1, dtype=bool)
+        iptm = max(
+            _rowwise_max_ptm(pae_1to2, full_mask_1, d0_chn),
+            _rowwise_max_ptm(pae_2to1, full_mask_2, d0_chn),
+        )
         all_iptm.append(iptm)
 
         # LIS (Local Interaction Score) - Kim et al.
+        pae_contacts = pae_interface[contact_mask]
         valid_pae = pae_contacts[pae_contacts <= 12.0]
         if len(valid_pae) > 0:
             lis_scores = (12.0 - valid_pae) / 12.0

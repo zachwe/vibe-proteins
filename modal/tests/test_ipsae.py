@@ -143,6 +143,36 @@ END
         # Should detect interface contacts (PAE < 12 Å cutoff)
         self.assertGreater(result["n_interface_contacts"], 0)
 
+    def test_ipsae_uses_rowwise_max(self) -> None:
+        """ipSAE should use max of row-wise pTM means (not global mean)."""
+        pae_matrix = np.full((6, 6), 20.0)
+        # Chain A (rows 0-2) -> Chain B (cols 3-5)
+        pae_matrix[0:3, 3:6] = np.array(
+            [
+                [1.0, 1.0, 1.0],   # high-confidence row
+                [10.0, 10.0, 10.0],
+                [10.0, 10.0, 10.0],
+            ]
+        )
+        # Chain B -> Chain A (rows 3-5, cols 0-2)
+        pae_matrix[3:6, 0:3] = np.array(
+            [
+                [1.0, 1.0, 1.0],
+                [10.0, 10.0, 10.0],
+                [10.0, 10.0, 10.0],
+            ]
+        )
+
+        result = compute_ipsae_from_pae(
+            pae_matrix=pae_matrix,
+            structure_path=self.pdb_path,
+            chain_pairs=[("A", "B")],
+        )
+
+        d0 = calc_d0(6)
+        expected = round(-ptm_func(1.0, d0), 4)
+        self.assertEqual(result["ipsae"], expected)
+
     def test_weak_interface(self) -> None:
         """High PAE values should give low scores (close to zero ipSAE)."""
         # High PAE (>12 Å) between chains = weak interaction
