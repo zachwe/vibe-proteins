@@ -551,6 +551,9 @@ app.get("/:id", async (c) => {
           updatePayload.billedSeconds = partialBilling.billedSeconds;
           updatePayload.gpuType = modalStatus.usage.gpu_type;
           updatePayload.executionSeconds = modalStatus.usage.execution_seconds;
+          // Accumulate cost from partial billing
+          const previousCost = job.costUsdCents ?? 0;
+          updatePayload.costUsdCents = previousCost + partialBilling.costCents;
         }
       }
 

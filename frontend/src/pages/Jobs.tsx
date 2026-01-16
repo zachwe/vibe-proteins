@@ -79,14 +79,18 @@ function renderJobRow(job: Job, challengeMap: Map<string, Challenge>) {
             <span>Cost: ${(job.costUsdCents / 100).toFixed(2)}</span>
           )}
           {(() => {
-            const duration = getJobDuration(job);
-            if (duration) return <span>Duration: {duration}</span>;
-            if (job.executionSeconds !== null && job.gpuType) {
-              return <span>{job.executionSeconds.toFixed(1)}s on {job.gpuType}</span>;
+            // Prefer GPU execution time (accurate) over wall-clock time
+            // Wall-clock includes queue wait, cold start, and callback delays
+            if (job.executionSeconds !== null && job.executionSeconds > 0) {
+              const formatted = formatDuration(0, job.executionSeconds * 1000);
+              return <span>{formatted} on {job.gpuType || "GPU"}</span>;
             }
             if (job.status === "pending" || job.status === "running") {
               return <span>In progress...</span>;
             }
+            // Fall back to wall-clock time if no GPU timing available
+            const duration = getJobDuration(job);
+            if (duration) return <span>Duration: {duration}</span>;
             return null;
           })()}
         </div>

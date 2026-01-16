@@ -204,7 +204,7 @@ def run_boltzgen_with_progress(
     num_designs: int,
     budget: int,
     start_time: float,
-    gpu_type: str = "A100",
+    gpu_type: str = "A100_40GB",
 ) -> None:
     """
     Run BoltzGen subprocess with real-time progress streaming.
@@ -420,7 +420,7 @@ def run_boltzgen(
     - Automatic retries on preemption (up to 3 attempts)
     """
     start_time = time.time()
-    gpu_type = "A100"
+    gpu_type = "A100_40GB"  # Must match gpu_pricing table (Modal's gpu="A100" defaults to 40GB)
 
     job_id = job_id or str(uuid.uuid4())
     target_source = resolve_structure_source(target_pdb, target_structure_url)
