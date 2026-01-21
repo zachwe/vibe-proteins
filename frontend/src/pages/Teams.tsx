@@ -16,6 +16,7 @@ import {
   updateMemberRole,
   leaveOrganization,
   deleteOrganization,
+  setActiveOrganization,
   authClient,
 } from "../lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -241,7 +242,8 @@ export default function Teams() {
         return;
       }
 
-      // Refresh teams list
+      // Clear active org (in case the left team was active) and refresh
+      await setActiveOrganization({ organizationId: null });
       await refetchOrgs();
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
       setExpandedTeam(null);
@@ -269,7 +271,8 @@ export default function Teams() {
         return;
       }
 
-      // Refresh teams list
+      // Clear active org (in case the deleted team was active) and refresh
+      await setActiveOrganization({ organizationId: null });
       await refetchOrgs();
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
       setExpandedTeam(null);
