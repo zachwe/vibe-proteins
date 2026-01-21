@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import {
   useSession,
   useListOrganizations,
@@ -17,8 +17,6 @@ import {
   leaveOrganization,
   deleteOrganization,
   setActiveOrganization,
-  listInvitations,
-  cancelInvitation,
 } from "../lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../lib/hooks";
@@ -51,6 +49,7 @@ interface PendingInvitation {
 }
 
 export default function Teams() {
+  const navigate = useNavigate();
   const { data: session, isPending: sessionPending } = useSession();
   const { data: orgsData, isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
   const organizations = orgsData ?? [];
@@ -156,14 +155,18 @@ export default function Teams() {
         });
       }
 
-      // Also fetch pending invitations
-      const invitationsResult = await listInvitations({ organizationId: teamId });
-      if (invitationsResult.data) {
-        // Filter to only show pending invitations
-        const pending = invitationsResult.data.filter(
-          (inv: PendingInvitation) => inv.status === "pending"
+      // Also fetch pending invitations using our own API
+      try {
+        const invResponse = await fetch(
+          `${apiUrl}/api/teams/${teamId}/invitations`,
+          { credentials: "include" }
         );
-        setPendingInvitations(pending);
+        if (invResponse.ok) {
+          const invData = await invResponse.json();
+          setPendingInvitations(invData.invitations || []);
+        }
+      } catch (invErr) {
+        console.error("Error fetching invitations:", invErr);
       }
     } catch (err) {
       console.error("Failed to load team details:", err);
@@ -195,13 +198,19 @@ export default function Teams() {
 
       setInviteEmail("");
       setInviteSuccess(true);
-      // Refresh invitations list
-      const invitationsResult = await listInvitations({ organizationId: expandedTeam });
-      if (invitationsResult.data) {
-        const pending = invitationsResult.data.filter(
-          (inv: PendingInvitation) => inv.status === "pending"
+      // Refresh invitations list using our own API
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      try {
+        const invResponse = await fetch(
+          `${apiUrl}/api/teams/${expandedTeam}/invitations`,
+          { credentials: "include" }
         );
-        setPendingInvitations(pending);
+        if (invResponse.ok) {
+          const invData = await invResponse.json();
+          setPendingInvitations(invData.invitations || []);
+        }
+      } catch (err) {
+        console.error("Error refreshing invitations:", err);
       }
     } catch (err) {
       console.error("Failed to invite member:", err);
@@ -216,22 +225,30 @@ export default function Teams() {
     setActionLoading(invitationId);
     setActionError(null);
 
-    try {
-      const result = await cancelInvitation({ invitationId });
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-      if (result.error) {
-        setActionError(result.error.message || "Failed to cancel invitation");
+    try {
+      // Use our own API to cancel invitation
+      const response = await fetch(
+        `${apiUrl}/api/teams/${expandedTeam}/invitations/${invitationId}`,
+        { method: "DELETE", credentials: "include" }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        setActionError(data.error || "Failed to cancel invitation");
         setActionLoading(null);
         return;
       }
 
       // Refresh invitations list
-      const invitationsResult = await listInvitations({ organizationId: expandedTeam });
-      if (invitationsResult.data) {
-        const pending = invitationsResult.data.filter(
-          (inv: PendingInvitation) => inv.status === "pending"
-        );
-        setPendingInvitations(pending);
+      const invResponse = await fetch(
+        `${apiUrl}/api/teams/${expandedTeam}/invitations`,
+        { credentials: "include" }
+      );
+      if (invResponse.ok) {
+        const invData = await invResponse.json();
+        setPendingInvitations(invData.invitations || []);
       }
     } catch (err) {
       console.error("Failed to cancel invitation:", err);
@@ -718,12 +735,16 @@ export default function Teams() {
 
                           {/* Team actions */}
                           <div className="flex gap-3 pt-4 border-t border-slate-700">
-                            <Link
-                              to="/billing"
+                            <button
+                              onClick={async () => {
+                                await setActiveOrganization({ organizationId: org.id });
+                                queryClient.invalidateQueries({ queryKey: queryKeys.user });
+                                navigate("/billing");
+                              }}
                               className="text-sm text-blue-400 hover:text-blue-300"
                             >
                               Add Funds
-                            </Link>
+                            </button>
                             {teamDetails.members.some(
                               (m) => m.userId === currentUserId && m.role !== "owner"
                             ) && (
