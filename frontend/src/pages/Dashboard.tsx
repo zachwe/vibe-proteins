@@ -309,7 +309,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <StatCard
                 label="Balance"
-                value={user?.balanceFormatted ?? "$0.00"}
+                value={user?.effectiveBalance?.balanceFormatted ?? "$0.00"}
                 color="text-green-400"
               />
               <StatCard
