@@ -31,3 +31,5 @@ export const removeMember = authClient.organization.removeMember;
 export const updateMemberRole = authClient.organization.updateMemberRole;
 export const leaveOrganization = authClient.organization.leave;
 export const deleteOrganization = authClient.organization.delete;
+export const listInvitations = authClient.organization.listInvitations;
+export const cancelInvitation = authClient.organization.cancelInvitation;

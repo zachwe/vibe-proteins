@@ -17,7 +17,8 @@ import {
   leaveOrganization,
   deleteOrganization,
   setActiveOrganization,
-  authClient,
+  listInvitations,
+  cancelInvitation,
 } from "../lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../lib/hooks";
@@ -41,6 +42,14 @@ interface TeamDetails {
   members: TeamMember[];
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  expiresAt: string;
+}
+
 export default function Teams() {
   const { data: session, isPending: sessionPending } = useSession();
   const { data: orgsData, isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
@@ -54,6 +63,7 @@ export default function Teams() {
 
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const [teamDetails, setTeamDetails] = useState<TeamDetails | null>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
 
   const [inviteEmail, setInviteEmail] = useState("");
@@ -112,6 +122,7 @@ export default function Teams() {
     if (expandedTeam === teamId) {
       setExpandedTeam(null);
       setTeamDetails(null);
+      setPendingInvitations([]);
       return;
     }
 
@@ -119,6 +130,7 @@ export default function Teams() {
     setDetailsLoading(true);
     setInviteError(null);
     setInviteSuccess(false);
+    setPendingInvitations([]);
 
     try {
       // Get full organization details with members
@@ -142,6 +154,16 @@ export default function Teams() {
           slug: data.slug,
           members: data.members as TeamMember[],
         });
+      }
+
+      // Also fetch pending invitations
+      const invitationsResult = await listInvitations({ organizationId: teamId });
+      if (invitationsResult.data) {
+        // Filter to only show pending invitations
+        const pending = invitationsResult.data.filter(
+          (inv: PendingInvitation) => inv.status === "pending"
+        );
+        setPendingInvitations(pending);
       }
     } catch (err) {
       console.error("Failed to load team details:", err);
@@ -173,11 +195,49 @@ export default function Teams() {
 
       setInviteEmail("");
       setInviteSuccess(true);
+      // Refresh invitations list
+      const invitationsResult = await listInvitations({ organizationId: expandedTeam });
+      if (invitationsResult.data) {
+        const pending = invitationsResult.data.filter(
+          (inv: PendingInvitation) => inv.status === "pending"
+        );
+        setPendingInvitations(pending);
+      }
     } catch (err) {
       console.error("Failed to invite member:", err);
       setInviteError("Failed to send invitation");
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    if (!expandedTeam) return;
+    setActionLoading(invitationId);
+    setActionError(null);
+
+    try {
+      const result = await cancelInvitation({ invitationId });
+
+      if (result.error) {
+        setActionError(result.error.message || "Failed to cancel invitation");
+        setActionLoading(null);
+        return;
+      }
+
+      // Refresh invitations list
+      const invitationsResult = await listInvitations({ organizationId: expandedTeam });
+      if (invitationsResult.data) {
+        const pending = invitationsResult.data.filter(
+          (inv: PendingInvitation) => inv.status === "pending"
+        );
+        setPendingInvitations(pending);
+      }
+    } catch (err) {
+      console.error("Failed to cancel invitation:", err);
+      setActionError("Failed to cancel invitation");
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -529,6 +589,86 @@ export default function Teams() {
                               })}
                             </div>
                           </div>
+
+                          {/* Pending invitations */}
+                          {pendingInvitations.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium text-slate-300 mb-3">
+                                Pending Invitations ({pendingInvitations.length})
+                              </h4>
+                              <div className="space-y-2">
+                                {pendingInvitations.map((invitation) => {
+                                  const isExpired = new Date(invitation.expiresAt) < new Date();
+                                  const currentUserRole = teamDetails.members.find(
+                                    (m) => m.userId === currentUserId
+                                  )?.role;
+                                  const canCancel = currentUserRole === "owner" || currentUserRole === "admin";
+
+                                  return (
+                                    <div
+                                      key={invitation.id}
+                                      className="flex items-center justify-between bg-slate-700/30 border border-slate-600/50 border-dashed rounded-lg p-3"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-slate-600/50 rounded-full flex items-center justify-center text-slate-400 text-sm">
+                                          <svg
+                                            className="w-4 h-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            strokeWidth={1.5}
+                                            stroke="currentColor"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+                                            />
+                                          </svg>
+                                        </div>
+                                        <div>
+                                          <div className="text-slate-300 text-sm">{invitation.email}</div>
+                                          <div className="text-slate-500 text-xs">
+                                            {isExpired ? (
+                                              <span className="text-red-400">Expired</span>
+                                            ) : (
+                                              <>Invited as {invitation.role}</>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400">
+                                          pending
+                                        </span>
+                                        {canCancel && (
+                                          <button
+                                            onClick={() => handleCancelInvitation(invitation.id)}
+                                            disabled={actionLoading === invitation.id}
+                                            className="text-red-400 hover:text-red-300 p-1"
+                                            title="Cancel invitation"
+                                          >
+                                            <svg
+                                              className="w-4 h-4"
+                                              fill="none"
+                                              viewBox="0 0 24 24"
+                                              strokeWidth={1.5}
+                                              stroke="currentColor"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M6 18 18 6M6 6l12 12"
+                                              />
+                                            </svg>
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Invite form */}
                           {teamDetails.members.some(
