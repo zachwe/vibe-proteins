@@ -122,16 +122,25 @@ export default function Teams() {
 
     try {
       // Get full organization details with members
-      const result = await authClient.organization.getFullOrganization({
-        organizationId: teamId,
-      });
+      // Use direct fetch with query param instead of BetterAuth client (more robust)
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      const response = await fetch(
+        `${apiUrl}/api/auth/organization/get-full-organization?organizationId=${teamId}`,
+        { credentials: "include" }
+      );
 
-      if (result.data) {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data) {
         setTeamDetails({
-          id: result.data.id,
-          name: result.data.name,
-          slug: result.data.slug,
-          members: result.data.members as TeamMember[],
+          id: data.id,
+          name: data.name,
+          slug: data.slug,
+          members: data.members as TeamMember[],
         });
       }
     } catch (err) {
