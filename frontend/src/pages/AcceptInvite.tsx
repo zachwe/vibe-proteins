@@ -51,8 +51,9 @@ export default function AcceptInvite() {
 
       try {
         // Use BetterAuth's getInvitation endpoint
+        // Note: BetterAuth expects 'id' not 'invitationId'
         const result = await authClient.organization.getInvitation({
-          invitationId,
+          id: invitationId,
         });
 
         if (result.error) {
