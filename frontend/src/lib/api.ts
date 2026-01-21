@@ -48,6 +48,28 @@ export interface User {
   balanceFormatted: string;
 }
 
+export interface ActiveTeam {
+  id: string;
+  name: string;
+  slug: string;
+  balanceUsdCents: number;
+  balanceFormatted: string;
+  role: "owner" | "admin" | "member";
+}
+
+export interface EffectiveBalance {
+  type: "personal" | "team";
+  balanceUsdCents: number;
+  balanceFormatted: string;
+  teamName?: string;
+}
+
+export interface UserResponse {
+  user: User;
+  activeTeam: ActiveTeam | null;
+  effectiveBalance: EffectiveBalance;
+}
+
 export interface JobProgressEvent {
   stage: string;
   message: string;
@@ -79,6 +101,7 @@ export interface Submission {
   designSequence: string;
   designPdbUrl: string | null;
   designStructureUrl: string | null;
+  designStructureSignedUrl: string | null; // Signed URL for browser access
   status: "pending" | "running" | "completed" | "failed";
   error: string | null;
   // Score fields
@@ -178,7 +201,7 @@ export const challengesApi = {
 
 // User API
 export const usersApi = {
-  me: () => apiFetch<{ user: User }>("/api/users/me"),
+  me: () => apiFetch<UserResponse>("/api/users/me"),
   deleteAccount: () => apiFetch<{ success: boolean }>("/api/users/me", { method: "DELETE" }),
 };
 

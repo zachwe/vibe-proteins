@@ -176,7 +176,7 @@ function SubmissionViewer({ submissionId }: { submissionId: string }) {
         type: "submission",
         title: `Submission ${data.id.slice(0, 8)}`,
         subtitle: challengeData?.name ? `For: ${challengeData.name}` : "User Submission",
-        structureUrl: data.designStructureUrl,
+        structureUrl: data.designStructureSignedUrl,
         pdbId: null,
         chainColors,
         scores: {

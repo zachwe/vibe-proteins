@@ -1,12 +1,23 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db, submissions, challenges, jobs, user, transactions, gpuPricing } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider } from "../inference/modal";
 import { analytics } from "../services/analytics";
+import {
+  getBillingContext,
+  deductBalance,
+  getMembership,
+} from "../lib/team-context";
+import { getSignedUrl } from "../storage/r2";
 
 const app = new Hono();
+
+const SIGNED_URL_TTL_SECONDS = Number.parseInt(
+  process.env.R2_SIGNED_URL_TTL_SECONDS || "900",
+  10
+);
 
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "vibeproteins";
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || "";
@@ -88,6 +99,39 @@ function toModalDownloadUri(url: string): string {
   }
   // External URL (e.g., RCSB) - return as-is for direct HTTP download
   return url;
+}
+
+/**
+ * Convert an S3 URI or R2 URL to a signed URL for browser access
+ * Returns null if the URL is not from R2 (e.g., external RCSB URLs)
+ */
+function getSignedStructureUrl(url: string | null): string | null {
+  if (!url) return null;
+
+  const key = extractR2Key(url);
+  if (!key) {
+    // Not an R2 URL - return as-is (might be external URL)
+    return url;
+  }
+
+  try {
+    return getSignedUrl(key, SIGNED_URL_TTL_SECONDS);
+  } catch (error) {
+    console.warn("Unable to sign structure URL:", error);
+    return null;
+  }
+}
+
+/**
+ * Attach signed URLs to a submission object for browser access
+ */
+function attachSignedUrlsToSubmission<T extends { designStructureUrl?: string | null }>(
+  submission: T
+): T & { designStructureSignedUrl?: string | null } {
+  return {
+    ...submission,
+    designStructureSignedUrl: getSignedStructureUrl(submission.designStructureUrl ?? null),
+  };
 }
 
 /**
@@ -300,6 +344,7 @@ async function runCustomSubmissionPipeline(
   challengeId: string,
   binderSequence: string,
   userId: string,
+  organizationId: string | null,
   targetStructureUrl: string,
   targetChainIds: string[]
 ) {
@@ -456,28 +501,20 @@ async function runCustomSubmissionPipeline(
 
     // Handle billing for the job
     if (output) {
-      const usage = result.result?.output as { gpu_type?: string; execution_seconds?: number } | undefined;
       const jobRecord = await db.select().from(jobs).where(eq(jobs.id, jobId)).get();
 
       if (jobRecord?.gpuType && jobRecord?.executionSeconds) {
         const costCents = await calculateJobCost(jobRecord.gpuType, jobRecord.executionSeconds);
 
-        const jobUser = await db
-          .select({ balanceUsdCents: user.balanceUsdCents })
-          .from(user)
-          .where(eq(user.id, userId))
-          .get();
-
-        if (jobUser && costCents > 0) {
-          const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
-          await db
-            .update(user)
-            .set({ balanceUsdCents: newBalance })
-            .where(eq(user.id, userId));
+        if (costCents > 0) {
+          // Get billing context based on the job's organizationId
+          const billingContext = await getBillingContext(userId, organizationId);
+          const newBalance = await deductBalance(billingContext, costCents);
 
           await db.insert(transactions).values({
             id: randomUUID(),
             userId,
+            organizationId,
             amountCents: -costCents,
             type: "job_usage",
             jobId,
@@ -565,20 +602,23 @@ app.post("/custom", async (c) => {
     return c.json({ error: "Challenge has no target structure" }, 400);
   }
 
-  // Check user balance
-  const currentUser = await db
-    .select({ balanceUsdCents: user.balanceUsdCents })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .get();
+  // Get active organization from session (if any)
+  const activeOrganizationId = (session.session as { activeOrganizationId?: string })?.activeOrganizationId ?? null;
 
-  if (!currentUser || currentUser.balanceUsdCents < MIN_BALANCE_CENTS) {
+  // Get billing context (team or personal)
+  const billingContext = await getBillingContext(session.user.id, activeOrganizationId);
+
+  // Check balance
+  if (billingContext.balanceUsdCents < MIN_BALANCE_CENTS) {
     return c.json(
       {
         error: "Insufficient balance",
-        message: "Please add funds to your account to submit custom sequences",
+        message: billingContext.type === "team"
+          ? "Please add funds to your team account to submit custom sequences"
+          : "Please add funds to your account to submit custom sequences",
         requiredCents: MIN_BALANCE_CENTS,
-        availableCents: currentUser?.balanceUsdCents ?? 0,
+        availableCents: billingContext.balanceUsdCents,
+        billingType: billingContext.type,
       },
       402
     );
@@ -587,12 +627,14 @@ app.post("/custom", async (c) => {
   const submissionId = randomUUID();
   const jobId = randomUUID();
   const now = new Date();
+  const organizationId = billingContext.type === "team" ? activeOrganizationId : null;
 
   // Create job first (submission references job via foreign key)
   await db.insert(jobs).values({
     id: jobId,
     userId: session.user.id,
     challengeId,
+    organizationId,
     type: "boltz2",
     status: "pending",
     input: JSON.stringify({
@@ -608,6 +650,7 @@ app.post("/custom", async (c) => {
     id: submissionId,
     userId: session.user.id,
     challengeId,
+    organizationId,
     jobId,
     designSequence: validation.cleaned,
     status: "pending",
@@ -632,6 +675,7 @@ app.post("/custom", async (c) => {
     challengeId,
     validation.cleaned,
     session.user.id,
+    organizationId,
     challenge.targetStructureUrl,
     targetChainIds
   ).catch((err) => {
@@ -690,6 +734,13 @@ app.post("/", async (c) => {
     return c.json({ error: "Challenge not found" }, 404);
   }
 
+  // Get active organization from session (if any)
+  const activeOrganizationId = (session.session as { activeOrganizationId?: string })?.activeOrganizationId ?? null;
+
+  // Determine organizationId based on active context
+  const billingContext = await getBillingContext(session.user.id, activeOrganizationId);
+  const organizationId = billingContext.type === "team" ? activeOrganizationId : null;
+
   const submissionId = randomUUID();
   const now = new Date();
 
@@ -697,6 +748,7 @@ app.post("/", async (c) => {
     id: submissionId,
     userId: session.user.id,
     challengeId,
+    organizationId,
     jobId: jobId ?? null,
     designSequence,
     designStructureUrl: designStructureUrl ?? null,
@@ -772,6 +824,7 @@ app.patch("/:id/status", async (c) => {
 });
 
 // GET /api/submissions - List user's submissions
+// Returns personal submissions OR team submissions based on active organization
 app.get("/", async (c) => {
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
@@ -783,27 +836,83 @@ app.get("/", async (c) => {
 
   const challengeId = c.req.query("challengeId");
 
-  let query = db
-    .select()
-    .from(submissions)
-    .where(eq(submissions.userId, session.user.id));
+  // Get active organization from session (if any)
+  const activeOrganizationId = (session.session as { activeOrganizationId?: string })?.activeOrganizationId ?? null;
 
-  // Optionally filter by challenge
-  if (challengeId) {
-    query = db
-      .select()
-      .from(submissions)
-      .where(
-        and(
-          eq(submissions.userId, session.user.id),
-          eq(submissions.challengeId, challengeId)
+  let userSubmissions;
+  if (activeOrganizationId) {
+    // Verify user is a member of this organization
+    const membership = await getMembership(session.user.id, activeOrganizationId);
+    if (membership) {
+      // Show all submissions belonging to this team
+      if (challengeId) {
+        userSubmissions = await db
+          .select()
+          .from(submissions)
+          .where(
+            and(
+              eq(submissions.organizationId, activeOrganizationId),
+              eq(submissions.challengeId, challengeId)
+            )
+          )
+          .all();
+      } else {
+        userSubmissions = await db
+          .select()
+          .from(submissions)
+          .where(eq(submissions.organizationId, activeOrganizationId))
+          .all();
+      }
+    } else {
+      // User not a member, fall back to personal submissions
+      if (challengeId) {
+        userSubmissions = await db
+          .select()
+          .from(submissions)
+          .where(
+            and(
+              eq(submissions.userId, session.user.id),
+              isNull(submissions.organizationId),
+              eq(submissions.challengeId, challengeId)
+            )
+          )
+          .all();
+      } else {
+        userSubmissions = await db
+          .select()
+          .from(submissions)
+          .where(
+            and(eq(submissions.userId, session.user.id), isNull(submissions.organizationId))
+          )
+          .all();
+      }
+    }
+  } else {
+    // No active team - show only personal submissions (organizationId is null)
+    if (challengeId) {
+      userSubmissions = await db
+        .select()
+        .from(submissions)
+        .where(
+          and(
+            eq(submissions.userId, session.user.id),
+            isNull(submissions.organizationId),
+            eq(submissions.challengeId, challengeId)
+          )
         )
-      );
+        .all();
+    } else {
+      userSubmissions = await db
+        .select()
+        .from(submissions)
+        .where(
+          and(eq(submissions.userId, session.user.id), isNull(submissions.organizationId))
+        )
+        .all();
+    }
   }
 
-  const userSubmissions = await query.all();
-
-  return c.json({ submissions: userSubmissions });
+  return c.json({ submissions: userSubmissions.map(attachSignedUrlsToSubmission) });
 });
 
 // GET /api/submissions/:id - Get a single submission
@@ -818,17 +927,29 @@ app.get("/:id", async (c) => {
 
   const id = c.req.param("id");
 
+  // First get the submission
   const submission = await db
     .select()
     .from(submissions)
-    .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
+    .where(eq(submissions.id, id))
     .get();
 
   if (!submission) {
     return c.json({ error: "Submission not found" }, 404);
   }
 
-  return c.json({ submission });
+  // Check if user has access to this submission:
+  // 1. They own it directly (personal submission)
+  // 2. It belongs to a team they're a member of
+  const canAccess =
+    submission.userId === session.user.id ||
+    (submission.organizationId && (await getMembership(session.user.id, submission.organizationId)));
+
+  if (!canAccess) {
+    return c.json({ error: "Submission not found" }, 404);
+  }
+
+  return c.json({ submission: attachSignedUrlsToSubmission(submission) });
 });
 
 // POST /api/submissions/:id/retry - Retry scoring for a failed/stuck submission
@@ -847,10 +968,21 @@ app.post("/:id/retry", async (c) => {
   const submission = await db
     .select()
     .from(submissions)
-    .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
+    .where(eq(submissions.id, id))
     .get();
 
   if (!submission) {
+    return c.json({ error: "Submission not found" }, 404);
+  }
+
+  // Check if user has access to this submission:
+  // 1. They own it directly (personal submission)
+  // 2. It belongs to a team they're a member of
+  const canAccess =
+    submission.userId === session.user.id ||
+    (submission.organizationId && (await getMembership(session.user.id, submission.organizationId)));
+
+  if (!canAccess) {
     return c.json({ error: "Submission not found" }, 404);
   }
 
