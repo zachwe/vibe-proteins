@@ -4,6 +4,9 @@ import { adminClient, organizationClient } from "better-auth/client/plugins";
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
   plugins: [adminClient(), organizationClient()],
+  fetchOptions: {
+    credentials: "include", // Required for cross-origin auth cookies
+  },
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
