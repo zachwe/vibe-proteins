@@ -42,7 +42,8 @@ interface TeamDetails {
 
 export default function Teams() {
   const { data: session, isPending: sessionPending } = useSession();
-  const { data: organizations = [], isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
+  const { data: orgsData, isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
+  const organizations = orgsData ?? [];
   const queryClient = useQueryClient();
 
   const [showCreateForm, setShowCreateForm] = useState(false);

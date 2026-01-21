@@ -26,8 +26,9 @@ export default function TeamSelector({
   const queryClient = useQueryClient();
 
   // Get list of user's organizations
-  // Note: useListOrganizations returns { data: org[] } where data is the array directly
-  const { data: organizations = [] } = useListOrganizations();
+  // Note: useListOrganizations returns { data: org[] | null }, use ?? to handle null
+  const { data: orgsData } = useListOrganizations();
+  const organizations = orgsData ?? [];
 
   // Close dropdown when clicking outside
   useEffect(() => {
