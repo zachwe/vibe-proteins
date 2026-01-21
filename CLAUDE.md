@@ -151,12 +151,12 @@ sqlite3 api/vibeproteins.db
 sqlite3 api/vibeproteins.db ".schema table_name"
 ```
 
-**Known issue:** Drizzle's migrator may report "completed" without actually applying migrations. This happens due to a mismatch between hash-based tracking (older migrations) and tag-based tracking (newer migrations) in `__drizzle_migrations`. If `pnpm prod:migrate` doesn't apply your migration:
+**Custom migration script:** We use a custom migration script (`api/src/db/migrate.ts`) instead of Drizzle's default migrator. This fixes a bug where Drizzle only checks if a migration is newer than the last applied one (by timestamp), which fails when migrations have out-of-order timestamps.
 
-1. Connect to prod: `pnpm prod:db`
-2. Check what's missing: `.schema table_name`
-3. Run the SQL manually from `api/drizzle/XXXX_name.sql`
-4. Record it: `INSERT INTO __drizzle_migrations VALUES (NULL, '0012_name', 1736294400000);`
+Our script:
+- Checks each migration by hash (not just timestamp)
+- Handles idempotent errors gracefully (e.g., "column already exists")
+- Records migrations that were already applied but tracked differently
 
 ## API Routes
 
