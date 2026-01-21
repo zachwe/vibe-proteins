@@ -222,9 +222,12 @@ SQLite database stored at `api/vibeproteins.db`.
 
 **Auth tables (BetterAuth):**
 - `user` - User accounts (includes `balance_usd_cents` field)
-- `session` - Active sessions
+- `session` - Active sessions (includes `active_organization_id` for team context)
 - `account` - OAuth/credential accounts
 - `verification` - Email verification tokens
+- `organization` - Teams with shared billing (`balance_usd_cents`)
+- `member` - Team membership (user ↔ organization with role)
+- `invitation` - Pending team invites
 
 ### Database Commands
 
@@ -484,6 +487,30 @@ gh secret set FLY_API_TOKEN --body "<token>"
 - `.github/workflows/deploy-api.yml` - CI/CD pipeline
 
 ### Production Database Management
+
+#### Automatic Migrations on Deploy
+
+Migrations run **automatically** when the API container starts. The Docker entrypoint (see `api/Dockerfile`) runs:
+
+```bash
+node dist/db/migrate.js && litestream replicate -exec 'node dist/index.js'
+```
+
+This means:
+1. Every deploy applies any pending migrations before the server starts
+2. No manual intervention needed for schema changes
+3. Migrations are tracked in `api/drizzle/` folder with a journal file
+
+**To add a new migration:**
+
+1. Update schema in `api/src/db/schema.ts` or `api/src/db/auth-schema.ts`
+2. Create a SQL file: `api/drizzle/00XX_description.sql`
+3. Add entry to `api/drizzle/meta/_journal.json`
+4. Deploy - migration runs automatically on container start
+
+See `CLAUDE.md` for detailed migration instructions and known issues.
+
+#### Manual Commands
 
 Scripts for managing the production SQLite database on Fly.io:
 
