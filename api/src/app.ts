@@ -13,6 +13,7 @@ import referenceBindersRoutes from "./routes/reference-binders";
 import helpRoutes from "./routes/help";
 import adminRoutes from "./routes/admin";
 import chatRoutes from "./routes/chat";
+import teamsRoutes from "./routes/teams";
 
 // CORS origins based on environment
 const corsOrigins =
@@ -61,6 +62,7 @@ export function createApp() {
   app.route("/api/help", helpRoutes);
   app.route("/api/admin", adminRoutes);
   app.route("/api/chat", chatRoutes);
+  app.route("/api/teams", teamsRoutes);
 
   return app;
 }

@@ -1,8 +1,8 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
-import { user } from "./auth-schema";
+import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { user, organization } from "./auth-schema";
 
-// Re-export user from auth-schema so it's available from this module too
-export { user } from "./auth-schema";
+// Re-export auth-schema tables
+export { user, organization, member, invitation } from "./auth-schema";
 
 // Challenges table
 export const challenges = sqliteTable("challenges", {
@@ -30,78 +30,96 @@ export const challenges = sqliteTable("challenges", {
 });
 
 // Jobs table (for tracking inference jobs)
-export const jobs = sqliteTable("jobs", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  challengeId: text("challenge_id")
-    .notNull()
-    .references(() => challenges.id),
-  type: text("type").notNull(), // 'rfdiffusion3', 'boltz2', 'alphafold', etc.
-  status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
-  input: text("input"), // JSON input parameters
-  output: text("output"), // JSON output or S3 URL
-  // Modal async tracking
-  modalCallId: text("modal_call_id"), // Modal FunctionCall ID for async polling
-  progress: text("progress"), // JSON array of progress events: [{stage, message, timestamp}]
-  // Usage tracking (populated on completion, updated periodically for long jobs)
-  gpuType: text("gpu_type"), // e.g., 'A10G', 'A100_40GB', etc.
-  executionSeconds: real("execution_seconds"), // Actual GPU time used
-  billedSeconds: real("billed_seconds").default(0), // Seconds already billed (for partial billing)
-  costUsdCents: integer("cost_usd_cents"), // Calculated cost in cents
-  error: text("error"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  completedAt: integer("completed_at", { mode: "timestamp" }),
-});
+export const jobs = sqliteTable(
+  "jobs",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    challengeId: text("challenge_id")
+      .notNull()
+      .references(() => challenges.id),
+    // Organization (team) - null means personal job
+    organizationId: text("organization_id").references(() => organization.id),
+    type: text("type").notNull(), // 'rfdiffusion3', 'boltz2', 'alphafold', etc.
+    status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
+    input: text("input"), // JSON input parameters
+    output: text("output"), // JSON output or S3 URL
+    // Modal async tracking
+    modalCallId: text("modal_call_id"), // Modal FunctionCall ID for async polling
+    progress: text("progress"), // JSON array of progress events: [{stage, message, timestamp}]
+    // Usage tracking (populated on completion, updated periodically for long jobs)
+    gpuType: text("gpu_type"), // e.g., 'A10G', 'A100_40GB', etc.
+    executionSeconds: real("execution_seconds"), // Actual GPU time used
+    billedSeconds: real("billed_seconds").default(0), // Seconds already billed (for partial billing)
+    costUsdCents: integer("cost_usd_cents"), // Calculated cost in cents
+    error: text("error"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [index("idx_jobs_organization_id").on(table.organizationId)]
+);
 
 // Submissions table
-export const submissions = sqliteTable("submissions", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  challengeId: text("challenge_id")
-    .notNull()
-    .references(() => challenges.id),
-  jobId: text("job_id").references(() => jobs.id),
-  designSequence: text("design_sequence").notNull(),
-  designStructureUrl: text("design_structure_url"), // S3 URL
-  // Status tracking
-  status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
-  error: text("error"),
-  // Scores
-  compositeScore: real("composite_score"),
-  ipSaeScore: real("ip_sae_score"),
-  plddt: real("plddt"),
-  ptm: real("ptm"),
-  interfaceArea: real("interface_area"),
-  shapeComplementarity: real("shape_complementarity"),
-  // Feedback
-  feedback: text("feedback"), // JSON or markdown feedback
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-});
+export const submissions = sqliteTable(
+  "submissions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    challengeId: text("challenge_id")
+      .notNull()
+      .references(() => challenges.id),
+    // Organization (team) - null means personal submission
+    organizationId: text("organization_id").references(() => organization.id),
+    jobId: text("job_id").references(() => jobs.id),
+    designSequence: text("design_sequence").notNull(),
+    designStructureUrl: text("design_structure_url"), // S3 URL
+    // Status tracking
+    status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
+    error: text("error"),
+    // Scores
+    compositeScore: real("composite_score"),
+    ipSaeScore: real("ip_sae_score"),
+    plddt: real("plddt"),
+    ptm: real("ptm"),
+    interfaceArea: real("interface_area"),
+    shapeComplementarity: real("shape_complementarity"),
+    // Feedback
+    feedback: text("feedback"), // JSON or markdown feedback
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("idx_submissions_organization_id").on(table.organizationId)]
+);
 
 // Transactions (balance changes in USD cents)
-export const transactions = sqliteTable("transactions", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  amountCents: integer("amount_cents").notNull(), // Positive for deposits, negative for usage
-  type: text("type").notNull(), // 'deposit', 'job_usage', 'refund'
-  jobId: text("job_id").references(() => jobs.id),
-  stripeSessionId: text("stripe_session_id"), // For deposit transactions
-  description: text("description"),
-  balanceAfterCents: integer("balance_after_cents"), // User's balance after this transaction
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-});
+export const transactions = sqliteTable(
+  "transactions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    // Organization (team) - null means personal transaction
+    organizationId: text("organization_id").references(() => organization.id),
+    amountCents: integer("amount_cents").notNull(), // Positive for deposits, negative for usage
+    type: text("type").notNull(), // 'deposit', 'job_usage', 'refund'
+    jobId: text("job_id").references(() => jobs.id),
+    stripeSessionId: text("stripe_session_id"), // For deposit transactions
+    description: text("description"),
+    balanceAfterCents: integer("balance_after_cents"), // Entity's balance after this transaction
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("idx_transactions_organization_id").on(table.organizationId)]
+);
 
 // GPU pricing (Modal rates + markup, per second)
 export const gpuPricing = sqliteTable("gpu_pricing", {

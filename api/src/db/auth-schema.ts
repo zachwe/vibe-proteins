@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
 // BetterAuth required tables
 export const user = sqliteTable("user", {
@@ -33,7 +33,63 @@ export const session = sqliteTable("session", {
     .references(() => user.id),
   // Admin plugin field for impersonation tracking
   impersonatedBy: text("impersonated_by"),
+  // Organization plugin field for active team
+  activeOrganizationId: text("active_organization_id"),
 });
+
+// BetterAuth Organization plugin tables
+export const organization = sqliteTable("organization", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  logo: text("logo"),
+  metadata: text("metadata"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  // Custom billing fields
+  balanceUsdCents: integer("balance_usd_cents").notNull().default(0),
+  stripeCustomerId: text("stripe_customer_id"),
+});
+
+export const member = sqliteTable(
+  "member",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    role: text("role").notNull(), // 'owner', 'admin', 'member'
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [
+    index("idx_member_user_id").on(table.userId),
+    index("idx_member_organization_id").on(table.organizationId),
+  ]
+);
+
+export const invitation = sqliteTable(
+  "invitation",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    inviterId: text("inviter_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    role: text("role").notNull(), // 'admin', 'member'
+    status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'rejected', 'canceled'
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [
+    index("idx_invitation_organization_id").on(table.organizationId),
+    index("idx_invitation_email").on(table.email),
+  ]
+);
 
 export const account = sqliteTable("account", {
   id: text("id").primaryKey(),

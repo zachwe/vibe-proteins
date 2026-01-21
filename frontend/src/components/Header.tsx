@@ -9,13 +9,23 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSession } from "../lib/auth";
 import { useCurrentUser } from "../lib/hooks";
+import TeamSelector from "./TeamSelector";
 
 export default function Header() {
   const { data: session, isPending } = useSession();
-  const { data: user } = useCurrentUser();
+  const { data: userData } = useCurrentUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isHomePage = location.pathname === "/";
+
+  // Extract user data from the new response format
+  const user = userData?.user;
+  const activeTeam = userData?.activeTeam ?? null;
+  const effectiveBalance = userData?.effectiveBalance ?? {
+    type: "personal" as const,
+    balanceUsdCents: user?.balanceUsdCents ?? 0,
+    balanceFormatted: user?.balanceFormatted ?? "$0.00",
+  };
 
   return (
     <header className="bg-slate-800 border-b border-slate-700">
@@ -64,17 +74,10 @@ export default function Header() {
                 >
                   Jobs
                 </Link>
-                <Link
-                  to="/billing"
-                  className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                  <span className="text-white font-medium">
-                    {user?.balanceFormatted ?? "$0.00"}
-                  </span>
-                </Link>
+                <TeamSelector
+                  activeTeam={activeTeam}
+                  effectiveBalance={effectiveBalance}
+                />
                 <Link
                   to="/dashboard"
                   className="text-slate-300 hover:text-white text-sm transition-colors"
@@ -181,7 +184,15 @@ export default function Header() {
                     <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
-                    Balance: {user?.balanceFormatted ?? "$0.00"}
+                    {activeTeam ? `${activeTeam.name}: ` : "Balance: "}
+                    {effectiveBalance.balanceFormatted}
+                  </Link>
+                  <Link
+                    to="/teams"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-slate-300 hover:text-white transition-colors py-2"
+                  >
+                    Teams
                   </Link>
                   <Link
                     to="/dashboard"

@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin } from "better-auth/plugins";
+import { admin, organization } from "better-auth/plugins";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { Resend } from "resend";
@@ -126,6 +126,50 @@ export const auth = betterAuth({
       defaultRole: "user",
       adminRoles: ["admin"],
       impersonationSessionDuration: 60 * 60 * 24, // 24 hours
+    }),
+    organization({
+      // Invitation settings
+      invitationExpiresIn: 60 * 60 * 24 * 7, // 7 days
+      // Allow any user to create organizations (teams)
+      allowUserToCreateOrganization: true,
+      // Creator starts as owner
+      creatorRole: "owner",
+      // Note: billing fields (balanceUsdCents, stripeCustomerId) are added via migration
+      // and managed through our own routes, not through BetterAuth
+      // Send invitation emails
+      sendInvitationEmail: async (data) => {
+        const inviteUrl = `${frontendUrl}/accept-invite?id=${data.id}`;
+
+        if (!resend) {
+          console.log(
+            `[DEV] Team invitation for ${data.email} to join ${data.organization.name}: ${inviteUrl}`
+          );
+          return;
+        }
+
+        // Don't await to prevent timing attacks
+        void resend.emails.send({
+          from: "ProteinDojo <noreply@proteindojo.com>",
+          to: data.email,
+          subject: `Join ${data.organization.name} on ProteinDojo`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #1e293b;">You're invited to join ${data.organization.name}</h1>
+              <p>${data.inviter.user.name || data.inviter.user.email} has invited you to join their team on ProteinDojo.</p>
+              <p>As a team member, you'll share a billing balance and be able to see each other's protein designs and jobs.</p>
+              <a href="${inviteUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+                Accept Invitation
+              </a>
+              <p style="color: #64748b; font-size: 14px;">
+                This invitation expires in 7 days. If you don't have an account, you'll be able to create one.
+              </p>
+              <p style="color: #64748b; font-size: 14px;">
+                Or copy this link: ${inviteUrl}
+              </p>
+            </div>
+          `,
+        });
+      },
     }),
   ],
 

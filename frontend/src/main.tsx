@@ -32,6 +32,8 @@ import HelpArticle from "./pages/HelpArticle";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Verified from "./pages/Verified";
+import AcceptInvite from "./pages/AcceptInvite";
+import Teams from "./pages/Teams";
 import NotFound from "./pages/NotFound";
 import Submit from "./pages/Submit";
 import Blog from "./pages/Blog";
@@ -74,6 +76,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/design/boltzgen" element={<BoltzGenPlayground />} />
           <Route path="/design/:challengeId" element={<Designer />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/teams" element={<Teams />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/view/:type/:id" element={<StructureViewer />} />
@@ -82,6 +85,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/verified" element={<Verified />} />
+          <Route path="/accept-invite" element={<AcceptInvite />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>

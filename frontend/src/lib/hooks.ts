@@ -69,7 +69,8 @@ export function useCurrentUser() {
     queryKey: queryKeys.user,
     queryFn: async () => {
       const data = await usersApi.me();
-      return data.user;
+      // Return the full response including user, activeTeam, and effectiveBalance
+      return data;
     },
     retry: false, // Don't retry on 401
   });

@@ -1,10 +1,11 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import Stripe from "stripe";
-import { db, user, depositPresets, transactions, gpuPricing } from "../db";
+import { db, user, organization, depositPresets, transactions, gpuPricing } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { analytics } from "../services/analytics";
+import { getBillingContext, getMembership, hasPermission } from "../lib/team-context";
 
 const app = new Hono();
 
@@ -20,7 +21,7 @@ const MIN_DEPOSIT_CENTS = 100; // $1.00
 const MAX_DEPOSIT_CENTS = 50000; // $500.00
 
 // Helper to get or create Stripe customer for user
-async function getOrCreateStripeCustomer(userId: string): Promise<string> {
+async function getOrCreateStripeCustomerForUser(userId: string): Promise<string> {
   if (!stripe) throw new Error("Stripe not configured");
 
   const currentUser = await db
@@ -48,6 +49,42 @@ async function getOrCreateStripeCustomer(userId: string): Promise<string> {
     .update(user)
     .set({ stripeCustomerId: customer.id })
     .where(eq(user.id, userId));
+
+  return customer.id;
+}
+
+// Helper to get or create Stripe customer for organization (team)
+async function getOrCreateStripeCustomerForOrg(
+  organizationId: string,
+  userEmail: string
+): Promise<string> {
+  if (!stripe) throw new Error("Stripe not configured");
+
+  const org = await db
+    .select({ stripeCustomerId: organization.stripeCustomerId, name: organization.name })
+    .from(organization)
+    .where(eq(organization.id, organizationId))
+    .get();
+
+  if (!org) throw new Error("Organization not found");
+
+  // Return existing customer ID if we have one
+  if (org.stripeCustomerId) {
+    return org.stripeCustomerId;
+  }
+
+  // Create new Stripe customer for the org
+  const customer = await stripe.customers.create({
+    email: userEmail, // Use the billing user's email for receipts
+    name: `${org.name} (Team)`,
+    metadata: { organizationId },
+  });
+
+  // Save customer ID to organization
+  await db
+    .update(organization)
+    .set({ stripeCustomerId: customer.id })
+    .where(eq(organization.id, organizationId));
 
   return customer.id;
 }
@@ -86,6 +123,7 @@ app.get("/pricing", async (c) => {
 });
 
 // POST /api/billing/deposit - Create Stripe checkout session for deposit
+// Supports both personal and team deposits
 app.post("/deposit", async (c) => {
   if (!stripe) {
     return c.json({ error: "Payments not configured" }, 503);
@@ -100,7 +138,7 @@ app.post("/deposit", async (c) => {
   }
 
   const body = await c.req.json();
-  const { amountCents } = body;
+  const { amountCents, organizationId: explicitOrgId } = body;
 
   // Validate amount
   const amount = Number(amountCents);
@@ -111,11 +149,52 @@ app.post("/deposit", async (c) => {
     }, 400);
   }
 
-  // Get or create Stripe customer
-  const customerId = await getOrCreateStripeCustomer(session.user.id);
+  // Determine if this is a team or personal deposit
+  // Use explicit organizationId if provided, otherwise use active organization from session
+  const activeOrganizationId =
+    explicitOrgId ?? (session.session as { activeOrganizationId?: string })?.activeOrganizationId ?? null;
+
+  let customerId: string;
+  let isTeamDeposit = false;
+  let teamName: string | null = null;
+
+  if (activeOrganizationId) {
+    // Verify user is a member with deposit permission (admin or owner)
+    const membership = await getMembership(session.user.id, activeOrganizationId);
+    if (!membership || !hasPermission(membership.role, "admin")) {
+      return c.json({ error: "Only admins and owners can add funds to team accounts" }, 403);
+    }
+
+    // Get the org name for the description
+    const org = await db
+      .select({ name: organization.name })
+      .from(organization)
+      .where(eq(organization.id, activeOrganizationId))
+      .get();
+    teamName = org?.name ?? "Team";
+
+    // Get or create Stripe customer for org
+    const currentUser = await db
+      .select({ email: user.email })
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .get();
+
+    customerId = await getOrCreateStripeCustomerForOrg(
+      activeOrganizationId,
+      currentUser?.email ?? session.user.email
+    );
+    isTeamDeposit = true;
+  } else {
+    // Personal deposit
+    customerId = await getOrCreateStripeCustomerForUser(session.user.id);
+  }
 
   // Format amount for display
   const amountDollars = (amount / 100).toFixed(2);
+  const description = isTeamDeposit
+    ? `Add $${amountDollars} to ${teamName} team account`
+    : `Add $${amountDollars} to your account`;
 
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -126,8 +205,8 @@ app.post("/deposit", async (c) => {
           currency: "usd",
           unit_amount: amount,
           product_data: {
-            name: "ProteinDojo Balance",
-            description: `Add $${amountDollars} to your account`,
+            name: isTeamDeposit ? `${teamName} Team Balance` : "ProteinDojo Balance",
+            description,
           },
         },
         quantity: 1,
@@ -137,6 +216,7 @@ app.post("/deposit", async (c) => {
       userId: session.user.id,
       amountCents: amount.toString(),
       type: "deposit",
+      ...(isTeamDeposit ? { organizationId: activeOrganizationId } : {}),
     },
     success_url: `${FRONTEND_URL}/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${FRONTEND_URL}/billing?canceled=true`,
@@ -174,7 +254,7 @@ app.post("/webhook", async (c) => {
 
     // Only process if payment was successful
     if (checkoutSession.payment_status === "paid") {
-      const { userId, amountCents, type } = checkoutSession.metadata || {};
+      const { userId, amountCents, type, organizationId } = checkoutSession.metadata || {};
 
       if (!userId || !amountCents || type !== "deposit") {
         console.error("Missing or invalid metadata in checkout session:", checkoutSession.id);
@@ -182,55 +262,102 @@ app.post("/webhook", async (c) => {
       }
 
       const depositCents = parseInt(amountCents, 10);
-
-      // Get current user balance
-      const currentUser = await db
-        .select({ balanceUsdCents: user.balanceUsdCents })
-        .from(user)
-        .where(eq(user.id, userId))
-        .get();
-
-      if (!currentUser) {
-        console.error("User not found for deposit:", userId);
-        return c.json({ received: true });
-      }
-
-      const newBalance = currentUser.balanceUsdCents + depositCents;
-
-      // Update user balance
-      await db
-        .update(user)
-        .set({ balanceUsdCents: newBalance })
-        .where(eq(user.id, userId));
-
-      // Record transaction
       const depositDollars = (depositCents / 100).toFixed(2);
-      await db.insert(transactions).values({
-        id: randomUUID(),
-        userId,
-        amountCents: depositCents,
-        type: "deposit",
-        stripeSessionId: checkoutSession.id,
-        description: `Added $${depositDollars} to balance`,
-        balanceAfterCents: newBalance,
-        createdAt: new Date(),
-      });
 
-      console.log(`Added $${depositDollars} to user ${userId} (new balance: $${(newBalance / 100).toFixed(2)})`);
+      if (organizationId) {
+        // Team deposit
+        const org = await db
+          .select({ balanceUsdCents: organization.balanceUsdCents, name: organization.name })
+          .from(organization)
+          .where(eq(organization.id, organizationId))
+          .get();
 
-      // Track deposit completed
-      analytics.track(userId, "deposit_completed", {
-        amountCents: depositCents,
-        newBalanceCents: newBalance,
-        stripeSessionId: checkoutSession.id,
-      });
+        if (!org) {
+          console.error("Organization not found for deposit:", organizationId);
+          return c.json({ received: true });
+        }
+
+        const newBalance = org.balanceUsdCents + depositCents;
+
+        // Update organization balance
+        await db
+          .update(organization)
+          .set({ balanceUsdCents: newBalance })
+          .where(eq(organization.id, organizationId));
+
+        // Record transaction
+        await db.insert(transactions).values({
+          id: randomUUID(),
+          userId,
+          organizationId,
+          amountCents: depositCents,
+          type: "deposit",
+          stripeSessionId: checkoutSession.id,
+          description: `Added $${depositDollars} to ${org.name} team balance`,
+          balanceAfterCents: newBalance,
+          createdAt: new Date(),
+        });
+
+        console.log(`Added $${depositDollars} to team ${org.name} (new balance: $${(newBalance / 100).toFixed(2)})`);
+
+        // Track deposit completed
+        analytics.track(userId, "team_deposit_completed", {
+          amountCents: depositCents,
+          newBalanceCents: newBalance,
+          organizationId,
+          organizationName: org.name,
+          stripeSessionId: checkoutSession.id,
+        });
+      } else {
+        // Personal deposit
+        const currentUser = await db
+          .select({ balanceUsdCents: user.balanceUsdCents })
+          .from(user)
+          .where(eq(user.id, userId))
+          .get();
+
+        if (!currentUser) {
+          console.error("User not found for deposit:", userId);
+          return c.json({ received: true });
+        }
+
+        const newBalance = currentUser.balanceUsdCents + depositCents;
+
+        // Update user balance
+        await db
+          .update(user)
+          .set({ balanceUsdCents: newBalance })
+          .where(eq(user.id, userId));
+
+        // Record transaction
+        await db.insert(transactions).values({
+          id: randomUUID(),
+          userId,
+          amountCents: depositCents,
+          type: "deposit",
+          stripeSessionId: checkoutSession.id,
+          description: `Added $${depositDollars} to balance`,
+          balanceAfterCents: newBalance,
+          createdAt: new Date(),
+        });
+
+        console.log(`Added $${depositDollars} to user ${userId} (new balance: $${(newBalance / 100).toFixed(2)})`);
+
+        // Track deposit completed
+        analytics.track(userId, "deposit_completed", {
+          amountCents: depositCents,
+          newBalanceCents: newBalance,
+          stripeSessionId: checkoutSession.id,
+        });
+      }
     }
   }
 
   return c.json({ received: true });
 });
 
-// GET /api/billing/transactions - Get user's transaction history
+// GET /api/billing/transactions - Get transaction history
+// Returns personal transactions OR team transactions based on active organization
 app.get("/transactions", async (c) => {
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
@@ -240,12 +367,43 @@ app.get("/transactions", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const userTransactions = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.userId, session.user.id))
-    .orderBy(transactions.createdAt)
-    .all();
+  // Get active organization from session (if any)
+  const activeOrganizationId = (session.session as { activeOrganizationId?: string })?.activeOrganizationId ?? null;
+
+  let userTransactions;
+  if (activeOrganizationId) {
+    // Verify user is a member of this organization
+    const membership = await getMembership(session.user.id, activeOrganizationId);
+    if (membership) {
+      // Show team transactions
+      userTransactions = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.organizationId, activeOrganizationId))
+        .orderBy(transactions.createdAt)
+        .all();
+    } else {
+      // User not a member, fall back to personal transactions
+      userTransactions = await db
+        .select()
+        .from(transactions)
+        .where(
+          and(eq(transactions.userId, session.user.id), isNull(transactions.organizationId))
+        )
+        .orderBy(transactions.createdAt)
+        .all();
+    }
+  } else {
+    // No active team - show only personal transactions
+    userTransactions = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(eq(transactions.userId, session.user.id), isNull(transactions.organizationId))
+      )
+      .orderBy(transactions.createdAt)
+      .all();
+  }
 
   // Reverse to show newest first
   return c.json({ transactions: userTransactions.reverse() });

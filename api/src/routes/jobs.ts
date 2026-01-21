@@ -1,12 +1,18 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
-import { db, jobs, user, challenges, transactions } from "../db";
+import { eq, and, or, isNull } from "drizzle-orm";
+import { db, jobs, user, organization, challenges, transactions } from "../db";
 import { auth } from "../auth";
 import { randomUUID } from "crypto";
 import { getInferenceProvider, type JobType } from "../inference";
 import { getSignedUrl } from "../storage/r2";
 import { analytics } from "../services/analytics";
 import { getJobCostCents } from "../billing";
+import {
+  getBillingContext,
+  deductBalance,
+  getMembership,
+  type BillingContext,
+} from "../lib/team-context";
 
 const app = new Hono();
 
@@ -20,6 +26,7 @@ const calculateJobCost = getJobCostCents;
 async function processPartialBilling(
   jobId: string,
   userId: string,
+  organizationId: string | null,
   jobType: string,
   gpuType: string,
   executionSeconds: number,
@@ -40,28 +47,17 @@ async function processPartialBilling(
     return null;
   }
 
-  // Get user's current balance
-  const jobUser = await db
-    .select({ balanceUsdCents: user.balanceUsdCents })
-    .from(user)
-    .where(eq(user.id, userId))
-    .get();
+  // Get billing context (team or personal based on the job's organizationId)
+  const billingContext = await getBillingContext(userId, organizationId);
 
-  if (!jobUser) {
-    return null;
-  }
-
-  // Deduct from user balance
-  const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
-  await db
-    .update(user)
-    .set({ balanceUsdCents: newBalance })
-    .where(eq(user.id, userId));
+  // Deduct from appropriate balance (user or team)
+  const newBalance = await deductBalance(billingContext, costCents);
 
   // Record transaction for partial billing
   await db.insert(transactions).values({
     id: randomUUID(),
     userId,
+    organizationId,
     amountCents: -costCents,
     type: "job_usage",
     jobId,
@@ -146,21 +142,23 @@ app.post("/", async (c) => {
     return c.json({ error: "Challenge not found" }, 404);
   }
 
-  // Get user's current balance (in cents)
-  const currentUser = await db
-    .select({ balanceUsdCents: user.balanceUsdCents })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .get();
+  // Get active organization from session (if any)
+  const activeOrganizationId = (session.session as { activeOrganizationId?: string })?.activeOrganizationId ?? null;
+
+  // Get billing context (team or personal)
+  const billingContext = await getBillingContext(session.user.id, activeOrganizationId);
 
   // Require minimum balance to submit jobs
-  if (!currentUser || currentUser.balanceUsdCents < MIN_BALANCE_CENTS) {
+  if (billingContext.balanceUsdCents < MIN_BALANCE_CENTS) {
     return c.json(
       {
         error: "Insufficient balance",
-        message: "Please add funds to your account to run jobs",
+        message: billingContext.type === "team"
+          ? "Please add funds to your team account to run jobs"
+          : "Please add funds to your account to run jobs",
         requiredCents: MIN_BALANCE_CENTS,
-        availableCents: currentUser?.balanceUsdCents ?? 0
+        availableCents: billingContext.balanceUsdCents,
+        billingType: billingContext.type,
       },
       402
     );
@@ -178,10 +176,12 @@ app.post("/", async (c) => {
   };
 
   // Create job without charging - billing happens on completion
+  // Store organizationId if in team context
   await db.insert(jobs).values({
     id: jobId,
     userId: session.user.id,
     challengeId,
+    organizationId: billingContext.type === "team" ? activeOrganizationId : null,
     type,
     status: "pending",
     input: JSON.stringify(normalizedInput ?? {}),
@@ -340,13 +340,6 @@ app.post("/:id/complete", async (c) => {
     return c.json({ error: "Job not found" }, 404);
   }
 
-  // Get user for billing
-  const jobUser = await db
-    .select({ id: user.id, balanceUsdCents: user.balanceUsdCents })
-    .from(user)
-    .where(eq(user.id, job.userId))
-    .get();
-
   const updatePayload: Record<string, unknown> = {
     status,
     output: output ? JSON.stringify(output) : null,
@@ -356,7 +349,7 @@ app.post("/:id/complete", async (c) => {
     updatePayload.completedAt = new Date();
 
     // Handle final billing if usage data provided (only for unbilled time)
-    if (usage?.gpu_type && usage?.execution_seconds && jobUser) {
+    if (usage?.gpu_type && usage?.execution_seconds) {
       const gpuType = usage.gpu_type;
       const totalExecutionSeconds = usage.execution_seconds;
       const billedSeconds = job.billedSeconds ?? 0;
@@ -374,17 +367,17 @@ app.post("/:id/complete", async (c) => {
         const previousCost = job.costUsdCents ?? 0;
         updatePayload.costUsdCents = previousCost + costCents;
 
-        // Deduct remaining cost from user balance
-        const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
-        await db
-          .update(user)
-          .set({ balanceUsdCents: newBalance })
-          .where(eq(user.id, jobUser.id));
+        // Get billing context based on the job's organizationId (not current session)
+        const billingContext = await getBillingContext(job.userId, job.organizationId);
+
+        // Deduct remaining cost from appropriate balance (user or team)
+        const newBalance = await deductBalance(billingContext, costCents);
 
         // Record transaction for final billing
         await db.insert(transactions).values({
           id: randomUUID(),
-          userId: jobUser.id,
+          userId: job.userId,
+          organizationId: job.organizationId,
           amountCents: -costCents,
           type: "job_usage",
           jobId: id,
@@ -429,13 +422,21 @@ app.get("/:id", async (c) => {
 
   const id = c.req.param("id");
 
-  let job = await db
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.id, id), eq(jobs.userId, session.user.id)))
-    .get();
+  // First get the job
+  let job = await db.select().from(jobs).where(eq(jobs.id, id)).get();
 
   if (!job) {
+    return c.json({ error: "Job not found" }, 404);
+  }
+
+  // Check if user has access to this job:
+  // 1. They own it directly (personal job)
+  // 2. It belongs to a team they're a member of
+  const canAccess =
+    job.userId === session.user.id ||
+    (job.organizationId && (await getMembership(session.user.id, job.organizationId)));
+
+  if (!canAccess) {
     return c.json({ error: "Job not found" }, 404);
   }
 
@@ -478,23 +479,16 @@ app.get("/:id", async (c) => {
             const previousCost = job.costUsdCents ?? 0;
             updatePayload.costUsdCents = previousCost + costCents;
 
-            // Deduct remaining cost from user balance
-            const jobUser = await db
-              .select({ balanceUsdCents: user.balanceUsdCents })
-              .from(user)
-              .where(eq(user.id, session.user.id))
-              .get();
+            // Get billing context based on the job's organizationId
+            const billingContext = await getBillingContext(job.userId, job.organizationId);
 
-            if (jobUser && costCents > 0) {
-              const newBalance = Math.max(0, jobUser.balanceUsdCents - costCents);
-              await db
-                .update(user)
-                .set({ balanceUsdCents: newBalance })
-                .where(eq(user.id, session.user.id));
+            if (costCents > 0) {
+              const newBalance = await deductBalance(billingContext, costCents);
 
               await db.insert(transactions).values({
                 id: randomUUID(),
-                userId: session.user.id,
+                userId: job.userId,
+                organizationId: job.organizationId,
                 amountCents: -costCents,
                 type: "job_usage",
                 jobId: id,
@@ -524,7 +518,8 @@ app.get("/:id", async (c) => {
         const currentBilledSeconds = job.billedSeconds ?? 0;
         const partialBilling = await processPartialBilling(
           id,
-          session.user.id,
+          job.userId,
+          job.organizationId,
           job.type,
           modalStatus.usage.gpu_type,
           modalStatus.usage.execution_seconds,
@@ -575,6 +570,7 @@ app.get("/:id", async (c) => {
 });
 
 // GET /api/jobs - List user's jobs
+// Returns personal jobs OR team jobs based on active organization
 app.get("/", async (c) => {
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
@@ -584,11 +580,36 @@ app.get("/", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const userJobs = await db
-    .select()
-    .from(jobs)
-    .where(eq(jobs.userId, session.user.id))
-    .all();
+  // Get active organization from session (if any)
+  const activeOrganizationId = (session.session as { activeOrganizationId?: string })?.activeOrganizationId ?? null;
+
+  let userJobs;
+  if (activeOrganizationId) {
+    // Verify user is a member of this organization
+    const membership = await getMembership(session.user.id, activeOrganizationId);
+    if (membership) {
+      // Show all jobs belonging to this team
+      userJobs = await db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.organizationId, activeOrganizationId))
+        .all();
+    } else {
+      // User not a member, fall back to personal jobs
+      userJobs = await db
+        .select()
+        .from(jobs)
+        .where(and(eq(jobs.userId, session.user.id), isNull(jobs.organizationId)))
+        .all();
+    }
+  } else {
+    // No active team - show only personal jobs (organizationId is null)
+    userJobs = await db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.userId, session.user.id), isNull(jobs.organizationId)))
+      .all();
+  }
 
   return c.json({
     jobs: userJobs.map((job) => {
