@@ -915,19 +915,10 @@ app.get("/", async (c) => {
   return c.json({ submissions: userSubmissions.map(attachSignedUrlsToSubmission) });
 });
 
-// GET /api/submissions/:id - Get a single submission
+// GET /api/submissions/:id - Get a single submission (public - submissions are leaderboard entries)
 app.get("/:id", async (c) => {
-  const session = await auth.api.getSession({
-    headers: c.req.raw.headers,
-  });
-
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
   const id = c.req.param("id");
 
-  // First get the submission
   const submission = await db
     .select()
     .from(submissions)
@@ -935,17 +926,6 @@ app.get("/:id", async (c) => {
     .get();
 
   if (!submission) {
-    return c.json({ error: "Submission not found" }, 404);
-  }
-
-  // Check if user has access to this submission:
-  // 1. They own it directly (personal submission)
-  // 2. It belongs to a team they're a member of
-  const canAccess =
-    submission.userId === session.user.id ||
-    (submission.organizationId && (await getMembership(session.user.id, submission.organizationId)));
-
-  if (!canAccess) {
     return c.json({ error: "Submission not found" }, 404);
   }
 
