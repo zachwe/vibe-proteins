@@ -42,7 +42,7 @@ interface TeamDetails {
 
 export default function Teams() {
   const { data: session, isPending: sessionPending } = useSession();
-  const { data: orgsData, isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
+  const { data: organizations = [], isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
   const queryClient = useQueryClient();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -62,8 +62,6 @@ export default function Teams() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const organizations = orgsData?.data ?? [];
 
   // Redirect to login if not authenticated
   if (!sessionPending && !session?.user) {
