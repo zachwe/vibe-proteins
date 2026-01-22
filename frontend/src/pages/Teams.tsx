@@ -4,9 +4,61 @@
  * Manage teams: create new teams, view team details, invite members.
  */
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigate, useNavigate } from "react-router-dom";
+
+// Confirmation modal component
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+  isLoading,
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60"
+        onClick={onCancel}
+      />
+      {/* Modal */}
+      <div className="relative bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+        <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+        <p className="text-slate-400 text-sm mb-6">{message}</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {isLoading ? "..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 import {
   useSession,
   useListOrganizations,
@@ -73,6 +125,13 @@ export default function Teams() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    type: "cancelInvitation" | "removeMember";
+    id: string;
+    email: string;
+  } | null>(null);
 
   // Redirect to login if not authenticated
   if (!sessionPending && !session?.user) {
@@ -220,10 +279,11 @@ export default function Teams() {
     }
   };
 
-  const handleCancelInvitation = async (invitationId: string) => {
+  const handleCancelInvitation = useCallback(async (invitationId: string) => {
     if (!expandedTeam) return;
     setActionLoading(invitationId);
     setActionError(null);
+    setConfirmModal(null);
 
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -256,12 +316,13 @@ export default function Teams() {
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [expandedTeam]);
 
-  const handleRemoveMember = async (memberId: string) => {
+  const handleRemoveMember = useCallback(async (memberId: string) => {
     if (!expandedTeam) return;
     setActionLoading(memberId);
     setActionError(null);
+    setConfirmModal(null);
 
     try {
       const result = await removeMember({
@@ -283,6 +344,14 @@ export default function Teams() {
     } finally {
       setActionLoading(null);
     }
+  }, [expandedTeam]);
+
+  const showCancelInvitationConfirm = (invitationId: string, email: string) => {
+    setConfirmModal({ type: "cancelInvitation", id: invitationId, email });
+  };
+
+  const showRemoveMemberConfirm = (memberId: string, email: string) => {
+    setConfirmModal({ type: "removeMember", id: memberId, email });
   };
 
   const handleChangeRole = async (memberId: string, newRole: "admin" | "member" | "owner") => {
@@ -580,7 +649,7 @@ export default function Teams() {
                                       )}
                                       {canManage && !isCurrentUser && !isOwner && (
                                         <button
-                                          onClick={() => handleRemoveMember(member.id)}
+                                          onClick={() => showRemoveMemberConfirm(member.id, member.user.email)}
                                           disabled={actionLoading === member.id}
                                           className="text-red-400 hover:text-red-300 p-1"
                                           title="Remove member"
@@ -659,7 +728,7 @@ export default function Teams() {
                                         </span>
                                         {canCancel && (
                                           <button
-                                            onClick={() => handleCancelInvitation(invitation.id)}
+                                            onClick={() => showCancelInvitationConfirm(invitation.id, invitation.email)}
                                             disabled={actionLoading === invitation.id}
                                             className="text-red-400 hover:text-red-300 p-1"
                                             title="Cancel invitation"
@@ -778,6 +847,33 @@ export default function Teams() {
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal !== null}
+        title={
+          confirmModal?.type === "cancelInvitation"
+            ? "Cancel Invitation"
+            : "Remove Member"
+        }
+        message={
+          confirmModal?.type === "cancelInvitation"
+            ? `Are you sure you want to cancel the invitation to ${confirmModal?.email}?`
+            : `Are you sure you want to remove ${confirmModal?.email} from this team?`
+        }
+        confirmLabel={
+          confirmModal?.type === "cancelInvitation" ? "Cancel Invitation" : "Remove"
+        }
+        onConfirm={() => {
+          if (confirmModal?.type === "cancelInvitation") {
+            handleCancelInvitation(confirmModal.id);
+          } else if (confirmModal?.type === "removeMember") {
+            handleRemoveMember(confirmModal.id);
+          }
+        }}
+        onCancel={() => setConfirmModal(null)}
+        isLoading={actionLoading === confirmModal?.id}
+      />
     </div>
   );
 }
