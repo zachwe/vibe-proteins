@@ -20,6 +20,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     environment: import.meta.env.MODE,
+    release: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.reactRouterV7BrowserTracingIntegration({

@@ -6,8 +6,8 @@ const plugins = [];
 if (process.env.SENTRY_AUTH_TOKEN) {
   plugins.push(
     sentryEsbuildPlugin({
-      org: "zach-ocean",
-      project: "proteindojo-api",
+      org: "protein-dojo",
+      project: "node",
       authToken: process.env.SENTRY_AUTH_TOKEN,
       release: {
         name: process.env.COMMIT_SHA || `local-${Date.now()}`,
