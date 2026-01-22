@@ -18,6 +18,8 @@ from core.config import (
     app,
     proteinmpnn_image,
     r2_secret,
+    sentry_secret,
+    init_sentry,
     PROTEINMPNN_DIR,
     PROTEINMPNN_MODEL_NAME,
     PROTEINMPNN_SAMPLING_TEMP,
@@ -131,7 +133,7 @@ def resolve_structure_source(target_pdb: str | None, target_structure_url: str |
     raise ValueError("A target_pdb or target_structure_url must be provided.")
 
 
-@app.function(image=proteinmpnn_image, gpu="A10G", timeout=1800, secrets=[r2_secret])
+@app.function(image=proteinmpnn_image, gpu="A10G", timeout=1800, secrets=[r2_secret, sentry_secret])
 def run_proteinmpnn(
     backbone_pdb: str | None = None,
     target_pdb: str | None = None,
@@ -139,6 +141,7 @@ def run_proteinmpnn(
     job_id: str | None = None,
 ) -> dict:
     """Direct ProteinMPNN call for a provided backbone."""
+    init_sentry()
     start_time = time.time()
     gpu_type = "A10G"
 

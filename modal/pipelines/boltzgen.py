@@ -22,6 +22,8 @@ from core.config import (
     app,
     boltzgen_image,
     r2_secret,
+    sentry_secret,
+    init_sentry,
     BOLTZGEN_CACHE_DIR,
     BOLTZGEN_MODEL_VOLUME,
     BOLTZGEN_WORK_DIR,
@@ -358,7 +360,7 @@ def run_boltzgen_with_progress(
     image=boltzgen_image,
     gpu="A100",  # BoltzGen benefits from A100 for larger batches
     timeout=14400,  # 4 hours for full pipeline
-    secrets=[r2_secret],
+    secrets=[r2_secret, sentry_secret],
     volumes={
         BOLTZGEN_CACHE_DIR: BOLTZGEN_MODEL_VOLUME,
         BOLTZGEN_WORK_DIR: BOLTZGEN_WORK_VOLUME,  # Persistent work dir for preemption recovery
@@ -419,6 +421,7 @@ def run_boltzgen(
     - Enabling --reuse flag to resume from checkpoints
     - Automatic retries on preemption (up to 3 attempts)
     """
+    init_sentry()
     start_time = time.time()
     gpu_type = "A100_40GB"  # Must match gpu_pricing table (Modal's gpu="A100" defaults to 40GB)
 

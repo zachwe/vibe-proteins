@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import * as Sentry from "@sentry/node";
 import { auth } from "./auth";
 
 import challengesRoutes from "./routes/challenges";
@@ -40,6 +41,16 @@ export function createApp() {
       credentials: true,
     })
   );
+
+  // Global error handler - capture exceptions in Sentry
+  app.onError((err, c) => {
+    Sentry.captureException(err);
+    console.error("Unhandled error:", err);
+    return c.json(
+      { error: "Internal server error" },
+      500
+    );
+  });
 
   // Health check
   app.get("/", (c) => {

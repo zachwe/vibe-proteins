@@ -1,4 +1,16 @@
 import "dotenv/config";
+import * as Sentry from "@sentry/node";
+
+// Initialize Sentry before other imports
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: 0.1,
+    profilesSampleRate: 0.1,
+  });
+}
+
 import { serve } from "@hono/node-server";
 import { app } from "./app";
 

@@ -21,6 +21,8 @@ from core.config import (
     app,
     rfdiffusion3_image,
     r2_secret,
+    sentry_secret,
+    init_sentry,
     RFD3_MODELS_DIR,
     RFD3_MODEL_VOLUME,
     RFD3_CHECKPOINT_FILENAME,
@@ -145,7 +147,7 @@ def extract_rfd3_error(log_path: Path) -> str:
     image=rfdiffusion3_image,
     gpu="A10G",
     timeout=7200,
-    secrets=[r2_secret],
+    secrets=[r2_secret, sentry_secret],
     volumes={RFD3_MODELS_DIR: RFD3_MODEL_VOLUME},
 )
 def run_rfdiffusion3(
@@ -166,6 +168,7 @@ def run_rfdiffusion3(
     """
     RFdiffusion3 (RFD3) + ProteinMPNN + Boltz-2 pipeline for binder design.
     """
+    init_sentry()
     start_time = time.time()
     gpu_type = "A10G"
 
