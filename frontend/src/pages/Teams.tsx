@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Navigate, Link, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
   useSession,
   useListOrganizations,
@@ -51,7 +51,7 @@ interface PendingInvitation {
 export default function Teams() {
   const navigate = useNavigate();
   const { data: session, isPending: sessionPending } = useSession();
-  const { data: orgsData, isLoading: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
+  const { data: orgsData, isPending: orgsLoading, refetch: refetchOrgs } = useListOrganizations();
   const organizations = orgsData ?? [];
   const queryClient = useQueryClient();
 

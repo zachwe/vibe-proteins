@@ -610,7 +610,7 @@ const BINDER_COLOR = Color(0xfcd34d);  // Yellow (tailwind yellow-300)
 const CONTEXT_COLOR = Color(0x34d399); // Green/teal (tailwind emerald-400)
 const HOTSPOT_COLOR = Color(0xff1493); // Bright magenta/deep pink for hotspot highlighting
 
-function inferStructureFormat(url: string): { format: "pdb" | "mmcif" | "bcif"; isBinary: boolean } {
+function inferStructureFormat(url: string): { format: "pdb" | "mmcif"; isBinary: boolean } {
   let pathname = url;
   try {
     pathname = new URL(url).pathname;
@@ -622,7 +622,8 @@ function inferStructureFormat(url: string): { format: "pdb" | "mmcif" | "bcif"; 
   const base = isGz ? lower.slice(0, -3) : lower;
 
   if (base.endsWith(".bcif")) {
-    return { format: "bcif", isBinary: true };
+    // bcif is binary CIF, which Molstar loads as mmcif with isBinary=true
+    return { format: "mmcif", isBinary: true };
   }
   if (base.endsWith(".cif") || base.endsWith(".mmcif")) {
     return { format: "mmcif", isBinary: isGz };
@@ -651,52 +652,6 @@ function parseResidueSpec(residue: string): { chain: string; resNum: number } | 
   if (!match) return null;
   return { chain: match[1], resNum: parseInt(match[2], 10) };
 }
-
-/**
- * Build a query to select specific residues by chain and residue number
- * Residues should be in format "A:417" (chain:residue_number)
- */
-function buildResidueQuery(label: string, residues: string[]) {
-  const parsed = residues
-    .map(parseResidueSpec)
-    .filter((r): r is { chain: string; resNum: number } => r !== null);
-
-  if (parsed.length === 0) return null;
-
-  // Group residues by chain for more efficient query
-  const byChain = new Map<string, number[]>();
-  for (const { chain, resNum } of parsed) {
-    if (!byChain.has(chain)) byChain.set(chain, []);
-    byChain.get(chain)!.push(resNum);
-  }
-
-  // Build a query that matches any of the chain+residue combinations
-  const chainQueries = Array.from(byChain.entries()).map(([chain, resNums]) => {
-    // Match chain by either auth_asym_id or label_asym_id
-    const chainTest = MS.core.logic.or([
-      MS.core.rel.eq([MS.ammp("auth_asym_id"), chain]),
-      MS.core.rel.eq([MS.ammp("label_asym_id"), chain]),
-    ]);
-    // Match residue by either auth_seq_id or label_seq_id
-    const resTest = MS.core.logic.or([
-      MS.core.set.has([MS.set(...resNums), MS.ammp("auth_seq_id")]),
-      MS.core.set.has([MS.set(...resNums), MS.ammp("label_seq_id")]),
-    ]);
-    return MS.core.logic.and([chainTest, resTest]);
-  });
-
-  const combinedTest =
-    chainQueries.length === 1
-      ? chainQueries[0]
-      : MS.core.logic.or(chainQueries);
-
-  const expression = MS.struct.generator.atomGroups({
-    "residue-test": combinedTest,
-  });
-
-  return StructureSelectionQuery(label, expression);
-}
-
 async function applyChainColors(
   viewer: Viewer,
   chainColors?: MolstarViewerProps["chainColors"]

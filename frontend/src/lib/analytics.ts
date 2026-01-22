@@ -27,7 +27,7 @@ export function initAnalytics() {
 
   posthog.init(apiKey, {
     api_host: host,
-    capture_pageviews: true,
+    capture_pageview: true,
     capture_pageleave: true,
     autocapture: false, // We'll track specific events manually
   });

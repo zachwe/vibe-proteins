@@ -88,7 +88,7 @@ export default function Billing() {
             <div>
               <p className="text-slate-400 text-sm">Current Balance</p>
               <p className="text-4xl font-bold text-white">
-                {userLoading ? "..." : user?.balanceFormatted ?? "$0.00"}
+                {userLoading ? "..." : user?.effectiveBalance?.balanceFormatted ?? "$0.00"}
               </p>
             </div>
             <div className="text-right text-slate-400 text-sm">

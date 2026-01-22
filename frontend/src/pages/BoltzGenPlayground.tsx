@@ -6,11 +6,6 @@ import { jobsApi, type ChainAnnotation } from "../lib/api";
 import MolstarViewer from "../components/MolstarViewer";
 import Spinner from "../components/Spinner";
 
-interface JobResult {
-  id: string;
-  status: "pending" | "running" | "completed" | "failed";
-}
-
 // Protocol options for BoltzGen
 const PROTOCOLS = [
   { value: "protein-anything", label: "Protein → Anything", description: "Design protein binders for any target" },
@@ -727,7 +722,7 @@ export default function BoltzGenPlayground() {
               {/* Submit */}
               <div className="flex items-center justify-between pt-4">
                 <div className="text-slate-400 text-sm">
-                  Balance: <span className="text-white font-medium">{user?.balanceFormatted ?? "$0.00"}</span>
+                  Balance: <span className="text-white font-medium">{user?.effectiveBalance?.balanceFormatted ?? "$0.00"}</span>
                 </div>
                 <button
                   type="submit"

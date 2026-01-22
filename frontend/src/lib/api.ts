@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 // Types matching the API responses
 export interface ChainAnnotation {
   name: string;
-  role: "target" | "context";
+  role: "target" | "binder" | "context";
   description: string;
 }
 
@@ -90,6 +90,8 @@ export interface Job {
   gpuType: string | null;
   executionSeconds: number | null;
   costUsdCents: number | null;
+  estimatedCostCents: number | null;
+  billedSeconds: number | null;
   createdAt: string;
   completedAt: string | null;
 }

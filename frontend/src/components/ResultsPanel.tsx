@@ -632,7 +632,7 @@ export default function ResultsPanel({
   onNewDesign,
   challengeName,
   challengeTaskType,
-  targetSequence,
+  targetSequence: _targetSequence,
 }: ResultsPanelProps) {
   const navigate = useNavigate();
   const createSubmission = useCreateSubmission();

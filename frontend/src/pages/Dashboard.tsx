@@ -232,7 +232,6 @@ export default function Dashboard() {
   const totalSubmissions = submissions?.length ?? 0;
   const completedSubmissions = submissions?.filter(s => s.status === "completed").length ?? 0;
   const totalJobs = jobs?.length ?? 0;
-  const completedJobs = jobs?.filter(j => j.status === "completed").length ?? 0;
   const totalSpentCents = jobs?.reduce((sum, j) => sum + (j.costUsdCents ?? 0), 0) ?? 0;
 
   // Unique challenges with completed submissions

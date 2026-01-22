@@ -81,7 +81,7 @@ export default function Submit() {
   const selectedChallenge = challenges?.find((c) => c.id === selectedChallengeId);
 
   // Check if user has sufficient balance
-  const hasBalance = (user?.balanceUsdCents ?? 0) >= 10;
+  const hasBalance = (user?.effectiveBalance?.balanceUsdCents ?? 0) >= 10;
 
   // Can submit
   const canSubmit =
@@ -94,7 +94,7 @@ export default function Submit() {
     if (!canSubmit) return;
 
     try {
-      const result = await createSubmission.mutateAsync({
+      await createSubmission.mutateAsync({
         challengeId: selectedChallengeId,
         designSequence: validation.cleaned,
       });

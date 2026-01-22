@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useSession, admin } from "../lib/auth";
 import Spinner from "../components/Spinner";
@@ -58,7 +57,6 @@ async function fetchUsers(search: string): Promise<UsersResponse> {
 }
 
 export default function Admin() {
-  const navigate = useNavigate();
   const { data: session, isPending: sessionLoading } = useSession();
   const [search, setSearch] = useState("");
   const [impersonating, setImpersonating] = useState<string | null>(null);
@@ -68,7 +66,6 @@ export default function Admin() {
     data,
     isLoading,
     error: fetchError,
-    refetch,
   } = useQuery({
     queryKey: ["admin-users", search],
     queryFn: () => fetchUsers(search),

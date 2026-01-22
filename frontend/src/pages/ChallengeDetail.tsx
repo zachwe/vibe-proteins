@@ -252,7 +252,7 @@ export default function ChallengeDetail() {
   const initialHashParams = useMemo(() => parseHashParams(location.hash), []);
 
   const [showDesignPanel, setShowDesignPanel] = useState(() => initialHashParams.design === "1");
-  const [currentStep, setCurrentStep] = useState(() => {
+  const [currentStep, _setCurrentStep] = useState(() => {
     const step = parseInt(initialHashParams.step || "1", 10);
     return isNaN(step) || step < 1 || step > 4 ? 1 : step;
   });

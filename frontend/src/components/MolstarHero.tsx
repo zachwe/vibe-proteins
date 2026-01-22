@@ -92,7 +92,7 @@ export default function MolstarHero({ pdbId, className = "" }: MolstarHeroProps)
             },
           });
 
-          // Disable all zoom-related bindings
+          // Disable all zoom-related bindings (partial override)
           canvas.setAttribs({
             trackball: {
               bindings: {
@@ -102,7 +102,7 @@ export default function MolstarHero({ pdbId, className = "" }: MolstarHeroProps)
                 scrollZoom: Binding.Empty,
                 scrollFocus: Binding.Empty,
                 scrollFocusZoom: Binding.Empty,
-              },
+              } as any, // Partial bindings override
             },
           });
         }

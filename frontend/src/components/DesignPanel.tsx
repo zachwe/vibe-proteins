@@ -63,7 +63,7 @@ export default function DesignPanel({
 
   // Track the hotspot selection mode separately from the actual selection
   // This allows us to remember manual selections when switching modes
-  const [hotspotMode, setHotspotMode] = useState<HotspotMode>("manual");
+  const [_hotspotMode, setHotspotMode] = useState<HotspotMode>("manual");
   const [savedManualHotspots, setSavedManualHotspots] = useState<string[]>([]);
 
   // Determine the current mode based on what's selected

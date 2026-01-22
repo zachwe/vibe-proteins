@@ -286,7 +286,7 @@ export default function Designer() {
   const [selectedModel, setSelectedModel] = useState<DesignModel>("rfdiffusion3");
   const [selectedDesignMode, setSelectedDesignMode] = useState<string>("protein");
   const [selectedHotspots, setSelectedHotspots] = useState<string[]>(initialHotspots);
-  const [hotspotMode, setHotspotMode] = useState<HotspotMode>("manual");
+  const [_hotspotMode, setHotspotMode] = useState<HotspotMode>("manual");
   const [savedManualHotspots, setSavedManualHotspots] = useState<string[]>(initialHotspots);
   const [submittedJobId, setSubmittedJobId] = useState<string | null>(null);
 
@@ -633,7 +633,7 @@ export default function Designer() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm text-slate-400">
-              Balance: <span className="text-white font-medium">{user?.balanceFormatted ?? "$0.00"}</span>
+              Balance: <span className="text-white font-medium">{user?.effectiveBalance?.balanceFormatted ?? "$0.00"}</span>
             </div>
             <Link
               to="/billing"

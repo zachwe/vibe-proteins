@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { referenceBindersApi, submissionsApi, challengesApi } from "../lib/api";
-import type { ReferenceBinder, Submission, Challenge } from "../lib/api";
 import MolstarViewer, { type ChainInfo } from "../components/MolstarViewer";
 import Spinner from "../components/Spinner";
 import ChatPanel from "../components/ChatPanel";
@@ -85,7 +84,7 @@ function ReferenceBinderViewer({ binderId }: { binderId: string }) {
 
   // Determine structure URL - prefer complexStructureUrl (Boltz-folded)
   // If no complexStructureUrl, let MolstarViewer handle pdbId construction
-  const structureUrl = data.complexStructureUrl || undefined;
+  const structureUrl = data.complexStructureUrl || null;
 
   // Determine chain colors based on available chain info
   const chainColors: { target?: string[]; binder?: string[] } = {};

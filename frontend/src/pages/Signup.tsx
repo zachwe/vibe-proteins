@@ -27,8 +27,8 @@ export default function Signup() {
         name,
         email,
         password,
-        username: username || undefined, // Only include if provided
-      });
+        ...(username ? { username } : {}), // Custom field, cast to avoid type error
+      } as Parameters<typeof signUp.email>[0]);
 
       if (result.error) {
         setError(result.error.message || "Failed to sign up");

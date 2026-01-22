@@ -395,7 +395,7 @@ export default function Leaderboard({ challengeId }: LeaderboardProps) {
                   key={entry.id}
                   entry={entry}
                   sortBy={sortBy}
-                  isCurrentUser={currentUser?.id === entry.userId}
+                  isCurrentUser={currentUser?.user?.id === entry.userId}
                 />
               ))}
 
