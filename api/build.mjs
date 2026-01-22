@@ -1,4 +1,20 @@
 import * as esbuild from "esbuild";
+import { sentryEsbuildPlugin } from "@sentry/esbuild-plugin";
+
+// Only include Sentry plugin in CI/production builds with auth token
+const plugins = [];
+if (process.env.SENTRY_AUTH_TOKEN) {
+  plugins.push(
+    sentryEsbuildPlugin({
+      org: "zach-ocean",
+      project: "proteindojo-api",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: {
+        name: process.env.COMMIT_SHA || `local-${Date.now()}`,
+      },
+    })
+  );
+}
 
 // Build the main server bundle
 await esbuild.build({
@@ -13,6 +29,7 @@ await esbuild.build({
   external: ["better-sqlite3", "posthog-node"],
   // Preserve dynamic imports
   splitting: false,
+  plugins,
   banner: {
     js: `
 import { createRequire as _createRequire } from 'module';

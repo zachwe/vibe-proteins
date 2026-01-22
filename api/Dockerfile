@@ -14,9 +14,13 @@ COPY frontend/package.json ./frontend/
 # Install all dependencies (needed for workspace resolution)
 RUN pnpm install --frozen-lockfile
 
-# Build the API
+# Build args for Sentry source map upload
+ARG SENTRY_AUTH_TOKEN
+ARG COMMIT_SHA
+
+# Build the API (with source map upload if SENTRY_AUTH_TOKEN is set)
 WORKDIR /app/api
-RUN pnpm build
+RUN SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN COMMIT_SHA=$COMMIT_SHA pnpm build
 
 # Use pnpm deploy to create a standalone production bundle
 WORKDIR /app

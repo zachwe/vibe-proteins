@@ -28,6 +28,7 @@
     "stripe": "^20.1.0"
   },
   "devDependencies": {
+    "@sentry/esbuild-plugin": "^4.7.0",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.2",
     "drizzle-kit": "^0.31.4",

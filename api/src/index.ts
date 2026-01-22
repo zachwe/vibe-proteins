@@ -6,6 +6,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || "development",
+    release: process.env.COMMIT_SHA,
     tracesSampleRate: 0.1,
     profilesSampleRate: 0.1,
   });
