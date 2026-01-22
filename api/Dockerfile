@@ -22,6 +22,9 @@ ARG COMMIT_SHA
 WORKDIR /app/api
 RUN SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN COMMIT_SHA=$COMMIT_SHA pnpm build
 
+# Pass COMMIT_SHA to runtime for Sentry release matching
+ENV COMMIT_SHA=$COMMIT_SHA
+
 # Use pnpm deploy to create a standalone production bundle
 WORKDIR /app
 RUN pnpm --filter api deploy --prod /prod/api

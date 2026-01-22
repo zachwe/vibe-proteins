@@ -4,8 +4,6 @@ primary_region = "sjc"
 
 [build]
   dockerfile = "api/Dockerfile"
-  [build.args]
-    SENTRY_AUTH_TOKEN = ""  # Set via --build-arg during deploy
 
 [env]
   NODE_ENV = "production"
