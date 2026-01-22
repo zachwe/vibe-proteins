@@ -57,11 +57,6 @@ export function createApp() {
     return c.json({ status: "ok", message: "ProteinDojo API" });
   });
 
-  // TEMPORARY: Sentry test endpoint - remove after testing
-  app.get("/api/debug/sentry-test", () => {
-    throw new Error("Test error from API - Sentry integration check");
-  });
-
   // BetterAuth routes - note: single asterisk for wildcard
   app.on(["POST", "GET"], "/api/auth/*", (c) => {
     return auth.handler(c.req.raw);

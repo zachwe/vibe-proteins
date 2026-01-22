@@ -72,23 +72,6 @@ import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import StructureViewer from "./pages/StructureViewer";
 
-// TEMPORARY: Sentry test page - remove after testing
-function SentryTest() {
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl mb-4">Sentry Test</h1>
-      <button
-        className="bg-red-600 text-white px-4 py-2 rounded"
-        onClick={() => {
-          throw new Error("Test error from Frontend - Sentry integration check");
-        }}
-      >
-        Trigger Test Error
-      </button>
-    </div>
-  );
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -130,7 +113,6 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/view/:type/:id" element={<StructureViewer />} />
-          <Route path="/debug/sentry-test" element={<SentryTest />} />
           <Route path="*" element={<NotFound />} />
         </Route>
           <Route path="/login" element={<Login />} />
