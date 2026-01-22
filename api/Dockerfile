@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-slim AS builder
 
+# Install CA certificates for Sentry source map uploads
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
