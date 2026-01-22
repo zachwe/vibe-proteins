@@ -14,6 +14,8 @@ from core.config import (
     app,
     msa_image,
     colabfold_volume,
+    sentry_secret,
+    init_sentry,
     COLABFOLD_DB_DIR,
 )
 
@@ -47,6 +49,7 @@ def convert_mmseqs_to_a3m(query_fasta: Path, hits_file: Path) -> str:
 @app.function(
     image=msa_image,
     volumes={str(COLABFOLD_DB_DIR): colabfold_volume},
+    secrets=[sentry_secret],
     memory=131072,  # 128GB RAM for MMseqs2 search
     timeout=1800,  # 30 min max per search
     cpu=8,
@@ -68,6 +71,7 @@ def run_msa_search(
             - status: "completed" or "failed"
             - usage: timing info
     """
+    init_sentry()
     start_time = time.time()
     job_id = job_id or str(uuid.uuid4())
 

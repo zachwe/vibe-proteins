@@ -8,8 +8,9 @@ web endpoints for job submission and status checking.
 from __future__ import annotations
 
 import modal
+import sentry_sdk
 
-from core.config import app, cpu_image
+from core.config import app, cpu_image, sentry_secret, init_sentry
 from core.job_status import get_job_status
 
 # Import all pipeline functions - this registers them with the app
@@ -24,13 +25,14 @@ from pipelines import (
 )
 
 
-@app.function(image=cpu_image)
+@app.function(image=cpu_image, secrets=[sentry_secret])
 def health_check() -> dict:
     """Simple health check to verify Modal is working."""
+    init_sentry()
     return {"status": "ok", "message": "VibeProteins Modal ready"}
 
 
-@app.function(image=cpu_image, timeout=3600)
+@app.function(image=cpu_image, timeout=3600, secrets=[sentry_secret])
 @modal.fastapi_endpoint(method="POST")
 def submit_job(request: dict) -> dict:
     """
@@ -43,6 +45,8 @@ def submit_job(request: dict) -> dict:
 
     Set request["async"] = True for async mode.
     """
+    init_sentry()
+
     job_type = request.get("job_type", "")
     params = request.get("params", {})
     async_mode = request.get("async", False)
@@ -79,6 +83,7 @@ def submit_job(request: dict) -> dict:
                 "message": f"Job {job_type} submitted asynchronously",
             }
         except Exception as e:
+            sentry_sdk.capture_exception(e)
             return {
                 "status": "error",
                 "job_id": params.get("job_id"),
@@ -89,7 +94,7 @@ def submit_job(request: dict) -> dict:
         return func.remote(**params)
 
 
-@app.function(image=cpu_image, timeout=60)
+@app.function(image=cpu_image, timeout=60, secrets=[sentry_secret])
 @modal.fastapi_endpoint(method="GET")
 def get_job_status_endpoint(job_id: str) -> dict:
     """
@@ -97,6 +102,7 @@ def get_job_status_endpoint(job_id: str) -> dict:
 
     Returns the current status, progress events, and output (if completed).
     """
+    init_sentry()
     status = get_job_status(job_id)
     if status is None:
         return {"status": "not_found", "job_id": job_id}

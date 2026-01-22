@@ -6,6 +6,19 @@ import os
 from pathlib import Path
 
 import modal
+import sentry_sdk
+
+
+def init_sentry():
+    """Initialize Sentry SDK for error tracking."""
+    dsn = os.environ.get("SENTRY_DSN")
+    if dsn:
+        sentry_sdk.init(
+            dsn=dsn,
+            traces_sample_rate=0.1,
+            profiles_sample_rate=0.1,
+            environment=os.environ.get("MODAL_ENVIRONMENT", "production"),
+        )
 
 # App definition
 app = modal.App("vibeproteins")
@@ -29,6 +42,7 @@ COMMON_PY_PKGS = [
     "pyyaml",
     "wheel",
     "fastapi[standard]",
+    "sentry-sdk>=2.0.0",
 ]
 
 
@@ -117,6 +131,7 @@ msa_image = _add_local_sources(
 
 # Secrets
 r2_secret = modal.Secret.from_name("r2-credentials")
+sentry_secret = modal.Secret.from_name("sentry-dsn", required_keys=["SENTRY_DSN"])
 
 # Volumes
 BOLTZ_CACHE_DIR = "/boltz-cache"

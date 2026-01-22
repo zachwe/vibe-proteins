@@ -14,6 +14,8 @@ from core.config import (
     gpu_image,
     cpu_image,
     r2_secret,
+    sentry_secret,
+    init_sentry,
 )
 from core.job_status import send_progress, send_completion
 from pipelines.proteinmpnn import rng_from_job
@@ -24,7 +26,7 @@ from utils.pdb import write_pdb_chains
 from utils.storage import download_to_path
 
 
-@app.function(image=gpu_image, gpu="A10G", timeout=1200, secrets=[r2_secret])
+@app.function(image=gpu_image, gpu="A10G", timeout=1200, secrets=[r2_secret, sentry_secret])
 def run_structure_prediction(
     sequence: str,
     target_sequence: str | None = None,
@@ -33,6 +35,7 @@ def run_structure_prediction(
     """
     Placeholder structure prediction hook - returns a stub response for now.
     """
+    init_sentry()
     start_time = time.time()
     gpu_type = "A10G"
 
@@ -58,7 +61,7 @@ def run_structure_prediction(
     }
 
 
-@app.function(image=cpu_image, secrets=[r2_secret])
+@app.function(image=cpu_image, secrets=[r2_secret, sentry_secret])
 def compute_scores(
     design_pdb: str,
     target_pdb: str,
@@ -81,6 +84,7 @@ def compute_scores(
         target_chain_ids: Optional list of target chain IDs
         use_msa_server: Whether to use MSA server
     """
+    init_sentry()
     start_time = time.time()
     job_id = job_id or str(uuid.uuid4())
 

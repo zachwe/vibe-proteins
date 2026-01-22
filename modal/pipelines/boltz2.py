@@ -17,6 +17,8 @@ from core.config import (
     app,
     boltz_image,
     r2_secret,
+    sentry_secret,
+    init_sentry,
     BOLTZ_CACHE_DIR,
     BOLTZ_MODEL_VOLUME,
     BOLTZ_USE_MSA_SERVER,
@@ -84,7 +86,7 @@ def run_boltz_prediction(
     image=boltz_image,
     gpu="A10G",
     timeout=3600,
-    secrets=[r2_secret],
+    secrets=[r2_secret, sentry_secret],
     volumes={BOLTZ_CACHE_DIR: BOLTZ_MODEL_VOLUME},
 )
 def run_boltz2(
@@ -102,6 +104,7 @@ def run_boltz2(
     """
     Boltz-2 structure prediction with optional PAE-based scoring.
     """
+    init_sentry()
     start_time = time.time()
     gpu_type = "A10G"
 

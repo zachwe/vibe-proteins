@@ -1,10 +1,41 @@
-import { StrictMode } from "react";
+import * as Sentry from "@sentry/react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigationType,
+  createRoutesFromChildren,
+  matchRoutes,
+} from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import { initAnalytics } from "./lib/analytics";
+
+// Initialize Sentry for error tracking
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.reactRouterV7BrowserTracingIntegration({
+        useEffect,
+        useLocation,
+        useNavigationType,
+        createRoutesFromChildren,
+        matchRoutes,
+      }),
+      Sentry.replayIntegration(),
+    ],
+    tracesSampleRate: 0.1,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+  });
+}
 
 // Initialize analytics
 initAnalytics();
@@ -51,6 +82,7 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <Sentry.ErrorBoundary fallback={<p>Something went wrong. Please refresh the page.</p>}>
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
@@ -90,5 +122,6 @@ createRoot(document.getElementById("root")!).render(
         </BrowserRouter>
       </QueryClientProvider>
     </HelmetProvider>
+    </Sentry.ErrorBoundary>
   </StrictMode>
 );
