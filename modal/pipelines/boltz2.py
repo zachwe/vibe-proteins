@@ -34,19 +34,11 @@ from utils.boltz_helpers import (
     _select_boltz_prediction,
     _select_chain_id,
     _write_boltz_yaml,
+    ensure_boltz2_cache,
 )
 from utils.ipsae import compute_interface_scores_from_boltz
 from utils.metrics import compute_interface_metrics
 from utils.storage import download_to_path, object_url, upload_bytes, upload_file
-
-
-def ensure_boltz2_cache(cache_dir: Path) -> None:
-    """Ensure Boltz-2 model weights are downloaded."""
-    from boltz.main import download_boltz2
-
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    if not (cache_dir / "boltz2_conf.ckpt").exists():
-        download_boltz2(cache_dir)
 
 
 def run_boltz_prediction(
