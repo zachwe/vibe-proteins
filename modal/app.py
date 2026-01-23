@@ -35,14 +35,6 @@ def health_check() -> dict:
     return {"status": "ok", "message": "VibeProteins Modal ready"}
 
 
-# TEMPORARY: Sentry test function - remove after testing
-@app.function(image=cpu_image, secrets=[sentry_secret])
-def sentry_test() -> dict:
-    """Test Sentry integration by raising an exception."""
-    init_sentry()
-    raise Exception("Test error from Modal - Sentry integration check")
-
-
 @app.function(image=cpu_image, timeout=3600, secrets=[sentry_secret])
 @modal.fastapi_endpoint(method="POST")
 def submit_job(request: dict) -> dict:
@@ -65,7 +57,6 @@ def submit_job(request: dict) -> dict:
     # Map job types to their functions
     job_functions = {
         "health": health_check,
-        "sentry_test": sentry_test,  # TEMPORARY - remove after testing
         "rfdiffusion3": run_rfdiffusion3,
         "proteinmpnn": run_proteinmpnn,
         "boltz2": run_boltz2,
