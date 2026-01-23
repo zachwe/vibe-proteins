@@ -18,6 +18,9 @@ from pipelines import (
     run_rfdiffusion3,
     run_boltz2,
     run_boltzgen,
+    run_mber_vhh,
+    run_mosaic_boltz2,
+    run_mosaic_trigram,
     run_proteinmpnn,
     compute_scores,
     run_structure_prediction,
@@ -30,6 +33,14 @@ def health_check() -> dict:
     """Simple health check to verify Modal is working."""
     init_sentry()
     return {"status": "ok", "message": "VibeProteins Modal ready"}
+
+
+# TEMPORARY: Sentry test function - remove after testing
+@app.function(image=cpu_image, secrets=[sentry_secret])
+def sentry_test() -> dict:
+    """Test Sentry integration by raising an exception."""
+    init_sentry()
+    raise Exception("Test error from Modal - Sentry integration check")
 
 
 @app.function(image=cpu_image, timeout=3600, secrets=[sentry_secret])
@@ -54,10 +65,14 @@ def submit_job(request: dict) -> dict:
     # Map job types to their functions
     job_functions = {
         "health": health_check,
+        "sentry_test": sentry_test,  # TEMPORARY - remove after testing
         "rfdiffusion3": run_rfdiffusion3,
         "proteinmpnn": run_proteinmpnn,
         "boltz2": run_boltz2,
         "boltzgen": run_boltzgen,
+        "mber_vhh": run_mber_vhh,
+        "mosaic_trigram": run_mosaic_trigram,
+        "mosaic_boltz2": run_mosaic_boltz2,
         "predict": run_structure_prediction,
         "score": compute_scores,
         "msa": run_msa_search,

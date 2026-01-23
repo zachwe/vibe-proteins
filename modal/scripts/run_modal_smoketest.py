@@ -41,9 +41,6 @@ if str(MODAL_DIR) not in sys.path:
 
 import modal  # noqa: E402
 
-from core.config import app  # noqa: E402
-from pipelines import run_boltz2, run_boltzgen, run_proteinmpnn, run_rfdiffusion3, compute_scores  # noqa: E402
-
 SAMPLE_DIR = REPO_ROOT / "sample_data"
 SAMPLE_DIR = REPO_ROOT / "sample_data"
 PDB_DIR = SAMPLE_DIR / "pdb"
@@ -88,8 +85,17 @@ def fetch_pdb(url: str) -> str:
     with urllib.request.urlopen(url, timeout=30) as response:
         return response.read().decode("utf-8")
 
-GPU_JOBS = {"rfdiffusion3", "proteinmpnn", "boltz2", "boltzgen"}
-JOB_ORDER = ["rfdiffusion3", "proteinmpnn", "boltz2", "boltzgen", "score"]
+GPU_JOBS = {"rfdiffusion3", "proteinmpnn", "boltz2", "boltzgen", "mber_vhh", "mosaic_boltz2"}
+JOB_ORDER = [
+    "rfdiffusion3",
+    "proteinmpnn",
+    "boltz2",
+    "boltzgen",
+    "mosaic_trigram",
+    "mosaic_boltz2",
+    "mber_vhh",
+    "score",
+]
 EXTRA_JOBS: List[str] = []
 JOB_CHOICES = JOB_ORDER + EXTRA_JOBS + ["all"]
 
@@ -98,6 +104,9 @@ FUNCTION_NAMES = {
     "proteinmpnn": "run_proteinmpnn",
     "boltz2": "run_boltz2",
     "boltzgen": "run_boltzgen",
+    "mosaic_trigram": "run_mosaic_trigram",
+    "mosaic_boltz2": "run_mosaic_boltz2",
+    "mber_vhh": "run_mber_vhh",
     "score": "compute_scores",
 }
 
@@ -111,19 +120,17 @@ def read_sequence(path: Path) -> str:
     return "".join(line for line in lines if not line.startswith(">"))
 
 
-LOCAL_FUNCTIONS = {
-    "rfdiffusion3": run_rfdiffusion3,
-    "proteinmpnn": run_proteinmpnn,
-    "boltz2": run_boltz2,
-    "boltzgen": run_boltzgen,
-    "score": compute_scores,
-}
+LOCAL_FUNCTIONS: Dict[str, object] = {}
 
 
 def build_payload(job: str, args: argparse.Namespace) -> Dict[str, object]:
+    selected_target = args.target
+    if job in {"mber_vhh", "mosaic_boltz2"} and not selected_target:
+        selected_target = "lysozyme"
+
     # Check if using a challenge target
-    if args.target and args.target in CHALLENGE_TARGETS:
-        challenge = CHALLENGE_TARGETS[args.target]
+    if selected_target and selected_target in CHALLENGE_TARGETS:
+        challenge = CHALLENGE_TARGETS[selected_target]
         print(f"  Using challenge target: {challenge['description']}")
         target_pdb = fetch_pdb(challenge["pdb_url"])
         target_sequence = challenge["target_sequence"]
@@ -198,6 +205,41 @@ def build_payload(job: str, args: argparse.Namespace) -> Dict[str, object]:
             print(f"  Using binding residues: {binding_residues}")
         return payload
 
+    if job == "mosaic_trigram":
+        return {
+            "sequence_length": args.mosaic_sequence_length,
+            "n_steps": args.mosaic_steps,
+            "stepsize": args.mosaic_stepsize,
+            "momentum": args.mosaic_momentum,
+        }
+
+    if job == "mosaic_boltz2":
+        return {
+            "target_sequence": target_sequence,
+            "target_chain_ids": [target_chain] if target_chain else None,
+            "binder_length": args.mosaic_binder_length,
+            "n_steps": args.mosaic_steps,
+            "stepsize": args.mosaic_stepsize,
+            "momentum": args.mosaic_momentum,
+            "sharpen_steps": args.mosaic_sharpen_steps,
+            "sharpen_stepsize": args.mosaic_sharpen_stepsize,
+            "sharpen_scale": args.mosaic_sharpen_scale,
+            "chunk_size": args.mosaic_chunk_size,
+            "use_sequence_recovery": not args.mosaic_skip_sequence_recovery,
+        }
+
+    if job == "mber_vhh":
+        return {
+            "target_pdb": target_pdb,
+            "target_chain_ids": [target_chain] if target_chain else None,
+            "hotspot_residues": hotspot_residues if hotspot_residues else None,
+            "num_accepted": args.mber_num_accepted,
+            "max_trajectories": args.mber_max_trajectories,
+            "min_iptm": args.mber_min_iptm,
+            "min_plddt": args.mber_min_plddt,
+            "skip_relax": args.mber_skip_relax,
+        }
+
     raise ValueError(f"Unsupported job: {job}")
 
 
@@ -208,7 +250,11 @@ def parse_jobs(selected: Iterable[str]) -> List[str]:
     return chosen
 
 
-def load_function_handles(mode: str, app_name: str, environment: str | None) -> Dict[str, object]:
+def load_function_handles(
+    mode: str,
+    app_name: str,
+    environment: str | None,
+) -> Dict[str, object]:
     if mode == "local":
         return LOCAL_FUNCTIONS
 
@@ -294,6 +340,27 @@ Examples:
     parser.add_argument("--boltzgen-num-designs", type=int, default=10, help="BoltzGen number of initial designs")
     parser.add_argument("--boltzgen-budget", type=int, default=3, help="BoltzGen budget (final designs to keep)")
     parser.add_argument("--boltzgen-alpha", type=float, default=0.01, help="BoltzGen alpha (quality vs diversity)")
+    # Mosaic arguments
+    parser.add_argument("--mosaic-sequence-length", type=int, default=80, help="Mosaic trigram sequence length")
+    parser.add_argument("--mosaic-steps", type=int, default=25, help="Mosaic optimization steps")
+    parser.add_argument("--mosaic-stepsize", type=float, default=0.1, help="Mosaic optimization step size")
+    parser.add_argument("--mosaic-momentum", type=float, default=0.0, help="Mosaic optimization momentum")
+    parser.add_argument("--mosaic-binder-length", type=int, default=45, help="Mosaic Boltz2 binder length")
+    parser.add_argument("--mosaic-sharpen-steps", type=int, default=10, help="Mosaic Boltz2 sharpening steps")
+    parser.add_argument("--mosaic-sharpen-stepsize", type=float, default=0.5, help="Mosaic Boltz2 sharpening step size")
+    parser.add_argument("--mosaic-sharpen-scale", type=float, default=1.5, help="Mosaic Boltz2 sharpening scale")
+    parser.add_argument("--mosaic-chunk-size", type=int, default=10, help="Mosaic checkpoint chunk size")
+    parser.add_argument(
+        "--mosaic-skip-sequence-recovery",
+        action="store_true",
+        help="Disable ProteinMPNN sequence recovery term in Mosaic Boltz2",
+    )
+    # mBER arguments
+    parser.add_argument("--mber-num-accepted", type=int, default=1, help="mBER accepted designs to keep")
+    parser.add_argument("--mber-max-trajectories", type=int, default=5, help="mBER max trajectories")
+    parser.add_argument("--mber-min-iptm", type=float, default=0.5, help="mBER min iPTM filter")
+    parser.add_argument("--mber-min-plddt", type=float, default=0.6, help="mBER min pLDDT filter")
+    parser.add_argument("--mber-skip-relax", action="store_true", help="Skip Amber relaxation step")
     parser.add_argument(
         "--mode",
         choices=["local", "deployed"],
@@ -319,6 +386,46 @@ Examples:
 
     if any(job in GPU_JOBS for job in jobs_to_run):
         print("⚠️  GPU-backed Modal calls may incur cost. This script should not run in CI.")
+
+    if args.mode == "local":
+        from core.config import app  # noqa: E402
+
+        def _register(job: str, func) -> None:
+            if job in jobs_to_run:
+                LOCAL_FUNCTIONS[job] = func
+
+        if "rfdiffusion3" in jobs_to_run:
+            from pipelines.rfdiffusion3 import run_rfdiffusion3  # noqa: E402
+
+            _register("rfdiffusion3", run_rfdiffusion3)
+        if "proteinmpnn" in jobs_to_run:
+            from pipelines.proteinmpnn import run_proteinmpnn  # noqa: E402
+
+            _register("proteinmpnn", run_proteinmpnn)
+        if "boltz2" in jobs_to_run:
+            from pipelines.boltz2 import run_boltz2  # noqa: E402
+
+            _register("boltz2", run_boltz2)
+        if "boltzgen" in jobs_to_run:
+            from pipelines.boltzgen import run_boltzgen  # noqa: E402
+
+            _register("boltzgen", run_boltzgen)
+        if "mosaic_trigram" in jobs_to_run:
+            from pipelines.mosaic import run_mosaic_trigram  # noqa: E402
+
+            _register("mosaic_trigram", run_mosaic_trigram)
+        if "mosaic_boltz2" in jobs_to_run:
+            from pipelines.mosaic import run_mosaic_boltz2  # noqa: E402
+
+            _register("mosaic_boltz2", run_mosaic_boltz2)
+        if "mber_vhh" in jobs_to_run:
+            from pipelines.mber import run_mber_vhh  # noqa: E402
+
+            _register("mber_vhh", run_mber_vhh)
+        if "score" in jobs_to_run:
+            from pipelines.scoring import compute_scores  # noqa: E402
+
+            _register("score", compute_scores)
 
     handles = load_function_handles(args.mode, args.app_name, args.environment)
 

@@ -1,20 +1,30 @@
-"""
-Pipeline functions for protein design and analysis.
-"""
+"""Pipeline functions for protein design and analysis."""
 
-from pipelines.rfdiffusion3 import run_rfdiffusion3
-from pipelines.boltz2 import run_boltz2
-from pipelines.boltzgen import run_boltzgen
-from pipelines.proteinmpnn import run_proteinmpnn
-from pipelines.scoring import compute_scores, run_structure_prediction
-from pipelines.msa import run_msa_search
+from __future__ import annotations
 
-__all__ = [
-    "run_rfdiffusion3",
-    "run_boltz2",
-    "run_boltzgen",
-    "run_proteinmpnn",
-    "compute_scores",
-    "run_structure_prediction",
-    "run_msa_search",
-]
+import importlib
+from typing import Dict
+
+_EXPORTS: Dict[str, str] = {
+    "run_rfdiffusion3": "pipelines.rfdiffusion3",
+    "run_boltz2": "pipelines.boltz2",
+    "run_boltzgen": "pipelines.boltzgen",
+    "run_proteinmpnn": "pipelines.proteinmpnn",
+    "compute_scores": "pipelines.scoring",
+    "run_structure_prediction": "pipelines.scoring",
+    "run_msa_search": "pipelines.msa",
+    "run_mber_vhh": "pipelines.mber",
+    "run_mosaic_trigram": "pipelines.mosaic",
+    "run_mosaic_boltz2": "pipelines.mosaic",
+}
+
+
+def __getattr__(name: str):
+    module_path = _EXPORTS.get(name)
+    if not module_path:
+        raise AttributeError(f"module 'pipelines' has no attribute '{name}'")
+    module = importlib.import_module(module_path)
+    return getattr(module, name)
+
+
+__all__ = list(_EXPORTS.keys())
