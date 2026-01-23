@@ -68,7 +68,6 @@ MOSAIC_GPU_PY_PKGS = [
     "sentry-sdk>=2.0.0",
     "numpy==2.1",
     "scipy==1.15.1",
-    "jax[cuda12]",
     "equinox>=0.13.0",
     "jaxtyping",
     "tqdm",
@@ -84,7 +83,7 @@ def _add_local_sources(image: modal.Image) -> modal.Image:
         .add_local_python_source("integrations")
         .add_local_python_source("pipelines")
         .add_local_python_source("utils")
-        .add_local_dir("assets", remote_path="/assets")
+        .add_local_dir("modal/assets", remote_path="/assets")
     )
 
 
@@ -182,6 +181,7 @@ mosaic_gpu_image = _add_local_sources(
     .pip_install("boltz[cuda]==2.2.1")
     .run_commands("pip install --no-deps git+https://github.com/nboyd/joltz")
     .run_commands(f"pip install --no-deps {pip_specs_for_mosaic()[0]}")
+    .pip_install("jax[cuda12]==0.4.38")
 )
 
 mber_image = _add_local_sources(
