@@ -189,14 +189,18 @@ mber_image = _add_local_sources(
     .apt_install(
         "git",
         "wget",
+        "ffmpeg",
+        "hmmer",
         "libgomp1",
         "libglib2.0-0",
         "libgl1",
         "libsm6",
         "libxext6",
         "libxrender1",
+        "muscle",
     )
     .pip_install(*COMMON_PY_PKGS)
+    .run_commands("pip install openmm 'pdbfixer @ git+https://github.com/openmm/pdbfixer.git'")
     .pip_install(*pip_specs_for_mber())
 )
 
