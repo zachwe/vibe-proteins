@@ -55,6 +55,9 @@
   - [x] RFDiffusion3 + ProteinMPNN pipeline function
   - [x] Boltz-2 sanity check pipeline
   - [x] ProteinMPNN function (standalone)
+  - [x] mBER VHH binder design pipeline
+  - [x] Mosaic trigram optimization pipeline
+  - [x] Mosaic Boltz2 GPU optimization pipeline
 - [x] Replace mocked Boltz-2 with real inference (Boltz CLI + cached weights)
 - [x] Replace mocked RFDiffusion3 with real inference (RFD3 repo + checkpoints)
 - [x] Replace mocked ProteinMPNN with real inference (ProteinMPNN repo)
@@ -309,6 +312,7 @@ Recently completed:
 - Usage-based billing with Stripe integration
 - **BoltzGen antibody/nanobody scaffolds**: scaffold library integration, label_seq_id hotspot mapping, and raw input previews
 - **Blog post**: antibody/nanobody design concepts and BoltzGen usage guide
+- **mBER smoketest stability**: skip-relax patch + smoketest flag for faster runs
 
 Next up:
 - Reference binders frontend (leaderboard integration, help article pages)
