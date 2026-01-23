@@ -14,6 +14,7 @@
     "db:shell": "sqlite3 api/vibeproteins.db",
     "test": "pnpm --filter api test",
     "test:watch": "pnpm --filter api test:watch",
+    "test:modal": "uv run --python modal/.venv/bin/python python -I -m unittest discover -s modal/tests -p \"test_*.py\" -v",
     "prod:db": "./scripts/prod-db.sh",
     "prod:seed": "./scripts/prod-seed.sh",
     "prod:seed-binders": "./scripts/prod-seed-reference-binders.sh",

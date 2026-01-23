@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import string
 from pathlib import Path
+import shutil
+import urllib.request
 from typing import List
 
 
@@ -34,6 +36,32 @@ def _select_chain_id(used: set[str]) -> str:
     if letter not in used:
       return letter
   raise ValueError("Unable to select an unused chain id for the binder.")
+
+
+def ensure_boltz2_cache(cache_dir: Path) -> None:
+  """Ensure Boltz-2 model weights and CCD data are downloaded."""
+  cache_dir.mkdir(parents=True, exist_ok=True)
+  mols_dir = cache_dir / "mols"
+  model_path = cache_dir / "boltz2_conf.ckpt"
+  ala_path = mols_dir / "ALA.pkl"
+  if mols_dir.exists() and model_path.exists() and ala_path.exists():
+    return
+
+  if mols_dir.exists() and not ala_path.exists():
+    shutil.rmtree(mols_dir, ignore_errors=True)
+  mols_tar = cache_dir / "mols.tar"
+  if mols_tar.exists() and not ala_path.exists():
+    mols_tar.unlink()
+
+  from boltz.main import download_boltz2
+
+  download_boltz2(cache_dir)
+
+  ccd_path = cache_dir / "ccd.pkl"
+  if not ccd_path.exists():
+    from boltz.main import CCD_URL
+
+    urllib.request.urlretrieve(CCD_URL, str(ccd_path))  # noqa: S310
 
 
 def _write_boltz_yaml(
