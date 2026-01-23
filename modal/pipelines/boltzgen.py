@@ -8,7 +8,6 @@ import csv
 import json
 import os
 import shutil
-import signal
 import subprocess
 import tempfile
 import time
@@ -34,6 +33,7 @@ from core.job_status import send_progress, send_completion, send_usage_update
 from pipelines.proteinmpnn import resolve_structure_source
 from utils.boltz_helpers import _extract_chain_sequences
 from utils.pdb import ordered_chain_ids_from_pdb, cif_to_pdb, tail_file, mmcif_auth_label_mapping
+from utils.preemption import ModalPreemptionAdapter, PreemptionManager
 from utils.storage import download_to_path, object_url, upload_bytes, upload_file
 
 
@@ -436,17 +436,14 @@ def run_boltzgen(
     # Track if we're resuming from a previous run
     is_resuming = (work_dir / "boltzgen_output").exists()
 
-    # Set up SIGTERM handler for graceful shutdown on preemption
-    preempted = False
-    def handle_sigterm(signum, frame):
-        nonlocal preempted
-        preempted = True
-        send_progress(job_id, "processing", "Preemption detected, saving state...")
-        # Commit the volume to ensure intermediate results are saved
-        BOLTZGEN_WORK_VOLUME.commit()
-        print(f"[preemption] Volume committed for job {job_id}")
-
-    signal.signal(signal.SIGTERM, handle_sigterm)
+    # Set up preemption handler for graceful shutdown on retry
+    preemption = PreemptionManager(
+        work_dir=work_dir,
+        adapter=ModalPreemptionAdapter(volume=BOLTZGEN_WORK_VOLUME),
+    )
+    preemption.register_signal_handler(
+        lambda: send_progress(job_id, "processing", "Preemption detected, saving state...")
+    )
 
     send_progress(job_id, "init", "Resuming BoltzGen pipeline..." if is_resuming else "Initializing BoltzGen pipeline")
 
