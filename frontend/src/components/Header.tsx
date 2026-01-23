@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useSession } from "../lib/auth";
 import { useCurrentUser } from "../lib/hooks";
 import TeamSelector from "./TeamSelector";
@@ -15,8 +15,6 @@ export default function Header() {
   const { data: session, isPending } = useSession();
   const { data: userData } = useCurrentUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  const isHomePage = location.pathname === "/";
 
   // Extract user data from the new response format
   const user = userData?.user;
@@ -55,14 +53,12 @@ export default function Header() {
             >
               Help
             </Link>
-            {isHomePage && (
-              <Link
-                to="/blog"
-                className="text-slate-300 hover:text-white transition-colors"
-              >
-                Blog
-              </Link>
-            )}
+            <Link
+              to="/blog"
+              className="text-slate-300 hover:text-white transition-colors"
+            >
+              Blog
+            </Link>
 
             {isPending ? (
               <div className="w-20 h-8 bg-slate-700 rounded animate-pulse" />
@@ -156,15 +152,13 @@ export default function Header() {
               >
                 Help
               </Link>
-              {isHomePage && (
-                <Link
-                  to="/blog"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-slate-300 hover:text-white transition-colors py-2"
-                >
-                  Blog
-                </Link>
-              )}
+              <Link
+                to="/blog"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-slate-300 hover:text-white transition-colors py-2"
+              >
+                Blog
+              </Link>
 
               {session?.user ? (
                 <>
